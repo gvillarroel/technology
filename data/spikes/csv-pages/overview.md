@@ -7,5 +7,5 @@ This spike proves that CSV can drive dual-format pages after normalization.
 
 Links authored once:
 
-- [Open governance](/spikes/csv-format/governance)
-- [Open GitHub spike](/spikes/github-format/overview)
+- [Open governance](./governance)
+- [Open GitHub spike](../github-format/overview)

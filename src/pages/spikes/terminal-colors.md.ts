@@ -1,3 +1,5 @@
+import { withBasePath } from "../../lib/site-url";
+
 const variants = [
   {
     name: "Variant A",
@@ -21,7 +23,7 @@ export function GET() {
     "---",
     "title: Terminal Color Spike",
     "description: Markdown companion for the landing-page terminal color exploration.",
-    "canonical_html: /spikes/terminal-colors/",
+    `canonical_html: ${withBasePath("/spikes/terminal-colors/")}`,
     "---",
     "",
     "# Terminal Palette Variations",
@@ -30,9 +32,9 @@ export function GET() {
     "",
     "## Related Navigation",
     "",
-    "- [Tech Radar](/tech-radar.md)",
-    "- [Technology sections](/index.md#technology-sections)",
-    "- [Page system](/index.md#page-system)",
+    `- [Tech Radar](${withBasePath("/tech-radar.md")})`,
+    `- [Technology sections](${withBasePath("/index.md#technology-sections")})`,
+    `- [Page system](${withBasePath("/index.md#page-system")})`,
     "",
     "## Variants",
     "",

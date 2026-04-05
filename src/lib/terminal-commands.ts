@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parse } from "yaml";
+import { withBasePath } from "./site-url";
 
 export interface TerminalCommandConfig {
   command: string;
@@ -35,8 +36,8 @@ export async function getTerminalCommandConfigs(): Promise<TerminalCommandConfig
     command: toScalar(entry.command),
     description: toScalar(entry.description),
     kind: toKind(entry.kind),
-    htmlUrl: toNullableScalar(entry.html_url),
-    markdownUrl: toNullableScalar(entry.markdown_url),
+    htmlUrl: toNullableScalar(entry.html_url) ? withBasePath(toNullableScalar(entry.html_url)!) : null,
+    markdownUrl: toNullableScalar(entry.markdown_url) ? withBasePath(toNullableScalar(entry.markdown_url)!) : null,
     fileName: toNullableScalar(entry.file_name),
   }));
 }

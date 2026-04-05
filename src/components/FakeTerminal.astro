@@ -1,4 +1,6 @@
 ---
+import { withBasePath } from "../lib/site-url";
+
 export interface CommandLink {
   label: string;
   href: string;
@@ -158,7 +160,7 @@ const searchNamespaces = props.searchNamespaces ?? [];
 
         <div class="terminal-panel terminal-footnote">
           <p class="terminal-copy terminal-copy-muted">
-            Still there? Try <a class="terminal-inline-link" href="/tech-radar/">/tech-radar</a> to review approved technologies.
+            Still there? Try <a class="terminal-inline-link" href={withBasePath("/tech-radar/")}>/tech-radar</a> to review approved technologies.
           </p>
           <p class="terminal-copy terminal-copy-muted">
             This terminal has more standards than you think...

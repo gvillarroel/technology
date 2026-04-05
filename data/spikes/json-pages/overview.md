@@ -7,5 +7,5 @@ This spike uses a JSON manifest as the source of page metadata and body file ref
 
 Links authored once:
 
-- [Open operations](/spikes/json-format/operations)
-- [Open CSV spike](/spikes/csv-format/overview)
+- [Open operations](./operations)
+- [Open CSV spike](../csv-format/overview)

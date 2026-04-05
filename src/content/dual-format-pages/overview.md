@@ -13,6 +13,6 @@ This page is authored once in Markdown and exposed in two modes:
 
 Internal links are authored once using the HTML-style canonical route:
 
-- [Go to standards](/spikes/dual-format/standards)
+- [Go to standards](./standards)
 
 The Markdown endpoint rewrites internal links so that Markdown readers stay in Markdown mode.

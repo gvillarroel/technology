@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parse } from "yaml";
 import { getScopedHtmlPageUrl, getScopedMarkdownPageUrl } from "./dual-format";
+import { withBasePath } from "./site-url";
 
 export interface CloudEnablementProduct {
   slug: string;
@@ -159,7 +160,7 @@ export function getCloudEnablementIndexMarkdown(providers: CloudEnablementProvid
     "---",
     "title: Cloud Enablement",
     "description: Google Cloud and AWS enablement inventory with seeded products and known features.",
-    "canonical_html: /cloud-enablement/",
+    `canonical_html: ${withBasePath("/cloud-enablement/")}`,
     "---",
     "",
     "# Cloud Enablement",
@@ -258,7 +259,7 @@ export function getCloudEnablementProductMarkdown(
           "",
         ]
       : []),
-    `[Back to cloud enablement](/cloud-enablement.md?q=${encodeURIComponent(product.name)}&provider=${provider.slug})`,
+    `[Back to cloud enablement](${withBasePath(`/cloud-enablement.md?q=${encodeURIComponent(product.name)}&provider=${provider.slug}`)})`,
     "",
   ];
 

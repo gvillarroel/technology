@@ -2,6 +2,7 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import StandardPageHeader from "../../components/StandardPageHeader.astro";
 import { getRadarEntries, getRadarEntryBySlug } from "../../lib/tech-radar";
+import { withBasePath } from "../../lib/site-url";
 
 export async function getStaticPaths() {
   const entries = await getRadarEntries();
@@ -15,7 +16,7 @@ const { slug } = Astro.params;
 const entry = slug ? await getRadarEntryBySlug(slug) : undefined;
 
 if (!entry) {
-  return Astro.redirect("/tech-radar/");
+  return Astro.redirect(withBasePath("/tech-radar/"));
 }
 ---
 
@@ -26,7 +27,7 @@ if (!entry) {
   <main class="shell shell-narrow standard-page">
     <StandardPageHeader
       currentPage="tech-radar"
-      searchAction="/tech-radar/"
+      searchAction={withBasePath("/tech-radar/")}
       searchPlaceholder="Search technologies"
       searchQuery={entry.name}
     />
@@ -196,7 +197,7 @@ if (!entry) {
     </section>
 
     <section class="standard-footer-actions">
-      <a class="button button-secondary" href="/tech-radar/">Back to Tech Radar</a>
+      <a class="button button-secondary" href={withBasePath("/tech-radar/")}>Back to Tech Radar</a>
     </section>
   </main>
 </BaseLayout>

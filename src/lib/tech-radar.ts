@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parse } from "yaml";
 import { getScopedHtmlPageUrl, getScopedMarkdownPageUrl } from "./dual-format";
+import { withBasePath } from "./site-url";
 
 export interface RadarEntry {
   slug: string;
@@ -308,7 +309,7 @@ export function getRadarIndexMarkdown(entries: RadarEntry[]) {
     "---",
     "title: Tech Radar",
     "description: The technology radar for approved and emerging technologies at e*f(x).",
-    "canonical_html: /tech-radar/",
+    `canonical_html: ${withBasePath("/tech-radar/")}`,
     "---",
     "",
     "# Tech Radar",
@@ -387,7 +388,7 @@ export function getRadarEntryMarkdown(entry: RadarEntry) {
     "",
     ...entry.actions.map((item) => `- ${item}`),
     "",
-    `[Back to index](/tech-radar.md)`,
+    `[Back to index](${withBasePath("/tech-radar.md")})`,
     "",
   ];
 

@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
+import { withBasePath } from "../lib/site-url";
 
 function normalizePath(path: string) {
   return path.replaceAll("\\", "/");
@@ -119,8 +120,8 @@ export function githubRemotePageLoader() {
           excerpt,
           "```",
           "",
-          "- [Open JSON spike](/spikes/json-format/overview)",
-          "- [Open CSV spike](/spikes/csv-format/overview)",
+          `- [Open JSON spike](${withBasePath("/spikes/json-format/overview")})`,
+          `- [Open CSV spike](${withBasePath("/spikes/csv-format/overview")})`,
         ].join("\n");
 
         const data = await context.parseData({

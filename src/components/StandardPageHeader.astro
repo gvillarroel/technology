@@ -4,6 +4,7 @@ import {
   getStandardPageNavItems,
   type StandardPageKey,
 } from "../lib/standard-page-nav";
+import { withBasePath } from "../lib/site-url";
 
 export interface Props {
   currentPage?: StandardPageKey;
@@ -14,7 +15,7 @@ export interface Props {
 
 const {
   currentPage,
-  searchAction = "/tech-radar/",
+  searchAction = withBasePath("/tech-radar/"),
   searchPlaceholder = "Search",
   searchQuery = "",
 } = Astro.props;

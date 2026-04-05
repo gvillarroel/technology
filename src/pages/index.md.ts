@@ -25,7 +25,7 @@ export function GET() {
     "---",
     "title: e*f(x) Technology",
     "description: Markdown companion for the landing page terminal.",
-    "canonical_html: /",
+    `canonical_html: ${withBasePath("/")}`,
     "---",
     "",
     "# e*f(x) Technology",
@@ -58,3 +58,4 @@ export function GET() {
     },
   });
 }
+import { withBasePath } from "../lib/site-url";

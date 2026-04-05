@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { parse } from "yaml";
 import { getScopedHtmlPageUrl, getScopedMarkdownPageUrl } from "./dual-format";
 import { type SkillsCatalogData } from "./skills-repositories";
+import { withBasePath } from "./site-url";
 
 export interface AiSdlcLink {
   label: string;
@@ -176,7 +177,7 @@ export function getAiSdlcIndexMarkdown(overview: AiSdlcOverview, topics: AiSdlcT
     "---",
     `title: ${overview.title}`,
     `description: ${overview.summary}`,
-    "canonical_html: /ai-sdlc/",
+    `canonical_html: ${withBasePath("/ai-sdlc/")}`,
     "---",
     "",
     `# ${overview.title}`,
@@ -241,7 +242,7 @@ export function getAiSdlcTopicMarkdown(topic: AiSdlcTopic, overview: AiSdlcOverv
     "",
     ...topic.links.map((link) => `- [${link.label}](${link.url})`),
     "",
-    `[Back to AI SDLC](/ai-sdlc.md)`,
+    `[Back to AI SDLC](${withBasePath("/ai-sdlc.md")})`,
     "",
   ];
 
@@ -305,7 +306,7 @@ export function getAiSdlcSkillsMarkdown(
     lines.push("");
   }
 
-  lines.push(`[Back to AI SDLC](/ai-sdlc.md)`);
+  lines.push(`[Back to AI SDLC](${withBasePath("/ai-sdlc.md")})`);
   lines.push("");
 
   return lines.join("\n");

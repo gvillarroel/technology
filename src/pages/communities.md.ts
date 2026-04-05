@@ -1,3 +1,4 @@
+import { withBasePath } from "../lib/site-url";
 import { getTechCommunities } from "../lib/tech-communities";
 
 export async function GET() {
@@ -6,7 +7,7 @@ export async function GET() {
     "---",
     "title: Technology Communities",
     "description: Markdown companion for the technology communities directory.",
-    "canonical_html: /communities/",
+    `canonical_html: ${withBasePath("/communities/")}`,
     "---",
     "",
     "# Technology Communities",

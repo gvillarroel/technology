@@ -1,3 +1,5 @@
+import { withBasePath } from "../../lib/site-url";
+
 const alternatives = [
   {
     name: "Query parameter mode",
@@ -18,28 +20,28 @@ const alternatives = [
     verdict: "Works",
     summary:
       "The baseline approach. Markdown is the source of truth, HTML is canonical, and .md is emitted from the same entry.",
-    markdownHref: "/spikes/dual-format/overview.md",
+    markdownHref: withBasePath("/spikes/dual-format/overview.md"),
   },
   {
     name: "Twin routes from JSON loader",
     verdict: "Works",
     summary:
       "Useful when another pipeline preprocesses metadata into JSON and keeps Markdown bodies separate.",
-    markdownHref: "/spikes/json-format/overview.md",
+    markdownHref: withBasePath("/spikes/json-format/overview.md"),
   },
   {
     name: "Twin routes from CSV loader",
     verdict: "Works",
     summary:
       "Validates that CSV-backed metadata can be normalized into the same page model with no route changes.",
-    markdownHref: "/spikes/csv-format/overview.md",
+    markdownHref: withBasePath("/spikes/csv-format/overview.md"),
   },
   {
     name: "Twin routes from GitHub remote loader",
     verdict: "Works",
     summary:
       "Fetches remote Markdown at build time and still produces matching HTML and .md outputs with the same linking rule.",
-    markdownHref: "/spikes/github-format/overview.md",
+    markdownHref: withBasePath("/spikes/github-format/overview.md"),
   },
 ];
 
@@ -48,7 +50,7 @@ export function GET() {
     "---",
     "title: Format Architecture Spike",
     "description: Markdown companion for the HTML and Markdown route architecture spike.",
-    "canonical_html: /spikes/format-architecture/",
+    `canonical_html: ${withBasePath("/spikes/format-architecture/")}`,
     "---",
     "",
     "# HTML + Markdown Page Strategy",

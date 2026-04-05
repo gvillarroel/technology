@@ -1,5 +1,6 @@
 const ABSOLUTE_URL_PATTERN = /^(?:[a-z]+:)?\/\//i;
 const ASSET_OR_ANCHOR_PATTERN = /^(#|mailto:|tel:)/i;
+import { withBasePath } from "./site-url";
 
 function shouldRewriteLink(url: string) {
   return !ABSOLUTE_URL_PATTERN.test(url) && !ASSET_OR_ANCHOR_PATTERN.test(url);
@@ -28,17 +29,17 @@ export function rewriteMarkdownLinks(source: string) {
 }
 
 export function getHtmlPageUrl(slug: string) {
-  return `/spikes/dual-format/${slug}/`;
+  return withBasePath(`/spikes/dual-format/${slug}/`);
 }
 
 export function getMarkdownPageUrl(slug: string) {
-  return `/spikes/dual-format/${slug}.md`;
+  return withBasePath(`/spikes/dual-format/${slug}.md`);
 }
 
 export function getScopedHtmlPageUrl(basePath: string, slug: string) {
-  return `${basePath}/${slug}/`;
+  return withBasePath(`${basePath}/${slug}/`);
 }
 
 export function getScopedMarkdownPageUrl(basePath: string, slug: string) {
-  return `${basePath}/${slug}.md`;
+  return withBasePath(`${basePath}/${slug}.md`);
 }

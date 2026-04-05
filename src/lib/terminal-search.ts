@@ -7,6 +7,7 @@ import {
 } from "./cloud-enablement";
 import { getRadarEntries, getRadarEntryMarkdown } from "./tech-radar";
 import { getTechCommunities } from "./tech-communities";
+import { withBasePath } from "./site-url";
 
 export interface TerminalSearchDocument {
   namespace: string;
@@ -39,7 +40,7 @@ function getCommunityMarkdown(community: Awaited<ReturnType<typeof getTechCommun
     "---",
     `title: ${community.name}`,
     `description: ${community.summary}`,
-    `canonical_html: /communities/?q=${encodeURIComponent(community.name)}`,
+    `canonical_html: ${withBasePath(`/communities/?q=${encodeURIComponent(community.name)}`)}`,
     "---",
     "",
     `# ${community.name}`,
@@ -64,7 +65,7 @@ function getCommunityMarkdown(community: Awaited<ReturnType<typeof getTechCommun
     "",
     `- [${community.linkLabel}](${community.link})`,
     "",
-    `[Back to communities](/communities.md?q=${encodeURIComponent(community.name)})`,
+    `[Back to communities](${withBasePath(`/communities.md?q=${encodeURIComponent(community.name)}`)})`,
     "",
   ];
 
@@ -154,7 +155,7 @@ export async function getTerminalSearchNamespaces(): Promise<TerminalSearchNames
         slug: community.slug,
         summary: community.summary,
         fileName: `communities/${community.slug}.md`,
-        htmlUrl: `/communities/?q=${encodeURIComponent(community.name)}`,
+        htmlUrl: withBasePath(`/communities/?q=${encodeURIComponent(community.name)}`),
         markdownUrl: null,
         markdown: getCommunityMarkdown(community),
         searchText: normalizeSearchText([

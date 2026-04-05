@@ -14,6 +14,6 @@ Recommended rule:
 
 Backlinks:
 
-- [Return to overview](/spikes/dual-format/overview)
+- [Return to overview](./overview)
 
 This keeps authoring simple and avoids maintaining two independent navigation systems.

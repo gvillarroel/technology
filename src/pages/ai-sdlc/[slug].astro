@@ -3,6 +3,7 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 import StandardPageHeader from "../../components/StandardPageHeader.astro";
 import { getAiSdlcData, getAiSdlcTopicBySlug, getAiSdlcTopics } from "../../lib/ai-sdlc";
 import { getSkillsCatalogData } from "../../lib/skills-repositories";
+import { withBasePath } from "../../lib/site-url";
 
 export async function getStaticPaths() {
   const topics = await getAiSdlcTopics();
@@ -20,7 +21,7 @@ const topic = slug ? await getAiSdlcTopicBySlug(slug) : undefined;
 const skillsCatalog = topic?.slug === "skills" ? await getSkillsCatalogData() : undefined;
 
 if (!topic) {
-  return Astro.redirect("/ai-sdlc/");
+  return Astro.redirect(withBasePath("/ai-sdlc/"));
 }
 ---
 
@@ -31,7 +32,7 @@ if (!topic) {
   <main class="shell shell-narrow standard-page">
     <StandardPageHeader
       currentPage="ai-sdlc"
-      searchAction="/ai-sdlc/"
+      searchAction={withBasePath("/ai-sdlc/")}
       searchPlaceholder={overview.copy.searchPlaceholder}
       searchQuery={topic.name}
     />
@@ -352,7 +353,7 @@ if (!topic) {
     )}
 
     <section class="standard-footer-actions">
-      <a class="button button-secondary" href="/ai-sdlc/">
+      <a class="button button-secondary" href={withBasePath("/ai-sdlc/")}>
         {overview.copy.backLabel}
       </a>
     </section>

@@ -1,4 +1,6 @@
 ---
+import { withBasePath } from "../lib/site-url";
+
 export interface NavItem {
   href: string;
   label: string;
@@ -15,14 +17,14 @@ export interface Props {
 
 const {
   navItems,
-  searchAction = "/tech-radar/",
+  searchAction = withBasePath("/tech-radar/"),
   searchPlaceholder = "Search technologies",
   searchQuery = "",
 } = Astro.props;
 ---
 
 <header class="standard-header">
-  <a class="brand" href="/">
+  <a class="brand" href={withBasePath("/")}>
     <span class="brand-mark">e*f(x)</span>
     <span class="brand-copy">Technology</span>
   </a>

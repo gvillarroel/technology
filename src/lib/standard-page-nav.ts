@@ -1,3 +1,5 @@
+import { withBasePath } from "./site-url";
+
 export type StandardPageKey = "home" | "tech-radar" | "cloud-enablement" | "ai-sdlc" | "communities";
 
 export interface StandardNavItem {
@@ -8,18 +10,18 @@ export interface StandardNavItem {
 }
 
 const standardPageNavConfig: Record<StandardPageKey, Omit<StandardNavItem, "current">> = {
-  home: { href: "/", label: "Home" },
-  "tech-radar": { href: "/tech-radar/", label: "Tech Radar" },
+  home: { href: withBasePath("/"), label: "Home" },
+  "tech-radar": { href: withBasePath("/tech-radar/"), label: "Tech Radar" },
   "cloud-enablement": {
-    href: "/cloud-enablement/",
+    href: withBasePath("/cloud-enablement/"),
     label: "Cloud Enablement",
     compactLabel: "Cloud",
   },
   "ai-sdlc": {
-    href: "/ai-sdlc/",
+    href: withBasePath("/ai-sdlc/"),
     label: "AI SDLC",
   },
-  communities: { href: "/communities/", label: "Communities" },
+  communities: { href: withBasePath("/communities/"), label: "Communities" },
 };
 
 export function getStandardPageNavItems(currentPage?: StandardPageKey) {
