@@ -9,13 +9,19 @@
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",
-    "build": "astro build",
+    "build": "npm run check:markdown-pages && astro build",
     "preview": "astro preview",
-    "check": "astro check"
+    "check": "npm run check:markdown-pages && astro check",
+    "check:markdown-pages": "node ./scripts/verify-markdown-page-pairs.mjs",
+    "prepare": "node ./scripts/install-git-hooks.mjs"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.8",
+    "@types/node": "^24.6.1",
     "astro": "6.1.1",
     "typescript": "5.9.3"
+  },
+  "dependencies": {
+    "yaml": "^2.8.3"
   }
 }

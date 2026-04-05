@@ -1,0 +1,3 @@
+id,title,description,slug,bodyPath
+csv-overview,CSV Loader Overview,A dual-format page generated from a CSV-backed custom loader.,overview,./data/spikes/csv-pages/overview.md
+csv-governance,CSV Loader Governance,Governance notes for CSV-backed pages.,governance,./data/spikes/csv-pages/governance.md

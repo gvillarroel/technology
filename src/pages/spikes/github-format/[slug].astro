@@ -1,0 +1,36 @@
+---
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import { getCollection, render } from "astro:content";
+import { getScopedHtmlPageUrl, getScopedMarkdownPageUrl } from "../../../lib/dual-format";
+
+export async function getStaticPaths() {
+  const pages = await getCollection("github-format-pages");
+
+  return pages.map((page) => ({
+    params: { slug: page.data.slug },
+    props: { page },
+  }));
+}
+
+const { page } = Astro.props as { page: any };
+const { Content } = await render(page);
+const htmlUrl = getScopedHtmlPageUrl("/spikes/github-format", page.data.slug);
+const markdownUrl = getScopedMarkdownPageUrl("/spikes/github-format", page.data.slug);
+---
+
+<BaseLayout title={`${page.data.title} | GitHub Format Spike`} description={page.data.description}>
+  <main class="shell shell-narrow">
+    <section class="page-hero page-hero-compact">
+      <p class="eyebrow">GitHub Format Spike</p>
+      <h1>{page.data.title}</h1>
+      <p class="copy">
+        HTML URL: <a href={htmlUrl}>{htmlUrl}</a><br />
+        Markdown URL: <a href={markdownUrl}>{markdownUrl}</a>
+      </p>
+    </section>
+
+    <article class="section-block prose-block">
+      <Content />
+    </article>
+  </main>
+</BaseLayout>

@@ -7,17 +7,23 @@ export interface Props {
 }
 
 const {
-  title = "Technology",
-  description = "Base inicial en Astro 6.1 lista para publicar en GitHub Pages.",
+  title = "e*f(x) Technology",
+  description = "Technology platform, standards, and radar for e*f(x).",
 } = Astro.props;
 ---
 
 <!doctype html>
-<html lang="es">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700;800&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..700,0,0"
+      rel="stylesheet"
+    />
     <title>{title}</title>
   </head>
   <body>

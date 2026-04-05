@@ -1,0 +1,6 @@
+#!/bin/sh
+
+set -eu
+
+echo "Checking Markdown route parity..."
+npm run check:markdown-pages

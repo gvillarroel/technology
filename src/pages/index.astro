@@ -1,23 +1,83 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import FakeTerminal from "../components/FakeTerminal.astro";
+import { getTerminalCommandConfigs } from "../lib/terminal-commands";
+import { getTerminalSearchNamespaces } from "../lib/terminal-search";
+
+const sections = [
+  {
+    id: "core-platforms",
+    title: "Core Platforms",
+    copy: "Products and services that keep identity, data, and decisioning workloads moving across the company.",
+    icon: "hub",
+  },
+  {
+    id: "delivery-systems",
+    title: "Delivery Systems",
+    copy: "The engineering toolchain, release patterns, and operational controls used to ship safely at scale.",
+    icon: "deployed_code",
+  },
+  {
+    id: "decision-intelligence",
+    title: "Decision Intelligence",
+    copy: "Analytics, AI workflows, and governed data products that support faster and more reliable business decisions.",
+    icon: "psychology",
+  },
+  {
+    id: "ai-sdlc",
+    title: "AI SDLC",
+    copy: "Operational standards for agents, reusable skills, and monitoring across the AI delivery lifecycle.",
+    icon: "schema",
+  },
+];
+
+const commandConfigs = await getTerminalCommandConfigs();
+const searchNamespaces = await getTerminalSearchNamespaces();
+
+const terminalCommands = [
+  ...commandConfigs
+    .filter((item) => item.kind === "markdown-page" && item.htmlUrl)
+    .map((item) => ({
+      label: item.command,
+      href: item.htmlUrl ?? "/",
+      command: item.command,
+    })),
+  {
+    label: "/help",
+    href: "/",
+    command: "/help",
+  },
+];
+
+const terminalDomains = sections.map((section) => ({
+  label: section.title,
+  href: `#${section.id}`,
+}));
+
+const rights = [
+  "Know which technologies are approved for enterprise use",
+  "Request review for a new tool or framework",
+  "Withdraw an unsupported stack before scale-up",
+  "Escalate architectural conflicts to the platform group",
+];
+
 ---
 
-<BaseLayout>
-  <main class="hero">
-    <p class="eyebrow">Astro 6.1 + GitHub Pages</p>
-    <h1>Base lista para empezar.</h1>
-    <p class="copy">
-      Este proyecto genera HTML estatico en <code>dist/</code> y se publica con
-      GitHub Actions en GitHub Pages.
-    </p>
-
-    <div class="actions">
-      <a href="https://docs.astro.build" target="_blank" rel="noreferrer">
-        Astro Docs
-      </a>
-      <a href="https://docs.github.com/pages" target="_blank" rel="noreferrer">
-        GitHub Pages
-      </a>
-    </div>
+<BaseLayout
+  title="e*f(x) Technology"
+  description="Landing page for e*f(x) technology, standards, and engineering direction."
+>
+  <main class="terminal-page">
+    <section class="terminal-hero">
+      <FakeTerminal
+        summary="The first screen should explain where to go next, what standards already exist, and which technology areas shape the company stack."
+        rights={rights}
+        commands={terminalCommands}
+        domains={terminalDomains}
+        commandConfigs={commandConfigs}
+        searchNamespaces={searchNamespaces}
+        shellStyle="--terminal-shell-bg:#161d26;--terminal-shell-surface:#263544;--terminal-shell-border:rgba(0,114,152,0.26);--terminal-shell-text:#eef5f7;--terminal-shell-muted:#96a9b3;--terminal-shell-blue:#00ace6;--terminal-shell-accent:#f1c319;--terminal-shell-green:#45842a;--terminal-shell-warm:#e77204;--terminal-shell-cyan:#cdf3ff;--terminal-shell-input:#8fa6b5;"
+      />
+    </section>
   </main>
 </BaseLayout>

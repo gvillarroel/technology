@@ -1,0 +1,311 @@
+---
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import StandardPageHeader from "../../../components/StandardPageHeader.astro";
+import {
+  getCloudEnablementEntries,
+  getCloudEnablementEntryBySlug,
+} from "../../../lib/cloud-enablement";
+
+export async function getStaticPaths() {
+  const entries = await getCloudEnablementEntries();
+
+  return entries.map((entry) => ({
+    params: {
+      provider: entry.providerSlug,
+      slug: entry.slug,
+    },
+  }));
+}
+
+const { provider, slug } = Astro.params;
+const entry = provider && slug ? await getCloudEnablementEntryBySlug(provider, slug) : undefined;
+
+if (!entry) {
+  return Astro.redirect("/cloud-enablement/");
+}
+---
+
+<BaseLayout
+  title={`${entry.name} | ${entry.providerShortName} | Cloud Enablement | e*f(x) Technology`}
+  description={`${entry.name} cloud enablement detail and official source links.`}
+>
+  <main class="shell shell-narrow standard-page">
+    <StandardPageHeader
+      currentPage="cloud-enablement"
+      searchAction="/cloud-enablement/"
+      searchPlaceholder="Search cloud products"
+      searchQuery={entry.name}
+    />
+
+    <section class="standard-page-intro standard-page-intro-detail">
+      <div>
+        <p class="eyebrow">{entry.providerShortName} / {entry.archetype}</p>
+        <h1 class="standard-page-title">{entry.name}</h1>
+        <p class="copy standard-copy-wide">{entry.summary}</p>
+      </div>
+    </section>
+
+    <section class="bat-grid bat-grid-detail">
+      <article class="bat-card bat-card-wide">
+        <div class="bat-card-bar">
+          <span class="bat-card-file">known-features.txt</span>
+          <span class="bat-card-lang">text</span>
+        </div>
+
+        <div class="bat-card-body bat-card-body-stack">
+          <div class="bat-line">
+            <span class="bat-gutter">1</span>
+            <div class="bat-code">
+              <p class="bat-heading bat-heading-inline">Known features</p>
+              <ul class="bat-list-block">
+                {entry.knownFeatures.map((feature) => <li>{feature}</li>)}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="bat-card">
+        <div class="bat-card-bar">
+          <span class="bat-card-file">metadata.json</span>
+          <span class="bat-card-lang">json</span>
+        </div>
+
+        <div class="bat-card-body bat-card-body-stack">
+          <div class="bat-line">
+            <span class="bat-gutter">1</span>
+            <div class="bat-code">
+              <dl class="bat-definition-list">
+                <div>
+                  <dt>cloud</dt>
+                  <dd>{entry.providerName}</dd>
+                </div>
+                <div>
+                  <dt>archetype</dt>
+                  <dd>{entry.archetype}</dd>
+                </div>
+                <div>
+                  <dt>category</dt>
+                  <dd>{entry.category}</dd>
+                </div>
+                <div>
+                  <dt>coverage</dt>
+                  <dd>{entry.featureCoverage}</dd>
+                </div>
+                <div>
+                  <dt>updated</dt>
+                  <dd>{entry.providerUpdated}</dd>
+                </div>
+              </dl>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="bat-grid bat-grid-detail">
+      <article class="bat-card">
+        <div class="bat-card-bar">
+          <span class="bat-card-file">official-links.md</span>
+          <span class="bat-card-lang">md</span>
+        </div>
+
+        <div class="bat-card-body bat-card-body-stack">
+          <div class="bat-line">
+            <span class="bat-gutter">1</span>
+            <div class="bat-code bat-link-row">
+              <a href={entry.productUrl} target="_blank" rel="noreferrer">open product page</a>
+              <a href={entry.featureSourceUrl} target="_blank" rel="noreferrer">open feature source</a>
+              {entry.iamSourceUrl && (
+                <a href={entry.iamSourceUrl} target="_blank" rel="noreferrer">open IAM source</a>
+              )}
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="bat-grid bat-grid-detail">
+      <article class="bat-card bat-card-wide cloud-detail-span-full">
+        <div class="bat-card-bar">
+          <span class="bat-card-file">iam-access.csv</span>
+          <span class="bat-card-lang">csv</span>
+        </div>
+
+        <div class="bat-card-body bat-card-body-stack">
+          <div class="bat-line">
+            <span class="bat-gutter">1</span>
+            <div class="bat-code">
+              <p class="bat-heading">IAM roles by permission</p>
+              <p class="bat-meta">
+                Approved company roles can be blank when the company mapping has not been defined yet.
+              </p>
+            </div>
+          </div>
+          {entry.iamPermissions.length > 0 ? (
+            <>
+              <div class="bat-line">
+                <span class="bat-gutter">2</span>
+                <div class="bat-code">
+                  <div class="cloud-iam-toolbar">
+                    <label class="standard-label" for="iam-permission-search">Search permissions</label>
+                    <input
+                      id="iam-permission-search"
+                      class="standard-select"
+                      type="search"
+                      placeholder="Filter by permission or approved role"
+                    />
+                    <p class="cloud-iam-results" id="iam-results-count">
+                      {entry.iamPermissions.length} permissions visible
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="bat-line">
+                <span class="bat-gutter">3</span>
+                <div class="bat-code">
+                  <div class="cloud-iam-table-wrap">
+                    <table class="cloud-iam-table">
+                      <thead>
+                        <tr>
+                          <th>Permission</th>
+                          <th>Approved roles</th>
+                        </tr>
+                      </thead>
+                      <tbody id="iam-permissions-table">
+                        {entry.iamPermissions.map((mapping) => (
+                          <tr
+                            class="cloud-iam-row"
+                            data-search={`${mapping.permission} ${mapping.approvedCompanyRoles.join(" ")}`.toLowerCase()}
+                          >
+                            <td><code>{mapping.permission}</code></td>
+                            <td>
+                              {mapping.approvedCompanyRoles.length > 0 ? (
+                                <div class="cloud-iam-tags">
+                                  {mapping.approvedCompanyRoles.map((role) => (
+                                    <span class="cloud-provider-pill cloud-provider-pill-gcp"><code>{role}</code></span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span class="cloud-iam-empty">Not mapped yet</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+              <div class="bat-line">
+                <span class="bat-gutter">4</span>
+                <div class="bat-code">
+                  <div class="cloud-iam-pagination">
+                    <button class="standard-toggle-button" id="iam-prev-page" type="button">Previous</button>
+                    <p class="cloud-iam-page-label" id="iam-page-label">Page 1 of 1</p>
+                    <button class="standard-toggle-button" id="iam-next-page" type="button">Next</button>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div class="bat-line">
+              <span class="bat-gutter">2</span>
+              <div class="bat-code">
+                <p class="bat-copy">
+                  IAM permission mapping has not been seeded for this service yet.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </article>
+    </section>
+
+    <section class="standard-footer-actions">
+      <a class="button button-secondary" href={`/cloud-enablement/?provider=${entry.providerSlug}&q=${encodeURIComponent(entry.name)}`}>
+        Back to Cloud Enablement
+      </a>
+    </section>
+  </main>
+</BaseLayout>
+
+<script is:inline>
+  const initCloudIamTable = () => {
+    const searchInput = document.querySelector("#iam-permission-search");
+    const rows = [...document.querySelectorAll(".cloud-iam-row")];
+    const countLabel = document.querySelector("#iam-results-count");
+    const pageLabel = document.querySelector("#iam-page-label");
+    const prevButton = document.querySelector("#iam-prev-page");
+    const nextButton = document.querySelector("#iam-next-page");
+    const pageSize = 5;
+    let currentPage = 1;
+
+    if (!rows.length || !(prevButton instanceof HTMLButtonElement) || !(nextButton instanceof HTMLButtonElement)) {
+      return;
+    }
+
+    const normalize = (value) => value.trim().toLowerCase();
+
+    const getFilteredRows = () => {
+      const query = searchInput instanceof HTMLInputElement ? normalize(searchInput.value) : "";
+      return rows.filter((row) => {
+        const search = row.getAttribute("data-search") ?? "";
+        return !query || search.includes(query);
+      });
+    };
+
+    const render = () => {
+      const filteredRows = getFilteredRows();
+      const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+      currentPage = Math.min(currentPage, totalPages);
+      const start = (currentPage - 1) * pageSize;
+      const end = start + pageSize;
+
+      rows.forEach((row) => row.setAttribute("hidden", ""));
+      filteredRows.slice(start, end).forEach((row) => row.removeAttribute("hidden"));
+
+      if (countLabel) {
+        countLabel.textContent = `${filteredRows.length} permissions visible`;
+      }
+
+      if (pageLabel) {
+        pageLabel.textContent = `Page ${currentPage} of ${totalPages}`;
+      }
+
+      prevButton.disabled = currentPage <= 1;
+      nextButton.disabled = currentPage >= totalPages;
+    };
+
+    if (searchInput instanceof HTMLInputElement) {
+      searchInput.addEventListener("input", () => {
+        currentPage = 1;
+        render();
+      });
+      searchInput.addEventListener("change", () => {
+        currentPage = 1;
+        render();
+      });
+    }
+
+    prevButton.addEventListener("click", () => {
+      if (currentPage > 1) {
+        currentPage -= 1;
+        render();
+      }
+    });
+
+    nextButton.addEventListener("click", () => {
+      currentPage += 1;
+      render();
+    });
+
+    render();
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initCloudIamTable, { once: true });
+  } else {
+    initCloudIamTable();
+  }
+</script>

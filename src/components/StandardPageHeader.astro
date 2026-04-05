@@ -1,0 +1,28 @@
+---
+import StandardHeader from "./StandardHeader.astro";
+import {
+  getStandardPageNavItems,
+  type StandardPageKey,
+} from "../lib/standard-page-nav";
+
+export interface Props {
+  currentPage?: StandardPageKey;
+  searchAction?: string;
+  searchPlaceholder?: string;
+  searchQuery?: string;
+}
+
+const {
+  currentPage,
+  searchAction = "/tech-radar/",
+  searchPlaceholder = "Search",
+  searchQuery = "",
+} = Astro.props;
+---
+
+<StandardHeader
+  navItems={getStandardPageNavItems(currentPage)}
+  searchAction={searchAction}
+  searchPlaceholder={searchPlaceholder}
+  searchQuery={searchQuery}
+/>

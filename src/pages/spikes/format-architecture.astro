@@ -1,0 +1,102 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+
+const alternatives = [
+  {
+    name: "Query parameter mode",
+    verdict: "Rejected",
+    summary:
+      "One route plus ?format=md is simple in theory, but it does not map cleanly to static hosting or file-like Markdown URLs.",
+    route: "README only",
+    href: null,
+  },
+  {
+    name: "Prefix route tree",
+    verdict: "Rejected",
+    summary:
+      "A separate /md/ tree works, but it creates two mental models and makes linking rules harder to scale.",
+    route: "README only",
+    href: null,
+  },
+  {
+    name: "Twin routes from Markdown collection",
+    verdict: "Works",
+    summary:
+      "The baseline approach. Markdown is the source of truth, HTML is canonical, and .md is emitted from the same entry.",
+    route: "/spikes/dual-format/overview/",
+    href: "/spikes/dual-format/overview/",
+  },
+  {
+    name: "Twin routes from JSON loader",
+    verdict: "Works",
+    summary:
+      "Useful when another pipeline preprocesses metadata into JSON and keeps Markdown bodies separate.",
+    route: "/spikes/json-format/overview/",
+    href: "/spikes/json-format/overview/",
+  },
+  {
+    name: "Twin routes from CSV loader",
+    verdict: "Works",
+    summary:
+      "Validates that CSV-backed metadata can be normalized into the same page model with no route changes.",
+    route: "/spikes/csv-format/overview/",
+    href: "/spikes/csv-format/overview/",
+  },
+  {
+    name: "Twin routes from GitHub remote loader",
+    verdict: "Works",
+    summary:
+      "Fetches remote Markdown at build time and still produces matching HTML and .md outputs with the same linking rule.",
+    route: "/spikes/github-format/overview/",
+    href: "/spikes/github-format/overview/",
+  },
+];
+---
+
+<BaseLayout
+  title="Format Architecture Spike"
+  description="Comparison of route and content-source alternatives for HTML and Markdown versions of every page."
+>
+  <main class="shell shell-narrow shell-spike">
+    <section class="page-hero page-hero-compact">
+      <p class="eyebrow">Format Architecture Spike</p>
+      <h1>HTML + Markdown page strategy</h1>
+      <p class="copy">
+        Goal: one repeatable pattern for all pages, regardless of whether the content starts in
+        Markdown, JSON, CSV, or a remote collector.
+      </p>
+      <p class="copy">
+        Recommendation: keep HTML as the canonical route, expose Markdown as the same route with
+        a <code>.md</code> suffix, and normalize every source into a shared page model.
+      </p>
+    </section>
+
+    <section class="section-block prose-block">
+      <h2>Alternatives</h2>
+      <div class="spike-grid" aria-label="Architecture alternatives">
+        {alternatives.map((alternative) => (
+          <article class="spike-card">
+            <p
+              class:list={[
+                "spike-verdict",
+                alternative.verdict === "Works" ? "spike-verdict-works" : "spike-verdict-rejected",
+              ]}
+            >
+              {alternative.verdict}
+            </p>
+            <h3>{alternative.name}</h3>
+            <p>{alternative.summary}</p>
+            <p>
+              Route: <code>{alternative.route}</code>
+            </p>
+            {alternative.href ? (
+              <a href={alternative.href}>Open spike</a>
+            ) : (
+              <span class="spike-note">Documented in `.specs/spikes/*/README.md`</span>
+            )}
+          </article>
+        ))}
+      </div>
+    </section>
+  </main>
+</BaseLayout>

@@ -1,0 +1,39 @@
+models:
+  - slug: gpt-5.4
+    provider: OpenAI
+    category: frontier
+    status: approved
+    primary_uses:
+      - Agentic coding
+      - Complex reasoning
+      - High value internal copilots
+    guardrails:
+      - Route sensitive workflows through approved gateways
+      - Log prompts and outputs when policy requires it
+      - Evaluate task quality before broad rollout
+
+  - slug: gpt-5.4-mini
+    provider: OpenAI
+    category: efficient
+    status: approved
+    primary_uses:
+      - Fast tool orchestration
+      - Draft generation
+      - Lightweight assistants
+    guardrails:
+      - Keep human review for consequential outputs
+      - Benchmark against the frontier tier before replacing it
+      - Monitor failure modes on long context tasks
+
+  - slug: text-embedding-3-large
+    provider: OpenAI
+    category: embeddings
+    status: approved
+    primary_uses:
+      - Semantic retrieval
+      - Knowledge indexing
+      - Search ranking support
+    guardrails:
+      - Rebuild indexes on schema changes
+      - Track retrieval quality with labeled queries
+      - Avoid mixing incompatible chunking strategies

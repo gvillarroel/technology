@@ -1,0 +1,81 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import StandardPageHeader from "../components/StandardPageHeader.astro";
+import { getAiSdlcData, getAiSdlcDetailHtmlUrl } from "../lib/ai-sdlc";
+
+const { overview, topics } = await getAiSdlcData();
+---
+
+<BaseLayout
+  title={`${overview.title} | e*f(x) Technology`}
+  description={overview.summary}
+>
+  <main class="shell shell-narrow standard-page">
+    <StandardPageHeader
+      currentPage="ai-sdlc"
+      searchAction="/ai-sdlc/"
+      searchPlaceholder={overview.copy.searchPlaceholder}
+    />
+
+    <section class="standard-page-intro">
+      <div>
+        <p class="eyebrow">{overview.copy.indexEyebrow}</p>
+        <h1 class="standard-page-title">{overview.copy.indexHeading}</h1>
+        <p class="copy standard-copy-wide">{overview.copy.indexIntro}</p>
+      </div>
+    </section>
+
+    <section class="bat-grid bat-grid-radar">
+      <article class="bat-card bat-card-wide">
+        <div class="bat-card-bar">
+          <span class="bat-card-file">{overview.sourceOfTruth}</span>
+          <span class="bat-card-lang">yaml</span>
+        </div>
+
+        <div class="bat-card-body bat-card-body-stack">
+          <div class="bat-line">
+            <span class="bat-gutter">1</span>
+            <div class="bat-code">
+              <p class="bat-heading">{overview.copy.sourceHeading}</p>
+              <p class="bat-copy">{overview.summary}</p>
+            </div>
+          </div>
+          <div class="bat-line">
+            <span class="bat-gutter">2</span>
+            <div class="bat-code bat-meta-row">
+              <span>{overview.copy.sourceOwnerLabel}: {overview.owner}</span>
+              <span>{overview.copy.sourceUpdatedLabel}: {overview.updated}</span>
+              <span>{overview.copy.sourceTopicsLabel}: {topics.length}</span>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="standard-section-heading">
+      <div>
+        <p class="eyebrow">{overview.copy.topicsEyebrow}</p>
+        <h2>{overview.copy.topicsHeading}</h2>
+      </div>
+      <p class="standard-section-meta">{topics.length} {overview.copy.topicsCountSuffix}</p>
+    </section>
+
+    <section class="ai-sdlc-grid">
+      {topics.map((topic, index) => (
+        <article class="ai-sdlc-card">
+          <div class="ai-sdlc-card-topline">
+            <a class="ai-sdlc-card-file-link" href={getAiSdlcDetailHtmlUrl(topic.slug)}>
+              <span class="ai-sdlc-card-file">{topic.slug}.md</span>
+              <span class="ai-sdlc-card-link-arrow" aria-hidden="true">↗</span>
+            </a>
+            <span class="community-card-index">{String(index + 1).padStart(2, "0")}</span>
+          </div>
+
+          <div class="ai-sdlc-card-body">
+            <p class="ai-sdlc-card-copy">{topic.summary}</p>
+          </div>
+        </article>
+      ))}
+    </section>
+  </main>
+</BaseLayout>

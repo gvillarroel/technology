@@ -1,0 +1,29 @@
+commands:
+  - command: /help
+    description: Show the available terminal commands.
+    kind: builtin
+  - command: /home
+    description: Open the landing page Markdown companion.
+    html_url: /
+    markdown_url: /index.md
+    file_name: index.md
+  - command: /tech-radar
+    description: Open the technology radar Markdown index.
+    html_url: /tech-radar/
+    markdown_url: /tech-radar.md
+    file_name: tech-radar.md
+  - command: /cloud-enablement
+    description: Open the cloud enablement Markdown index.
+    html_url: /cloud-enablement/
+    markdown_url: /cloud-enablement.md
+    file_name: cloud-enablement.md
+  - command: /ai-sdlc
+    description: Open the AI SDLC Markdown index.
+    html_url: /ai-sdlc/
+    markdown_url: /ai-sdlc.md
+    file_name: ai-sdlc.md
+  - command: /communities
+    description: Open the communities Markdown index.
+    html_url: /communities/
+    markdown_url: /communities.md
+    file_name: communities.md

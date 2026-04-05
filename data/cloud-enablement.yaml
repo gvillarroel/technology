@@ -1,0 +1,372 @@
+providers:
+  - slug: gcp
+    name: Google Cloud
+    short_name: GCP
+    priority: primary
+    summary: Google Cloud is the primary cloud enablement inventory and should receive the deepest feature coverage first.
+    official_inventory_label: Google Cloud products at a glance
+    official_inventory_url: https://docs.cloud.google.com/docs/product-list
+    documentation_url: https://cloud.google.com/products
+    coverage_status: Seeded from official product catalog and documentation hubs; feature coverage is still partial.
+    updated: 2026-04-04
+    known_limitations:
+      - The full Google Cloud product catalog is larger than the seeded list below.
+      - Known features are limited to features already confirmed from official product or documentation pages.
+    products:
+      - slug: vertex-ai
+        name: Vertex AI
+        archetype: Product
+        category: AI and machine learning
+        summary: Build, tune, evaluate, and deploy machine learning and generative AI applications on Google Cloud.
+        product_url: https://cloud.google.com/vertex-ai
+        feature_source_url: https://cloud.google.com/vertex-ai/docs
+        feature_coverage: Partial
+        known_features:
+          - Gemini models on Vertex AI
+          - Model Garden
+          - Prompt management
+          - Evaluation
+          - Vector Search
+          - Pipelines
+      - slug: bigquery
+        name: BigQuery
+        archetype: Product
+        category: Data analytics
+        summary: Serverless enterprise data warehouse and analytics platform.
+        product_url: https://cloud.google.com/bigquery
+        feature_source_url: https://cloud.google.com/bigquery/docs
+        iam_source_url: https://docs.cloud.google.com/bigquery/docs/access-control
+        feature_coverage: Partial
+        known_features:
+          - SQL analytics
+          - BigQuery ML
+          - BigQuery Studio
+          - Vector search
+          - Data sharing
+          - BigLake integration
+        iam_permissions:
+          - permission: bigquery.jobs.create
+            included_in_roles:
+              - roles/owner
+              - roles/editor
+              - roles/bigquery.admin
+              - roles/bigquery.jobUser
+              - roles/bigquery.user
+              - roles/bigquery.studioAdmin
+              - roles/bigquery.studioUser
+            approved_company_roles:
+              - approved-gcp-bigquery-job-runner
+              - approved-gcp-data-platform-analyst
+          - permission: bigquery.datasets.get
+            included_in_roles:
+              - roles/owner
+              - roles/editor
+              - roles/viewer
+              - roles/bigquery.admin
+              - roles/bigquery.dataEditor
+              - roles/bigquery.dataOwner
+              - roles/bigquery.dataViewer
+              - roles/bigquery.user
+            approved_company_roles: []
+          - permission: bigquery.tables.get
+            included_in_roles:
+              - roles/owner
+              - roles/editor
+              - roles/viewer
+              - roles/bigquery.admin
+              - roles/bigquery.dataEditor
+              - roles/bigquery.dataOwner
+              - roles/bigquery.dataViewer
+              - roles/bigquery.metadataViewer
+            approved_company_roles:
+              - approved-gcp-bigquery-metadata-reader
+              - approved-gcp-data-platform-analyst
+          - permission: bigquery.tables.getData
+            included_in_roles:
+              - roles/owner
+              - roles/bigquery.admin
+              - roles/bigquery.dataEditor
+              - roles/bigquery.dataOwner
+              - roles/bigquery.dataViewer
+            approved_company_roles:
+              - approved-gcp-bigquery-data-reader
+              - approved-gcp-data-platform-analyst
+          - permission: bigquery.tables.create
+            included_in_roles:
+              - roles/owner
+              - roles/editor
+              - roles/bigquery.admin
+              - roles/bigquery.dataEditor
+              - roles/bigquery.dataOwner
+            approved_company_roles:
+              - approved-gcp-bigquery-data-editor
+              - approved-gcp-analytics-engineer
+          - permission: bigquery.tables.updateData
+            included_in_roles:
+              - roles/owner
+              - roles/editor
+              - roles/bigquery.admin
+              - roles/bigquery.dataEditor
+              - roles/bigquery.dataOwner
+            approved_company_roles:
+              - approved-gcp-bigquery-data-editor
+              - approved-gcp-analytics-engineer
+          - permission: bigquery.routines.create
+            included_in_roles:
+              - roles/owner
+              - roles/editor
+              - roles/bigquery.admin
+              - roles/bigquery.dataEditor
+              - roles/bigquery.dataOwner
+            approved_company_roles:
+              - approved-gcp-bigquery-routine-editor
+              - approved-gcp-analytics-engineer
+          - permission: bigquery.models.create
+            included_in_roles:
+              - roles/owner
+              - roles/editor
+              - roles/bigquery.admin
+              - roles/bigquery.dataEditor
+              - roles/bigquery.dataOwner
+            approved_company_roles:
+              - approved-gcp-bigquery-ml-editor
+              - approved-gcp-applied-ml-engineer
+      - slug: compute-engine
+        name: Compute Engine
+        archetype: Infrastructure
+        category: Compute
+        summary: Virtual machines on Google Cloud with preset and custom machine types.
+        product_url: https://cloud.google.com/compute
+        feature_source_url: https://cloud.google.com/compute/docs
+        feature_coverage: Partial
+        known_features:
+          - Custom machine types
+          - Managed instance groups
+          - Spot VMs
+          - GPUs
+          - Sole-tenant nodes
+      - slug: cloud-run
+        name: Cloud Run
+        archetype: Product
+        category: Application development
+        summary: Fully managed environment for running stateless containers.
+        product_url: https://cloud.google.com/run
+        feature_source_url: https://cloud.google.com/run/docs
+        feature_coverage: Partial
+        known_features:
+          - Service deployments
+          - Jobs
+          - Revisions
+          - Traffic splitting
+          - GPU support
+      - slug: google-kubernetes-engine
+        name: Google Kubernetes Engine
+        archetype: Infrastructure
+        category: Containers
+        summary: Managed Kubernetes service for running containerized workloads.
+        product_url: https://cloud.google.com/kubernetes-engine
+        feature_source_url: https://cloud.google.com/kubernetes-engine/docs
+        feature_coverage: Partial
+        known_features:
+          - Standard mode
+          - Autopilot mode
+          - Workload Identity
+          - Node auto-provisioning
+          - Fleet integration
+      - slug: cloud-storage
+        name: Cloud Storage
+        archetype: Infrastructure
+        category: Storage
+        summary: Object storage service for data lakes, backups, and application assets.
+        product_url: https://cloud.google.com/storage
+        feature_source_url: https://cloud.google.com/storage/docs
+        feature_coverage: Partial
+        known_features:
+          - Standard and archival storage classes
+          - Lifecycle management
+          - Signed URLs
+          - Object versioning
+          - Transfer Service integration
+      - slug: cloud-sql
+        name: Cloud SQL
+        archetype: Product
+        category: Databases
+        summary: Fully managed relational databases for MySQL, PostgreSQL, and SQL Server.
+        product_url: https://cloud.google.com/sql
+        feature_source_url: https://cloud.google.com/sql/docs
+        feature_coverage: Partial
+        known_features:
+          - MySQL
+          - PostgreSQL
+          - SQL Server
+          - Automated backups
+          - High availability
+          - Read replicas
+      - slug: pub-sub
+        name: Pub/Sub
+        archetype: Product
+        category: Integration
+        summary: Global messaging and event ingestion service for asynchronous systems.
+        product_url: https://cloud.google.com/pubsub
+        feature_source_url: https://cloud.google.com/pubsub/docs
+        feature_coverage: Partial
+        known_features:
+          - Topics and subscriptions
+          - Push delivery
+          - Pull delivery
+          - Schemas
+          - Dead-letter topics
+      - slug: cloud-monitoring
+        name: Cloud Monitoring
+        archetype: Tool
+        category: Observability
+        summary: Metrics, dashboards, alerting, and uptime monitoring for Google Cloud and hybrid systems.
+        product_url: https://cloud.google.com/products/observability
+        feature_source_url: https://cloud.google.com/monitoring/docs
+        feature_coverage: Partial
+        known_features:
+          - Dashboards
+          - Alerting policies
+          - Uptime checks
+          - SLO monitoring
+          - Managed Service for Prometheus
+  - slug: aws
+    name: Amazon Web Services
+    short_name: AWS
+    priority: secondary
+    summary: AWS is the comparison cloud inventory. Coverage should stay aligned with the official AWS product catalog while remaining secondary to GCP depth.
+    official_inventory_label: AWS cloud services
+    official_inventory_url: https://aws.amazon.com/products/
+    documentation_url: https://docs.aws.amazon.com/whitepapers/latest/aws-overview/amazon-web-services-cloud-platform.html
+    coverage_status: Seeded from official product and overview pages; feature coverage is still partial.
+    updated: 2026-04-04
+    known_limitations:
+      - The full AWS service catalog is larger than the seeded list below.
+      - Known features are limited to features already confirmed from official product or documentation pages.
+    products:
+      - slug: amazon-bedrock
+        name: Amazon Bedrock
+        archetype: Product
+        category: AI and machine learning
+        summary: Managed service for building generative AI applications with foundation models and agents.
+        product_url: https://aws.amazon.com/bedrock/
+        feature_source_url: https://docs.aws.amazon.com/bedrock/
+        feature_coverage: Partial
+        known_features:
+          - Foundation model access
+          - Knowledge bases
+          - Agents
+          - Guardrails
+          - Model evaluation
+      - slug: amazon-ec2
+        name: Amazon EC2
+        archetype: Infrastructure
+        category: Compute
+        summary: Elastic virtual servers in the AWS cloud.
+        product_url: https://aws.amazon.com/ec2/
+        feature_source_url: https://docs.aws.amazon.com/ec2/
+        feature_coverage: Partial
+        known_features:
+          - Instance families
+          - Auto Scaling integration
+          - Spot Instances
+          - Dedicated Hosts
+          - Elastic IP addresses
+      - slug: aws-lambda
+        name: AWS Lambda
+        archetype: Product
+        category: Compute
+        summary: Serverless compute service that runs code in response to events.
+        product_url: https://aws.amazon.com/lambda/
+        feature_source_url: https://docs.aws.amazon.com/lambda/
+        feature_coverage: Partial
+        known_features:
+          - Event triggers
+          - Layers
+          - Function URLs
+          - Provisioned concurrency
+          - Container image support
+      - slug: amazon-eks
+        name: Amazon EKS
+        archetype: Infrastructure
+        category: Containers
+        summary: Managed Kubernetes service on AWS.
+        product_url: https://aws.amazon.com/eks/
+        feature_source_url: https://docs.aws.amazon.com/eks/
+        feature_coverage: Partial
+        known_features:
+          - Managed control plane
+          - Managed node groups
+          - Fargate integration
+          - Add-ons
+          - Pod Identity
+      - slug: amazon-s3
+        name: Amazon S3
+        archetype: Infrastructure
+        category: Storage
+        summary: Object storage service for backup, archive, analytics, and application assets.
+        product_url: https://aws.amazon.com/s3/
+        feature_source_url: https://docs.aws.amazon.com/s3/
+        feature_coverage: Partial
+        known_features:
+          - Storage classes
+          - Lifecycle rules
+          - Versioning
+          - Replication
+          - Object Lock
+      - slug: amazon-rds
+        name: Amazon RDS
+        archetype: Product
+        category: Databases
+        summary: Managed relational database service across multiple engines.
+        product_url: https://aws.amazon.com/rds/
+        feature_source_url: https://docs.aws.amazon.com/rds/
+        feature_coverage: Partial
+        known_features:
+          - Multi-AZ deployments
+          - Automated backups
+          - Read replicas
+          - Performance Insights
+          - Aurora compatibility options
+      - slug: amazon-dynamodb
+        name: Amazon DynamoDB
+        archetype: Product
+        category: Databases
+        summary: Managed NoSQL key-value and document database.
+        product_url: https://aws.amazon.com/dynamodb/
+        feature_source_url: https://docs.aws.amazon.com/amazondynamodb/
+        feature_coverage: Partial
+        known_features:
+          - On-demand capacity
+          - Global tables
+          - Streams
+          - Point-in-time recovery
+          - DAX
+      - slug: amazon-eventbridge
+        name: Amazon EventBridge
+        archetype: Product
+        category: Integration
+        summary: Event bus service for routing application and SaaS events.
+        product_url: https://aws.amazon.com/eventbridge/
+        feature_source_url: https://docs.aws.amazon.com/eventbridge/
+        feature_coverage: Partial
+        known_features:
+          - Event buses
+          - Rules
+          - Scheduler
+          - Pipes
+          - API destinations
+      - slug: amazon-cloudwatch
+        name: Amazon CloudWatch
+        archetype: Tool
+        category: Observability
+        summary: Monitoring and observability service for metrics, logs, alarms, and traces.
+        product_url: https://aws.amazon.com/cloudwatch/
+        feature_source_url: https://docs.aws.amazon.com/AmazonCloudWatch/
+        feature_coverage: Partial
+        known_features:
+          - Metrics
+          - Logs
+          - Alarms
+          - Dashboards
+          - Application Signals

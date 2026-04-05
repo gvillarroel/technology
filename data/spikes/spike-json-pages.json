@@ -1,0 +1,16 @@
+[
+  {
+    "id": "json-overview",
+    "title": "JSON Loader Overview",
+    "description": "A dual-format page generated from a JSON-backed custom loader.",
+    "slug": "overview",
+    "bodyPath": "./data/spikes/json-pages/overview.md"
+  },
+  {
+    "id": "json-operations",
+    "title": "JSON Loader Operations",
+    "description": "Operational notes for the JSON-backed dual-format route.",
+    "slug": "operations",
+    "bodyPath": "./data/spikes/json-pages/operations.md"
+  }
+]

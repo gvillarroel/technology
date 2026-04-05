@@ -1,0 +1,58 @@
+---
+export interface NavItem {
+  href: string;
+  label: string;
+  compactLabel?: string;
+  current?: boolean;
+}
+
+export interface Props {
+  navItems: NavItem[];
+  searchAction?: string;
+  searchPlaceholder?: string;
+  searchQuery?: string;
+}
+
+const {
+  navItems,
+  searchAction = "/tech-radar/",
+  searchPlaceholder = "Search technologies",
+  searchQuery = "",
+} = Astro.props;
+---
+
+<header class="standard-header">
+  <a class="brand" href="/">
+    <span class="brand-mark">e*f(x)</span>
+    <span class="brand-copy">Technology</span>
+  </a>
+
+  <div class="standard-header-actions">
+    <nav class="nav standard-nav" aria-label="Primary">
+      {navItems.map((item) => (
+        <a
+          href={item.href}
+          aria-current={item.current ? "page" : undefined}
+          data-has-compact-label={item.compactLabel ? "true" : undefined}
+          title={item.compactLabel ? item.label : undefined}
+        >
+          <span class="nav-label-full">{item.label}</span>
+          {item.compactLabel ? <span class="nav-label-compact">{item.compactLabel}</span> : null}
+        </a>
+      ))}
+    </nav>
+
+    <form class="standard-search" action={searchAction} method="get">
+      <label class="standard-search-label" for="site-search">
+        <span class="material-symbols-rounded" aria-hidden="true">search</span>
+      </label>
+      <input
+        id="site-search"
+        name="q"
+        type="search"
+        placeholder={searchPlaceholder}
+        value={searchQuery}
+      />
+    </form>
+  </div>
+</header>

@@ -1,0 +1,103 @@
+communities:
+  - slug: berkeley-facts-ai-builders
+    name: Berkeley Facts AI Builders
+    track: AI
+    category: Artificial Intelligence
+    tags:
+      - AI
+      - Evaluation
+      - Copilots
+    summary: Working sessions for teams shipping copilots, evaluations, retrieval workflows, and model-backed product features.
+    audience:
+      - Engineering
+      - Data
+      - Product
+    cadence: Biweekly
+    link: https://www.meetup.com/topics/artificial-intelligence/
+    link_label: Visit community
+
+  - slug: berkeley-facts-innersource-forum
+    name: Berkeley Facts InnerSource Forum
+    track: Software
+    category: InnerSource
+    tags:
+      - Software
+      - InnerSource
+      - Collaboration
+    summary: Practical forum for maintainers and contributors aligning repository standards, contribution flows, and cross-team reuse.
+    audience:
+      - Platform Engineering
+      - Developer Experience
+      - Application Teams
+    cadence: Monthly
+    link: https://innersourcecommons.org/
+    link_label: Explore InnerSource Commons
+
+  - slug: berkeley-facts-product-circle
+    name: Berkeley Facts Product Circle
+    track: Products
+    category: Product
+    tags:
+      - Products
+      - Discovery
+      - Prioritization
+    summary: Community for product managers, designers, and delivery leads reviewing discovery patterns, prioritization, and operating rhythms.
+    audience:
+      - Product
+      - Design
+      - Delivery
+    cadence: Monthly
+    link: https://www.producttalk.org/
+    link_label: Visit product resource
+
+  - slug: berkeley-facts-data-guild
+    name: Berkeley Facts Data Guild
+    track: AI
+    category: Data
+    tags:
+      - AI
+      - Data
+      - Metrics
+    summary: Shared space for analytics and data platform practitioners to align on metrics, data contracts, and trustworthy reporting.
+    audience:
+      - Analytics
+      - Data Engineering
+      - Operations
+    cadence: Every 3 weeks
+    link: https://www.getdbt.com/community
+    link_label: Visit data community
+
+  - slug: berkeley-facts-devex-exchange
+    name: Berkeley Facts DevEx Exchange
+    track: Software
+    category: Developer Experience
+    tags:
+      - Software
+      - DevEx
+      - Tooling
+    summary: Exchange for teams improving local workflows, CI pipelines, documentation, and day-to-day engineering productivity.
+    audience:
+      - Developer Experience
+      - Platform Engineering
+      - Engineering Managers
+    cadence: Monthly
+    link: https://platformengineering.org/community/
+    link_label: Visit platform engineering community
+
+  - slug: berkeley-facts-open-technology-network
+    name: Berkeley Facts Open Technology Network
+    track: Products
+    category: Cross-Functional
+    tags:
+      - Products
+      - Strategy
+      - Governance
+    summary: Cross-functional community connecting AI, product, platform, and governance groups around shared technology decisions.
+    audience:
+      - Engineering
+      - Product
+      - Security
+      - Leadership
+    cadence: Quarterly
+    link: https://www.thoughtworks.com/radar
+    link_label: Visit technology community resource

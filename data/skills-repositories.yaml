@@ -1,0 +1,29 @@
+repositories:
+  - slug: openai-system-skills
+    name: OpenAI System Skills
+    source: github
+    location: C:/Users/villa/.codex/skills/.system
+    repository: openai/skills
+    ref: main
+    skill_root: skills/.system
+    install_package: openai/skills
+    allowed: true
+    purpose: Preinstalled system skills mirrored locally from the trusted OpenAI skills repository
+
+  - slug: agent-marketplace
+    name: Agent Marketplace
+    source: local
+    location: C:/Users/villa/.agents/skills
+    allowed: true
+    purpose: Shared local skills used across agent workflows
+
+  - slug: knowledge-skills
+    name: Knowledge Skills
+    source: github
+    location: C:/Users/villa/dev/knowledge/skills
+    repository: gvillarroel/knowledge
+    ref: main
+    skill_root: skills
+    install_package: gvillarroel/knowledge
+    allowed: true
+    purpose: Repository-backed skills focused on knowledge ingestion and retrieval workflows

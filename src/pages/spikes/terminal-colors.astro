@@ -1,0 +1,73 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import FakeTerminal from "../../components/FakeTerminal.astro";
+
+const rights = [
+  "Know which technologies are approved for enterprise use",
+  "Request review for a new tool or framework",
+  "Withdraw an unsupported stack before scale-up",
+  "Escalate architectural conflicts to the platform group",
+];
+
+const commands = [
+  { label: "/tech-radar", href: "/tech-radar/" },
+  { label: "/delivery", href: "/#technology-sections" },
+  { label: "/standards", href: "/#page-system" },
+];
+
+const variants = [
+  {
+    name: "Variant A",
+    title: "Balanced Official",
+    description: "Closest to the current version, but with official palette values mapped more directly.",
+    style:
+      "--terminal-shell-bg:#1a2030;--terminal-shell-surface:#2a2d4a;--terminal-shell-border:rgba(158,27,50,0.24);--terminal-shell-text:#f0f3ff;--terminal-shell-muted:#9ba4d1;--terminal-shell-blue:#007298;--terminal-shell-accent:#9e1b32;--terminal-shell-green:#45842a;--terminal-shell-warm:#e77204;--terminal-shell-cyan:#8fdad2;--terminal-shell-input:#6b78b8;",
+  },
+  {
+    name: "Variant B",
+    title: "Brand Forward",
+    description: "Leans harder into the official red and gray relationship for a more branded feel.",
+    style:
+      "--terminal-shell-bg:#232937;--terminal-shell-surface:#333e48;--terminal-shell-border:rgba(231,114,4,0.18);--terminal-shell-text:#f7f7f7;--terminal-shell-muted:#b7bcc2;--terminal-shell-blue:#00ace6;--terminal-shell-accent:#ffccd5;--terminal-shell-green:#36b300;--terminal-shell-warm:#ff9633;--terminal-shell-cyan:#cdf3ff;--terminal-shell-input:#9aa3b2;",
+  },
+  {
+    name: "Variant C",
+    title: "Cool Enterprise",
+    description: "Uses the official blue and gray system more aggressively for a quieter enterprise mood.",
+    style:
+      "--terminal-shell-bg:#161d26;--terminal-shell-surface:#263544;--terminal-shell-border:rgba(0,114,152,0.26);--terminal-shell-text:#eef5f7;--terminal-shell-muted:#96a9b3;--terminal-shell-blue:#00ace6;--terminal-shell-accent:#f1c319;--terminal-shell-green:#45842a;--terminal-shell-warm:#e77204;--terminal-shell-cyan:#cdf3ff;--terminal-shell-input:#8fa6b5;",
+  },
+];
+---
+
+<BaseLayout
+  title="Terminal Color Spike | e*f(x) Technology"
+  description="Color exploration spike for the e*f(x) terminal landing page."
+>
+  <main class="shell shell-spike">
+    <section class="page-hero page-hero-compact">
+      <p class="eyebrow">Color Spike</p>
+      <h1>Terminal palette variations closer to the official brand colors.</h1>
+      <p class="copy">
+        This spike compares three color mappings for the landing page terminal while
+        keeping the same layout and interaction model.
+      </p>
+    </section>
+
+    <section class="spike-grid">
+      {variants.map((variant) => (
+        <article class="spike-card">
+          <div class="spike-copy">
+            <p class="eyebrow">{variant.name}</p>
+            <h2>{variant.title}</h2>
+            <p>{variant.description}</p>
+          </div>
+
+          <div class="spike-terminal-frame">
+            <FakeTerminal rights={rights} commands={commands} shellStyle={variant.style} />
+          </div>
+        </article>
+      ))}
+    </section>
+  </main>
+</BaseLayout>

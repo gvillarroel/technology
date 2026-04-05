@@ -1,0 +1,1647 @@
+entries:
+  - slug: astro
+    name: Astro
+    ring: Adopt
+    primary_scope: Frontend
+    archetypes:
+      - Product
+      - Tool
+    source_type: oss
+    status: approved
+    domain: Frontend
+    owner: Experience Engineering
+    summary: Content led product surfaces with a fast static first runtime
+    reasoning: The stack fits content heavy experiences and keeps delivery simple for small teams
+    maturity: production
+    operation_scope: Marketing sites and operational portals
+    operation_model: Static build with selective server rendering
+    review_cadence: Quarterly
+    updated: 2026-03-28
+    capabilities:
+      - Content collections
+      - Static generation
+      - Island architecture
+    guardrails:
+      - Use design tokens
+      - Keep routes explicit
+      - Review integrations before rollout
+    signals:
+      - Build time
+      - Core Web Vitals
+      - Publishing latency
+    actions:
+      - Use by default for content surfaces
+      - Pair with TypeScript
+      - Validate UI changes with Playwright
+    alternatives:
+      - Next.js for application-heavy web experiences
+      - Eleventy for simpler static publishing
+      - Hugo for documentation-oriented static sites
+
+  - slug: typescript
+    name: TypeScript
+    ring: Adopt
+    primary_scope: Platform
+    archetypes:
+      - Tool
+    source_type: oss
+    status: approved
+    domain: Engineering
+    owner: Platform Engineering
+    summary: Typed application code across front end and services
+    reasoning: Shared typing reduces delivery risk and improves maintainability across squads
+    maturity: production
+    operation_scope: Application code and automation scripts
+    operation_model: Strict typing in CI with shared compiler rules
+    review_cadence: Monthly
+    updated: 2026-03-25
+    capabilities:
+      - Static typing
+      - Tooling ecosystem
+      - Safe refactors
+    guardrails:
+      - Enable strict mode
+      - Review tsconfig drift
+      - Block any usage growth
+    signals:
+      - Type coverage
+      - Build failures
+      - Refactor safety
+    actions:
+      - Use for all new code
+      - Keep configs aligned
+      - Fail CI on broken checks
+    alternatives:
+      - JavaScript with JSDoc for lighter-weight scripts
+      - Go for strongly typed backend services
+      - Python for automation-heavy workflows
+
+  - slug: playwright
+    name: Playwright
+    ring: Explore
+    primary_scope: Delivery
+    archetypes:
+      - Tool
+    source_type: oss
+    status: emerging
+    domain: Quality
+    owner: Quality Engineering
+    summary: Browser based regression checks for high value interfaces
+    reasoning: The tooling improves confidence for UI work and supports screenshot based review
+    maturity: scaling
+    operation_scope: Pricing flows and internal portals
+    operation_model: Smoke coverage plus targeted visual verification
+    review_cadence: Monthly
+    updated: 2026-03-21
+    capabilities:
+      - Cross browser flows
+      - Visual snapshots
+      - Trace capture
+    guardrails:
+      - Keep scenarios focused
+      - Run on changed paths first
+      - Store stable baselines
+    signals:
+      - Pass rate
+      - Screenshot diffs
+      - Trace diagnostics
+    actions:
+      - Add to critical flows first
+      - Capture screenshots for UI changes
+      - Review flaky tests weekly
+    alternatives:
+      - Cypress for browser-centric test suites
+      - Selenium for broader legacy automation coverage
+      - Manual exploratory QA for narrow one-off checks
+
+  - slug: openai-workflows
+    name: OpenAI Workflows
+    ring: Explore
+    primary_scope: Data and AI
+    archetypes:
+      - Tool
+    source_type: internal
+    status: limited
+    domain: AI
+    owner: Decision Intelligence
+    summary: Governed AI delivery patterns for internal assistants and copilots
+    reasoning: The opportunity is strong but security and evaluation standards are still maturing
+    maturity: pilot
+    operation_scope: Internal knowledge workflows and summarization tasks
+    operation_model: Prompt templates with evaluation gates and human review
+    review_cadence: Every 6 weeks
+    updated: 2026-03-18
+    capabilities:
+      - Prompt templates
+      - Eval loops
+      - Model routing
+    guardrails:
+      - Protect sensitive data
+      - Log prompts and outputs
+      - Require fallback paths
+    signals:
+      - Task success
+      - Review queue
+      - Usage growth
+    actions:
+      - Start with internal use cases
+      - Define evaluation criteria early
+      - Track prompt changes
+    alternatives:
+      - Product-specific direct integrations without a shared workflow layer
+      - LangGraph-style orchestration for agentic flows
+      - Human-only review workflows for high-risk decisions
+
+  - slug: terraform
+    name: Terraform
+    ring: Adopt
+    primary_scope: Platform
+    archetypes:
+      - Infrastructure
+      - Tool
+    source_type: oss
+    status: approved
+    domain: Platform
+    owner: Cloud Platform
+    summary: Infrastructure changes managed through reviewed code
+    reasoning: The workflow gives repeatability and aligns operational ownership across teams
+    maturity: production
+    operation_scope: Cloud resources and shared services
+    operation_model: Plan and apply through pull request based delivery
+    review_cadence: Quarterly
+    updated: 2026-03-19
+    capabilities:
+      - Declarative infra
+      - Reusable modules
+      - Drift visibility
+    guardrails:
+      - No manual prod edits
+      - Require plan review
+      - Version shared modules
+    signals:
+      - Plan drift
+      - Apply duration
+      - Rollback success
+    actions:
+      - Use modules before custom stacks
+      - Keep state ownership clear
+      - Review providers quarterly
+    alternatives:
+      - Pulumi for code-first infrastructure workflows
+      - CloudFormation for AWS-native stacks
+      - Crossplane for platform-managed infrastructure abstractions
+
+  - slug: airbyte
+    name: Airbyte
+    ring: To evaluate
+    primary_scope: Data and AI
+    archetypes:
+      - Infrastructure
+      - Tool
+    source_type: oss
+    status: limited
+    domain: Data
+    owner: Data Platform
+    summary: Managed connectors for non critical source ingestion
+    reasoning: The connector catalog is useful but operational ownership is still uneven
+    maturity: pilot
+    operation_scope: Department reporting pipelines and low risk syncs
+    operation_model: Scheduled syncs with alerting and manual approval for schema drift
+    review_cadence: Every 6 weeks
+    updated: 2026-03-14
+    capabilities:
+      - Connector catalog
+      - Incremental sync
+      - Basic observability
+    guardrails:
+      - Limit to low risk sources
+      - Require owner per connection
+      - Escalate schema drift
+    signals:
+      - Sync freshness
+      - Failure rate
+      - Schema changes
+    actions:
+      - Use for exploratory ingestion only
+      - Promote stable pipelines later
+      - Track connector health
+    alternatives:
+      - Fivetran for managed connector coverage
+      - Meltano for open ETL composition
+      - Custom ingestion pipelines for higher-control sources
+
+  - slug: metrics-dashboards
+    name: Metrics and Dashboards
+    ring: Adopt
+    primary_scope: Data and AI
+    archetypes:
+      - Product
+    source_type: internal
+    status: approved
+    domain: Data
+    owner: Decision Intelligence
+    summary: Shared metrics layers and dashboards for operational and product visibility
+    reasoning: Standardized metrics definitions reduce reporting drift and give teams a common operating picture
+    maturity: production
+    operation_scope: Executive scorecards, service health, and product performance reviews
+    operation_model: Central semantic metrics with governed dashboard publishing
+    review_cadence: Monthly
+    updated: 2026-04-03
+    capabilities:
+      - KPI definitions
+      - Operational dashboards
+      - Alert-aware scorecards
+    guardrails:
+      - Keep metric owners explicit
+      - Review source lineage before publishing
+      - Separate exploratory views from certified dashboards
+    signals:
+      - Dashboard freshness
+      - Query latency
+      - KPI adoption
+    actions:
+      - Start with certified executive and product dashboards
+      - Retire duplicate spreadsheets
+      - Review stale dashboards every month
+    alternatives:
+      - Tableau Server for legacy reporting needs
+      - Looker for semantic-model-driven analytics
+      - Spreadsheets for low-governance ad hoc analysis
+
+  - slug: angularjs
+    name: AngularJS
+    ring: Endure
+    primary_scope: Frontend
+    archetypes:
+      - Product
+      - Tool
+    source_type: oss
+    status: discouraged
+    domain: Frontend
+    owner: Experience Engineering
+    summary: Legacy front end framework kept only for controlled retirement
+    reasoning: The platform is costly to maintain and blocks design system modernization
+    maturity: legacy
+    operation_scope: Existing legacy portals only
+    operation_model: Containment mode with migration tracking and change freeze
+    review_cadence: Monthly
+    updated: 2026-03-11
+    capabilities:
+      - Legacy support
+      - Migration tracking
+      - Risk containment
+    guardrails:
+      - Do not start new work
+      - Allow security fixes only
+      - Maintain retirement plan
+    signals:
+      - Incident count
+      - Migration burndown
+      - Dependency risk
+    actions:
+      - Do not adopt for new products
+      - Move features behind strangler routes
+      - Track exit dates
+    alternatives:
+      - Astro for content-led front-end surfaces
+      - Next.js for interactive product applications
+      - React with Vite for modular SPA delivery
+
+  - slug: github-actions
+    name: GitHub Actions
+    ring: Adopt
+    primary_scope: Delivery
+    archetypes:
+      - Tool
+    source_type: non-oss
+    status: approved
+    domain: Delivery
+    owner: Developer Experience
+    summary: Default automation layer for build quality and deployment workflows
+    reasoning: The platform is already central to engineering delivery and keeps policy close to code
+    maturity: production
+    operation_scope: Build pipelines validation and release orchestration
+    operation_model: Reusable workflows with branch protections and environment gates
+    review_cadence: Quarterly
+    updated: 2026-03-22
+    capabilities:
+      - Reusable workflows
+      - Protected environments
+      - Artifacts
+    guardrails:
+      - Keep secrets scoped
+      - Reuse central workflows
+      - Require status checks
+    signals:
+      - Workflow duration
+      - Failure rate
+      - Deployment lead time
+    actions:
+      - Use shared workflows first
+      - Add caching deliberately
+      - Review permissions by repo
+    alternatives:
+      - Jenkins for inherited CI estates
+      - CircleCI for hosted pipeline execution
+      - Azure DevOps Pipelines for Microsoft-centered delivery environments
+
+  - slug: nextjs
+    name: Next.js
+    ring: Explore
+    primary_scope: Frontend
+    archetypes:
+      - Product
+      - Tool
+    source_type: oss
+    status: emerging
+    domain: Frontend
+    owner: Experience Engineering
+    summary: Application framework for interactive product surfaces with selective server rendering
+    reasoning: It is a strong option for richer product experiences, but team conventions and hosting posture still need alignment
+    maturity: pilot
+    operation_scope: Logged-in portals and workflow-heavy interfaces
+    operation_model: App router with controlled server rendering and component boundaries
+    review_cadence: Every 6 weeks
+    updated: 2026-04-02
+    capabilities:
+      - Hybrid rendering
+      - Route-level data loading
+      - Strong ecosystem
+    guardrails:
+      - Keep rendering strategy explicit
+      - Limit framework-specific coupling
+      - Review bundle growth on every release
+    signals:
+      - Bundle size
+      - Navigation latency
+      - Error rate
+    actions:
+      - Use in bounded product pilots
+      - Validate hosting model early
+      - Compare with Astro before scaling
+    alternatives:
+      - Astro for content-first experiences
+      - Remix for web-standard routing and data flows
+      - React with Vite for lighter client-rendered applications
+
+  - slug: dbt
+    name: dbt
+    ring: Explore
+    primary_scope: Data and AI
+    archetypes:
+      - Tool
+    source_type: oss
+    status: emerging
+    domain: Data
+    owner: Data Platform
+    summary: Transform-first analytics workflow with versioned models and tests
+    reasoning: It improves modeling discipline, but warehouse conventions and ownership boundaries still need to settle
+    maturity: pilot
+    operation_scope: Metrics modeling and analytical data products
+    operation_model: Pull request-based model changes with scheduled builds
+    review_cadence: Monthly
+    updated: 2026-04-01
+    capabilities:
+      - SQL modeling
+      - Tests and docs
+      - Lineage visibility
+    guardrails:
+      - Keep model ownership explicit
+      - Block undocumented marts
+      - Review warehouse cost impact
+    signals:
+      - Model freshness
+      - Test failures
+      - Query cost
+    actions:
+      - Trial on curated marts first
+      - Add tests for key dimensions
+      - Keep naming conventions strict
+    alternatives:
+      - SQLMesh for SQL transformation workflows with planning controls
+      - Warehouse-native scheduled SQL for simpler transformation estates
+      - Spark or Databricks pipelines for larger-scale data processing
+
+  - slug: backstage
+    name: Backstage
+    ring: Explore
+    primary_scope: Platform
+    archetypes:
+      - Product
+      - Tool
+    source_type: oss
+    status: limited
+    domain: Platform
+    owner: Developer Experience
+    summary: Internal developer portal for service discovery and operational ownership
+    reasoning: The platform can improve developer navigation, but adoption depends on metadata discipline across teams
+    maturity: pilot
+    operation_scope: Service catalog and engineering platform workflows
+    operation_model: Metadata-driven catalog with curated plugins
+    review_cadence: Every 6 weeks
+    updated: 2026-04-02
+    capabilities:
+      - Service catalog
+      - Ownership lookup
+      - Platform plugins
+    guardrails:
+      - Keep plugin count constrained
+      - Enforce metadata standards
+      - Start with read-oriented workflows
+    signals:
+      - Catalog coverage
+      - Metadata freshness
+      - Team adoption
+    actions:
+      - Start with critical services
+      - Require owners on every entity
+      - Measure discovery time improvements
+    alternatives:
+      - Port for a managed internal developer portal
+      - OpsLevel for catalog and maturity workflows
+      - An internal catalog service for tightly scoped platform needs
+
+  - slug: datadog-app-builder
+    name: Datadog App Builder
+    ring: Explore
+    primary_scope: Delivery
+    archetypes:
+      - Product
+      - Tool
+    source_type: non-oss
+    status: limited
+    domain: Delivery
+    owner: Developer Experience
+    summary: Vendor workflow surface for lightweight internal operational tooling
+    reasoning: It could accelerate internal tooling around observability, but product boundaries and lock-in tradeoffs still need validation
+    maturity: pilot
+    operation_scope: Small internal tools tied to observability and incident response
+    operation_model: Controlled experiments within existing vendor boundaries
+    review_cadence: Every 6 weeks
+    updated: 2026-04-04
+    capabilities:
+      - Internal app scaffolding
+      - Native observability context
+      - Fast operator workflows
+    guardrails:
+      - Keep use cases narrow
+      - Avoid business-critical dependencies
+      - Validate export and portability assumptions
+    signals:
+      - Internal adoption
+      - Build speed
+      - Platform lock-in risk
+    actions:
+      - Prototype only on operational tooling
+      - Validate ownership before scaling
+      - Compare with internal alternatives
+    alternatives:
+      - Retool for internal tool assembly
+      - Backstage plugins for portal-native workflows
+      - Bespoke internal web apps for full ownership and portability
+
+  - slug: temporal
+    name: Temporal
+    ring: To evaluate
+    primary_scope: Platform
+    archetypes:
+      - Infrastructure
+    source_type: oss
+    status: limited
+    domain: Platform
+    owner: Platform Engineering
+    summary: Durable workflow runtime for long-running backend processes
+    reasoning: The orchestration model is promising, but it adds operational complexity and new runtime primitives
+    maturity: research
+    operation_scope: Long-running internal workflows and retry-heavy operations
+    operation_model: Candidate platform runtime under architectural review
+    review_cadence: Every 6 weeks
+    updated: 2026-04-01
+    capabilities:
+      - Durable workflows
+      - Retries and compensation
+      - Execution history
+    guardrails:
+      - Do not introduce before platform ownership is clear
+      - Limit to architecture evaluation
+      - Compare against simpler queue-based patterns
+    signals:
+      - Operator overhead
+      - Workflow success rate
+      - Runtime complexity
+    actions:
+      - Evaluate on one representative workflow
+      - Document failure modes
+      - Decide build vs adopt posture
+    alternatives:
+      - Queue-plus-worker patterns for simpler asynchronous processes
+      - AWS Step Functions for managed orchestration
+      - Camunda for BPM-oriented workflow modeling
+
+  - slug: clickhouse
+    name: ClickHouse
+    ring: To evaluate
+    primary_scope: Data and AI
+    archetypes:
+      - Infrastructure
+    source_type: oss
+    status: limited
+    domain: Data
+    owner: Data Platform
+    summary: Analytical database candidate for high-volume event exploration
+    reasoning: It offers strong performance characteristics, but cost and operational ownership need direct validation
+    maturity: research
+    operation_scope: Event analytics and operational telemetry exploration
+    operation_model: Benchmarked candidate compared with warehouse and OLAP alternatives
+    review_cadence: Every 6 weeks
+    updated: 2026-04-03
+    capabilities:
+      - Columnar analytics
+      - Fast aggregations
+      - Event exploration
+    guardrails:
+      - Keep benchmark workloads representative
+      - Avoid production commitments during evaluation
+      - Validate retention and cost assumptions
+    signals:
+      - Query latency
+      - Storage efficiency
+      - Operational effort
+    actions:
+      - Run benchmark scenarios
+      - Compare ingestion complexity
+      - Decide hosting model before adoption
+    alternatives:
+      - BigQuery for managed analytical warehousing
+      - Apache Druid for real-time OLAP exploration
+      - DuckDB for embedded analytical workloads and local investigation
+
+  - slug: cloudflare-workers
+    name: Cloudflare Workers
+    ring: To evaluate
+    primary_scope: Delivery
+    archetypes:
+      - Infrastructure
+    source_type: non-oss
+    status: limited
+    domain: Delivery
+    owner: Developer Experience
+    summary: Edge runtime candidate for latency-sensitive delivery patterns
+    reasoning: The deployment model is attractive, but vendor coupling and runtime constraints need direct review
+    maturity: research
+    operation_scope: Edge middleware and geo-sensitive request handling
+    operation_model: Prototype-level evaluation against current hosting patterns
+    review_cadence: Every 6 weeks
+    updated: 2026-04-02
+    capabilities:
+      - Edge execution
+      - Fast cold starts
+      - Request mediation
+    guardrails:
+      - Avoid lock-in-heavy abstractions early
+      - Keep experiments isolated
+      - Validate observability coverage
+    signals:
+      - Latency improvement
+      - Runtime limits hit
+      - Debuggability
+    actions:
+      - Prototype one edge-heavy flow
+      - Compare with current CDN approach
+      - Review cost model before expansion
+    alternatives:
+      - AWS Lambda@Edge for AWS-centered edge execution
+      - Fastly Compute for programmable delivery at the edge
+      - Regional Node.js services behind the CDN for simpler control planes
+
+  - slug: datahub
+    name: DataHub
+    ring: To evaluate
+    primary_scope: Data and AI
+    archetypes:
+      - Product
+      - Tool
+    source_type: oss
+    status: limited
+    domain: Data Governance
+    owner: Decision Intelligence
+    summary: Metadata catalog candidate for data lineage and ownership discovery
+    reasoning: The metadata model is useful, but governance process maturity is not yet strong enough for rollout
+    maturity: research
+    operation_scope: Data asset discovery and lineage review
+    operation_model: Governance-focused evaluation with limited ingestion sources
+    review_cadence: Every 6 weeks
+    updated: 2026-04-01
+    capabilities:
+      - Dataset catalog
+      - Lineage graphs
+      - Ownership metadata
+    guardrails:
+      - Evaluate only with curated sources
+      - Do not promise universal catalog coverage yet
+      - Confirm stewardship model first
+    signals:
+      - Metadata completeness
+      - Steward adoption
+      - Lineage quality
+    actions:
+      - Ingest one governed domain first
+      - Validate ownership workflows
+      - Decide whether governance readiness is sufficient
+    alternatives:
+      - Amundsen for a lighter-weight data discovery experience
+      - Collibra for enterprise governance programs
+      - Backstage metadata extensions for engineering-led catalogs
+
+  - slug: internal-feature-store
+    name: Internal Feature Store
+    ring: To evaluate
+    primary_scope: Data and AI
+    archetypes:
+      - Infrastructure
+    source_type: internal
+    status: limited
+    domain: AI
+    owner: Decision Intelligence
+    summary: Candidate internal capability for managed feature reuse across predictive and analytical workflows
+    reasoning: The concept could reduce duplication, but stewardship, serving patterns, and operational scope are still unresolved
+    maturity: research
+    operation_scope: Internal machine learning and scoring workflows
+    operation_model: Concept validation with architecture and ownership review
+    review_cadence: Every 6 weeks
+    updated: 2026-04-04
+    capabilities:
+      - Feature reuse
+      - Shared definitions
+      - Offline and online alignment
+    guardrails:
+      - Do not scale before ownership is clear
+      - Start with one bounded domain
+      - Validate feature lifecycle governance
+    signals:
+      - Duplicate feature definitions
+      - Training-serving skew
+      - Ownership clarity
+    actions:
+      - Assess one high-value domain first
+      - Document stewardship model
+      - Decide whether internal build is justified
+    alternatives:
+      - Feast for an open feature store baseline
+      - Warehouse-managed feature tables without a dedicated platform
+      - Service-owned feature pipelines for domain-specific ML use cases
+
+  - slug: php-monolith
+    name: PHP Monolith
+    ring: Endure
+    primary_scope: Platform
+    archetypes:
+      - Product
+      - Infrastructure
+    source_type: internal
+    status: discouraged
+    domain: Legacy Systems
+    owner: Business Systems
+    summary: Legacy operational monolith kept running while capabilities are extracted incrementally
+    reasoning: It still supports core workflows, but its change model and dependency surface make expansion undesirable
+    maturity: legacy
+    operation_scope: Existing internal operations only
+    operation_model: Stabilize, secure, and peel off bounded capabilities
+    review_cadence: Monthly
+    updated: 2026-04-01
+    capabilities:
+      - Legacy business logic
+      - Existing integrations
+      - Stable operational baseline
+    guardrails:
+      - No new greenfield features
+      - Prioritize extraction over enhancement
+      - Track migration milestones explicitly
+    signals:
+      - Incident rate
+      - Lead time for changes
+      - Migration progress
+    actions:
+      - Keep in containment mode
+      - Extract APIs around stable domains
+      - Reduce direct schema coupling
+    alternatives:
+      - Strangler services around extracted domains
+      - TypeScript or Node.js services for new platform capabilities
+      - Laravel or Symfony modules for bounded PHP modernization
+
+  - slug: jenkins
+    name: Jenkins
+    ring: Endure
+    primary_scope: Delivery
+    archetypes:
+      - Tool
+    source_type: oss
+    status: discouraged
+    domain: Delivery
+    owner: Developer Experience
+    summary: Existing CI estate sustained only where migration work has not yet completed
+    reasoning: The platform remains functional, but maintenance overhead and fragmented standards make it a transition-only choice
+    maturity: legacy
+    operation_scope: Older repositories and inherited delivery paths
+    operation_model: Restricted maintenance with migration to newer automation standards
+    review_cadence: Monthly
+    updated: 2026-04-02
+    capabilities:
+      - Existing pipeline coverage
+      - Mature plugin base
+      - Transitional automation support
+    guardrails:
+      - Do not add new net-new pipelines
+      - Freeze plugin growth
+      - Move teams to shared workflows
+    signals:
+      - Build stability
+      - Plugin risk
+      - Migration burndown
+    actions:
+      - Maintain only for transition
+      - Retire job sprawl
+      - Migrate highest-risk repos first
+    alternatives:
+      - GitHub Actions for repository-native automation
+      - Buildkite for elastic agent-based pipelines
+      - GitLab CI for consolidated source and pipeline management
+
+  - slug: tableau-server
+    name: Tableau Server
+    ring: Endure
+    primary_scope: Data and AI
+    archetypes:
+      - Product
+      - Tool
+    source_type: non-oss
+    status: discouraged
+    domain: Data
+    owner: Decision Intelligence
+    summary: Existing dashboard platform maintained while metric governance shifts to the shared metrics layer
+    reasoning: It still serves key reporting needs, but duplication and ownership drift make it unsuitable as the future default
+    maturity: legacy
+    operation_scope: Existing dashboards with established consumers
+    operation_model: Certified-report maintenance plus staged migration to governed dashboards
+    review_cadence: Monthly
+    updated: 2026-04-01
+    capabilities:
+      - Existing dashboards
+      - Broad analyst familiarity
+      - Role-based access
+    guardrails:
+      - Avoid new dashboard sprawl
+      - Certify only owned dashboards
+      - Migrate duplicated KPIs first
+    signals:
+      - Dashboard usage
+      - Staleness
+      - KPI duplication
+    actions:
+      - Maintain critical reports only
+      - Migrate shared KPIs to the new layer
+      - Archive stale workbooks aggressively
+    alternatives:
+      - Metrics and Dashboards for governed internal reporting
+      - Looker for semantic-model-centered BI
+      - Power BI for Microsoft-heavy analyst environments
+
+  - slug: rabbitmq
+    name: RabbitMQ
+    ring: Endure
+    primary_scope: Platform
+    archetypes:
+      - Infrastructure
+    source_type: oss
+    status: discouraged
+    domain: Platform
+    owner: Platform Engineering
+    summary: Existing message broker used where stable workloads do not yet justify a migration
+    reasoning: It continues to work for inherited patterns, but the operational model is heavier than preferred for future platform design
+    maturity: legacy
+    operation_scope: Existing integration queues and internal async jobs
+    operation_model: Constrained support with queue-by-queue migration decisions
+    review_cadence: Monthly
+    updated: 2026-04-03
+    capabilities:
+      - Mature queuing
+      - Routing flexibility
+      - Existing workload support
+    guardrails:
+      - No new platform defaults
+      - Keep topology simple
+      - Review every new queue request
+    signals:
+      - Queue backlog
+      - Broker incidents
+      - Migration progress
+    actions:
+      - Maintain only for inherited workloads
+      - Simplify queue topology
+      - Prefer simpler async patterns for new systems
+    alternatives:
+      - Amazon SQS and SNS for managed queueing patterns
+      - Kafka for event-stream-centric architectures
+      - Database-backed job queues for simpler bounded workloads
+
+  - slug: rust
+    name: Rust
+    ring: Explore
+    primary_scope: Platform
+    archetypes:
+      - Tool
+    source_type: oss
+    status: emerging
+    domain: Engineering
+    owner: Platform Engineering
+    summary: Systems programming language for performance-sensitive services and tooling
+    reasoning: Memory safety and predictable performance are attractive, but team fluency is still limited
+    maturity: pilot
+    operation_scope: CLI tooling, infrastructure services, and selected high-throughput components
+    operation_model: Small bounded use cases with explicit ownership and benchmarking
+    review_cadence: Every 6 weeks
+    updated: 2026-04-04
+    capabilities:
+      - Memory safety
+      - Strong concurrency model
+      - Native performance
+    guardrails:
+      - Use only where performance or safety benefits are material
+      - Keep onboarding support explicit
+      - Validate operational maturity before wider rollout
+    signals:
+      - Developer adoption
+      - Runtime performance
+      - Delivery friction
+    actions:
+      - Trial in infrastructure-heavy services first
+      - Compare with Go and TypeScript on representative workloads
+      - Document training needs
+    alternatives:
+      - Go for simpler service development
+      - C++ for existing native estates
+      - TypeScript for broader team familiarity
+
+  - slug: csharp
+    name: C#
+    ring: To evaluate
+    primary_scope: Platform
+    archetypes:
+      - Tool
+    source_type: non-oss
+    status: limited
+    domain: Engineering
+    owner: Business Systems
+    summary: Managed language candidate for enterprise APIs and workflow-heavy backends
+    reasoning: Strong tooling and ecosystem fit some enterprise cases, but platform conventions are not aligned yet
+    maturity: research
+    operation_scope: Internal APIs and workflow services under enterprise integration review
+    operation_model: Architecture evaluation with representative service prototypes
+    review_cadence: Every 6 weeks
+    updated: 2026-04-04
+    capabilities:
+      - Mature IDE support
+      - Rich enterprise libraries
+      - Strong runtime tooling
+    guardrails:
+      - Keep evaluation bounded
+      - Confirm hosting and observability standards early
+      - Avoid isolated stacks without clear ownership
+    signals:
+      - Prototype delivery speed
+      - Runtime stability
+      - Platform fit
+    actions:
+      - Assess on one integration-heavy service
+      - Compare with Java and TypeScript
+      - Decide whether a supported runtime standard is justified
+    alternatives:
+      - Java for mature enterprise backend teams
+      - TypeScript for consistent full-stack delivery
+      - Go for lighter service runtimes
+
+  - slug: java
+    name: Java
+    ring: Endure
+    primary_scope: Platform
+    archetypes:
+      - Tool
+    source_type: oss
+    status: discouraged
+    domain: Engineering
+    owner: Business Systems
+    summary: Existing JVM estate maintained where core integrations and legacy services still depend on it
+    reasoning: It remains viable, but the preferred platform direction favors lighter operational patterns
+    maturity: legacy
+    operation_scope: Existing integration services and inherited business systems
+    operation_model: Maintain and modernize selectively while avoiding new default adoption
+    review_cadence: Monthly
+    updated: 2026-04-04
+    capabilities:
+      - Mature ecosystem
+      - Enterprise integrations
+      - Stable runtime behavior
+    guardrails:
+      - Do not treat as the default for greenfield work
+      - Keep framework sprawl under control
+      - Migrate only where operational value is clear
+    signals:
+      - Service stability
+      - Delivery lead time
+      - Maintenance cost
+    actions:
+      - Keep inherited services stable
+      - Limit framework proliferation
+      - Prefer platform-standard stacks for new domains
+    alternatives:
+      - TypeScript for broader full-stack consistency
+      - Go for leaner backend services
+      - C# for Microsoft-centered enterprise estates
+
+  - slug: python
+    name: Python
+    ring: Adopt
+    primary_scope: Data and AI
+    archetypes:
+      - Tool
+    source_type: oss
+    status: approved
+    domain: AI
+    owner: Decision Intelligence
+    summary: Default language for data science workflows, experimentation, and ML-adjacent services
+    reasoning: The ecosystem and team fluency make it the fastest path for analytical and AI work
+    maturity: production
+    operation_scope: Data workflows, model evaluation, notebooks, and selected service components
+    operation_model: Use virtual environments and explicit packaging standards in CI
+    review_cadence: Monthly
+    updated: 2026-04-04
+    capabilities:
+      - Rich data ecosystem
+      - Fast experimentation
+      - Strong ML tooling
+    guardrails:
+      - Keep production services bounded
+      - Enforce dependency hygiene
+      - Separate notebooks from operational pipelines
+    signals:
+      - Delivery speed
+      - Dependency risk
+      - Model workflow adoption
+    actions:
+      - Use by default for analytical and ML workflows
+      - Package reusable code early
+      - Keep runtime footprints explicit
+    alternatives:
+      - TypeScript for product-adjacent services
+      - Rust for performance-sensitive components
+      - Julia for specialized numerical exploration
+
+  - slug: go
+    name: Go
+    ring: Explore
+    primary_scope: Platform
+    archetypes:
+      - Tool
+    source_type: oss
+    status: emerging
+    domain: Engineering
+    owner: Platform Engineering
+    summary: Compiled language candidate for platform services, operators, and CLIs
+    reasoning: Simplicity and operational ergonomics are appealing, but team standards are still evolving
+    maturity: pilot
+    operation_scope: Internal services, infrastructure operators, and command-line tooling
+    operation_model: Evaluate in service and tooling pilots with shared templates
+    review_cadence: Every 6 weeks
+    updated: 2026-04-04
+    capabilities:
+      - Fast builds
+      - Simple deployment model
+      - Strong concurrency support
+    guardrails:
+      - Reuse shared service templates
+      - Keep dependency trees small
+      - Validate observability patterns before scale-up
+    signals:
+      - Service reliability
+      - Delivery speed
+      - Team adoption
+    actions:
+      - Trial on internal platform tooling first
+      - Compare against Rust and TypeScript
+      - Define standard project layout
+    alternatives:
+      - Rust for stronger safety guarantees
+      - TypeScript for wider team familiarity
+      - Java for entrenched enterprise service stacks
+
+  - slug: kotlin
+    name: Kotlin
+    ring: To evaluate
+    primary_scope: Platform
+    archetypes:
+      - Tool
+    source_type: oss
+    status: limited
+    domain: Engineering
+    owner: Business Systems
+    summary: JVM language candidate for cleaner backend development and Android-adjacent teams
+    reasoning: The language is productive, but it would add another runtime path to govern
+    maturity: research
+    operation_scope: Candidate backend services and mobile-adjacent shared logic
+    operation_model: Narrow evaluation in JVM-friendly domains only
+    review_cadence: Every 6 weeks
+    updated: 2026-04-04
+    capabilities:
+      - Concise syntax
+      - JVM interoperability
+      - Strong developer ergonomics
+    guardrails:
+      - Avoid introducing without a clear platform owner
+      - Reuse JVM standards where adopted
+      - Keep pilot scope limited
+    signals:
+      - Prototype productivity
+      - Runtime fit
+      - Support overhead
+    actions:
+      - Evaluate only where JVM alignment already exists
+      - Compare with Java and TypeScript
+      - Decide whether ecosystem fit outweighs stack expansion
+    alternatives:
+      - Java for established JVM platforms
+      - TypeScript for broader full-stack consistency
+      - C# for enterprise service delivery
+
+  - slug: postgresql
+    name: PostgreSQL
+    ring: Adopt
+    primary_scope: Platform
+    archetypes:
+      - Infrastructure
+    source_type: oss
+    status: approved
+    domain: Platform
+    owner: Platform Engineering
+    summary: Default relational database for transactional systems and operational reporting
+    reasoning: Reliability, flexibility, and internal familiarity make it the default data store
+    maturity: production
+    operation_scope: Core services, internal applications, and operational analytics
+    operation_model: Managed instances with schema review and backup controls
+    review_cadence: Quarterly
+    updated: 2026-04-04
+    capabilities:
+      - Relational transactions
+      - Extensions ecosystem
+      - Strong operational maturity
+    guardrails:
+      - Keep schema ownership explicit
+      - Review index strategy regularly
+      - Do not mix transactional and heavy analytical workloads carelessly
+    signals:
+      - Query latency
+      - Replication health
+      - Storage growth
+    actions:
+      - Use by default for transactional domains
+      - Review schema changes through pull requests
+      - Separate heavy analytics when needed
+    alternatives:
+      - MySQL for teams already standardized there
+      - ClickHouse for analytical exploration
+      - DynamoDB for specific high-scale key-value patterns
+
+  - slug: redis
+    name: Redis
+    ring: Adopt
+    primary_scope: Platform
+    archetypes:
+      - Infrastructure
+    source_type: oss
+    status: approved
+    domain: Platform
+    owner: Platform Engineering
+    summary: In-memory data layer for caching, queues, rate limits, and short-lived state
+    reasoning: It solves common low-latency infrastructure problems with a well-understood operational model
+    maturity: production
+    operation_scope: Shared caching, session state, and lightweight coordination patterns
+    operation_model: Managed shared clusters with explicit TTL and persistence policies
+    review_cadence: Quarterly
+    updated: 2026-04-04
+    capabilities:
+      - Caching
+      - Pub-sub and queues
+      - Fast ephemeral storage
+    guardrails:
+      - Avoid using as a primary database by accident
+      - Keep key design predictable
+      - Define eviction and memory policies explicitly
+    signals:
+      - Hit rate
+      - Memory pressure
+      - Latency
+    actions:
+      - Use for bounded low-latency infrastructure needs
+      - Keep TTL policy explicit
+      - Review persistence assumptions before adoption
+    alternatives:
+      - Memcached for simpler cache-only usage
+      - RabbitMQ for richer broker semantics
+      - PostgreSQL for durable transactional data
+
+  - slug: kafka
+    name: Kafka
+    ring: Explore
+    primary_scope: Platform
+    archetypes:
+      - Infrastructure
+    source_type: oss
+    status: emerging
+    domain: Platform
+    owner: Data Platform
+    summary: Event streaming platform candidate for durable, replayable event pipelines
+    reasoning: It can unlock event-driven architecture patterns, but it adds meaningful operational complexity
+    maturity: pilot
+    operation_scope: Event ingestion, analytical streams, and cross-domain event propagation
+    operation_model: Limited platform pilot with clear event ownership and retention design
+    review_cadence: Every 6 weeks
+    updated: 2026-04-04
+    capabilities:
+      - Durable event logs
+      - Replayable streams
+      - Decoupled consumers
+    guardrails:
+      - Do not introduce without ownership and retention rules
+      - Limit topic proliferation
+      - Validate operational support before scale
+    signals:
+      - Consumer lag
+      - Broker health
+      - Topic growth
+    actions:
+      - Pilot on one event-heavy domain
+      - Define schema and retention standards first
+      - Compare with simpler queue-based options
+    alternatives:
+      - RabbitMQ for queue-oriented workflows
+      - Kinesis for managed streaming on AWS
+      - Database-backed job queues for simpler async workloads
+
+  - slug: elasticsearch
+    name: Elasticsearch
+    ring: To evaluate
+    primary_scope: Data and AI
+    archetypes:
+      - Infrastructure
+      - Product
+    source_type: oss
+    status: limited
+    domain: Data
+    owner: Decision Intelligence
+    summary: Search and indexing platform candidate for operational search and discovery experiences
+    reasoning: It is powerful for search-heavy use cases, but data modeling and operational cost need validation
+    maturity: research
+    operation_scope: Search portals, internal discovery, and operational log exploration
+    operation_model: Research with bounded index sets and representative queries
+    review_cadence: Every 6 weeks
+    updated: 2026-04-04
+    capabilities:
+      - Full-text search
+      - Faceting and ranking
+      - Flexible indexing
+    guardrails:
+      - Keep mappings explicit
+      - Avoid using it as a general-purpose primary store
+      - Benchmark relevance and cost before scaling
+    signals:
+      - Query latency
+      - Index freshness
+      - Infrastructure cost
+    actions:
+      - Evaluate on one search-centric workflow
+      - Compare with vector and relational search options
+      - Decide whether a managed posture is required
+    alternatives:
+      - OpenSearch for compatible managed deployments
+      - Vertex AI Vector Search for embedding-centric retrieval
+      - PostgreSQL full-text search for simpler search use cases
+
+  - slug: graphql
+    name: GraphQL
+    ring: Explore
+    primary_scope: Frontend
+    archetypes:
+      - Tool
+    source_type: oss
+    status: emerging
+    domain: Engineering
+    owner: Experience Engineering
+    summary: API query model candidate for client-driven data fetching across complex product surfaces
+    reasoning: It can simplify some product data flows, but schema governance and backend discipline are required
+    maturity: pilot
+    operation_scope: Product APIs and federated front-end data access
+    operation_model: Narrow pilots with schema ownership and performance review
+    review_cadence: Every 6 weeks
+    updated: 2026-04-04
+    capabilities:
+      - Flexible data fetching
+      - Typed schema contracts
+      - Strong client tooling
+    guardrails:
+      - Keep schema ownership explicit
+      - Review query cost and caching strategy
+      - Avoid introducing federation prematurely
+    signals:
+      - Resolver latency
+      - Schema churn
+      - Client adoption
+    actions:
+      - Pilot on one data-rich product surface
+      - Define observability for query cost early
+      - Compare with REST plus typed clients
+    alternatives:
+      - REST with typed SDKs for simpler service contracts
+      - tRPC for TypeScript-heavy internal stacks
+      - BFF patterns for workflow-specific aggregation
+
+  - slug: internal-ops-copilot
+    name: Internal Ops Copilot
+    ring: Explore
+    primary_scope: Delivery
+    archetypes:
+      - Product
+    source_type: internal
+    status: limited
+    domain: AI
+    owner: Developer Experience
+    summary: Internal assistant for incident response, operational runbooks, and deployment triage
+    reasoning: It can reduce operational lookup time, but grounding quality and trust still need validation
+    maturity: pilot
+    operation_scope: On-call support and operator workflows
+    operation_model: Human-in-the-loop assistant with audited prompts and fallback procedures
+    review_cadence: Every 6 weeks
+    updated: 2026-04-04
+    capabilities:
+      - Runbook retrieval
+      - Incident triage assistance
+      - Deployment guidance
+    guardrails:
+      - Keep humans in the approval path
+      - Log all operational suggestions
+      - Limit write access until trust improves
+    signals:
+      - Suggestion acceptance
+      - Retrieval precision
+      - Incident resolution time
+    actions:
+      - Expand only on well-documented workflows
+      - Measure operator trust explicitly
+      - Keep auditability intact
+    alternatives:
+      - Static runbook portals for lower-risk lookup
+      - Vendor copilots with stronger product support
+      - Human-only on-call handoffs
+
+  - slug: support-qa-console
+    name: Support QA Console
+    ring: Adopt
+    primary_scope: Delivery
+    archetypes:
+      - Product
+    source_type: internal
+    status: approved
+    domain: Delivery
+    owner: Customer Operations
+    summary: Internal product for support case review, QA workflows, and escalation tracking
+    reasoning: It centralizes an operational workflow that previously lived in disconnected spreadsheets and email
+    maturity: production
+    operation_scope: Internal support operations and quality review
+    operation_model: Internal web application with governed workflow states and audit trails
+    review_cadence: Monthly
+    updated: 2026-04-04
+    capabilities:
+      - Case review workflows
+      - QA scoring
+      - Escalation tracking
+    guardrails:
+      - Keep workflow ownership explicit
+      - Preserve audit history
+      - Review role access quarterly
+    signals:
+      - Review throughput
+      - QA backlog
+      - Escalation cycle time
+    actions:
+      - Continue as the internal default
+      - Remove duplicate trackers
+      - Keep workflow changes tightly reviewed
+    alternatives:
+      - Zendesk add-ons for simpler case review extensions
+      - Airtable for lower-governance workflow coordination
+      - Vendor QA tools for external support stacks
+
+  - slug: experiment-studio
+    name: Experiment Studio
+    ring: Explore
+    primary_scope: Frontend
+    archetypes:
+      - Product
+      - Tool
+    source_type: internal
+    status: limited
+    domain: Delivery
+    owner: Experience Engineering
+    summary: Internal product for experiment setup, targeting, and readout review across product surfaces
+    reasoning: It can reduce dependency on vendor experimentation platforms, but governance and analytics integration are still maturing
+    maturity: pilot
+    operation_scope: Controlled experiments in customer-facing product flows
+    operation_model: Internal console backed by shared metrics and release safeguards
+    review_cadence: Every 6 weeks
+    updated: 2026-04-04
+    capabilities:
+      - Experiment configuration
+      - Audience targeting
+      - Readout review
+    guardrails:
+      - Keep statistical review explicit
+      - Require owner per experiment
+      - Avoid ungoverned flag sprawl
+    signals:
+      - Experiment cycle time
+      - Analysis trust
+      - Adoption across teams
+    actions:
+      - Keep scope bounded to curated teams
+      - Connect to certified metrics only
+      - Review flag retirement aggressively
+    alternatives:
+      - LaunchDarkly with analytics integrations
+      - Optimizely for mature experimentation programs
+      - Manual experiment tracking for low-volume use cases
+
+  - slug: revenue-forecast-console
+    name: Revenue Forecast Console
+    ring: Explore
+    primary_scope: Data and AI
+    archetypes:
+      - Product
+    source_type: internal
+    status: limited
+    domain: Data
+    owner: Decision Intelligence
+    summary: Internal product for forecast scenarios, planning assumptions, and executive review workflows
+    reasoning: It improves consistency in planning, but model transparency and trust still need work
+    maturity: pilot
+    operation_scope: Finance planning and executive forecasting reviews
+    operation_model: Internal scenario console backed by governed forecasting pipelines
+    review_cadence: Every 6 weeks
+    updated: 2026-04-04
+    capabilities:
+      - Scenario planning
+      - Assumption tracking
+      - Review workflows
+    guardrails:
+      - Keep forecast lineage visible
+      - Separate modeled output from final approval
+      - Limit ad hoc overrides
+    signals:
+      - Forecast variance
+      - Review turnaround
+      - Executive adoption
+    actions:
+      - Expand only after trust metrics improve
+      - Standardize scenario templates
+      - Audit manual overrides
+    alternatives:
+      - Spreadsheets for low-governance forecasting
+      - Adaptive Planning for enterprise planning workflows
+      - BI dashboards plus manual scenario analysis
+
+  - slug: knowledge-navigator
+    name: Knowledge Navigator
+    ring: Adopt
+    primary_scope: Data and AI
+    archetypes:
+      - Product
+    source_type: internal
+    status: approved
+    domain: AI
+    owner: Decision Intelligence
+    summary: Internal search and retrieval product for policies, architecture references, and operational guidance
+    reasoning: It reduces time spent locating trusted internal knowledge and improves consistency in reference workflows
+    maturity: production
+    operation_scope: Internal policy, architecture, and support knowledge access
+    operation_model: Search-first internal product with governed content sources and feedback loops
+    review_cadence: Monthly
+    updated: 2026-04-04
+    capabilities:
+      - Internal search
+      - Source-aware retrieval
+      - Feedback capture
+    guardrails:
+      - Keep source provenance visible
+      - Exclude sensitive content without policy approval
+      - Review stale content sources regularly
+    signals:
+      - Search success rate
+      - Query abandonment
+      - Content freshness
+    actions:
+      - Keep as a default internal discovery surface
+      - Expand trusted sources gradually
+      - Track gaps in indexed content
+    alternatives:
+      - Confluence search for simpler document discovery
+      - Vendor enterprise search platforms
+      - Shared folders and manual reference lists
+
+  - slug: grunt
+    name: Grunt
+    ring: Retired
+    primary_scope: Frontend
+    archetypes:
+      - Tool
+    source_type: oss
+    status: prohibited
+    domain: Frontend
+    owner: Experience Engineering
+    summary: Deprecated task runner removed from the accepted frontend toolchain
+    reasoning: Modern build systems fully replace its value and keeping it around increases maintenance drag
+    maturity: retired
+    operation_scope: None for active development
+    operation_model: Remove remaining references when encountered
+    review_cadence: Quarterly
+    updated: 2026-04-02
+    capabilities:
+      - Legacy task execution
+      - Historical build support
+      - Old asset pipelines
+    guardrails:
+      - Do not use in new work
+      - Delete residual configs when touched
+      - Replace with maintained tooling
+    signals:
+      - Residual usage
+      - Legacy repo count
+      - Migration completion
+    actions:
+      - Remove from remaining projects
+      - Replace with modern toolchains
+      - Treat any new use as a policy violation
+    alternatives:
+      - Vite for modern front-end build workflows
+      - npm scripts for straightforward task orchestration
+      - Turborepo task pipelines for monorepo coordination
+
+  - slug: bower
+    name: Bower
+    ring: Retired
+    primary_scope: Frontend
+    archetypes:
+      - Tool
+    source_type: oss
+    status: prohibited
+    domain: Frontend
+    owner: Experience Engineering
+    summary: Obsolete package manager removed from all supported delivery paths
+    reasoning: The ecosystem has moved on and retaining it only extends supply and dependency risk
+    maturity: retired
+    operation_scope: None for supported systems
+    operation_model: Residual references should be deleted during remediation work
+    review_cadence: Quarterly
+    updated: 2026-04-01
+    capabilities:
+      - Legacy client package resolution
+      - Historical dependency manifests
+      - Old front-end compatibility
+    guardrails:
+      - Never add to repositories
+      - Remove lockfiles and configs when found
+      - Replace with current package management
+    signals:
+      - Residual files in repos
+      - Migration completion
+      - Security findings
+    actions:
+      - Delete from legacy projects
+      - Consolidate onto npm-based workflows
+      - Block any reintroduction
+    alternatives:
+      - npm for standard JavaScript package management
+      - pnpm for workspace efficiency and strict installs
+      - Yarn for teams already standardized on its workflow
+
+  - slug: svn
+    name: Subversion
+    ring: Retired
+    primary_scope: Delivery
+    archetypes:
+      - Tool
+    source_type: non-oss
+    status: prohibited
+    domain: Delivery
+    owner: Developer Experience
+    summary: Version control model fully retired in favor of modern pull request workflows
+    reasoning: It conflicts with the collaboration and automation model used across engineering today
+    maturity: retired
+    operation_scope: None for active engineering work
+    operation_model: Read-only access only where archival history must remain accessible
+    review_cadence: Quarterly
+    updated: 2026-04-02
+    capabilities:
+      - Historical repository access
+      - Archive retrieval
+      - Legacy audit trail
+    guardrails:
+      - No active development in SVN
+      - Migrate remaining archives off critical paths
+      - Keep access restricted
+    signals:
+      - Remaining active repos
+      - Archive access frequency
+      - Migration closure
+    actions:
+      - Complete migration to Git-based workflows
+      - Archive read-only mirrors where needed
+      - Remove team dependencies on SVN
+    alternatives:
+      - GitHub for pull-request-centric collaboration
+      - GitLab for integrated source control and CI
+      - Bitbucket for teams aligned with Atlassian tooling
+
+  - slug: ftp-deployments
+    name: FTP Deployments
+    ring: Retired
+    primary_scope: Delivery
+    archetypes:
+      - Tool
+    source_type: internal
+    status: prohibited
+    domain: Delivery
+    owner: Developer Experience
+    summary: Manual file transfer deployments removed from supported release processes
+    reasoning: The approach lacks auditability, rollback safety, and repeatability for modern delivery
+    maturity: retired
+    operation_scope: None for supported production systems
+    operation_model: Eliminate and replace with pipeline-driven deployment
+    review_cadence: Quarterly
+    updated: 2026-04-03
+    capabilities:
+      - Legacy file publishing
+      - Direct artifact transfer
+      - Historical emergency changes
+    guardrails:
+      - Never use for current delivery
+      - Replace remaining scripts immediately
+      - Route emergency changes through standard pipelines
+    signals:
+      - Residual script usage
+      - Manual deployment incidents
+      - Policy exceptions
+    actions:
+      - Remove deployment credentials
+      - Replace residual jobs with CI/CD
+      - Audit systems for manual release paths
+    alternatives:
+      - GitHub Actions deployment workflows
+      - Argo CD for GitOps-driven delivery
+      - Platform-native deployment services with audited release history
+
+  - slug: perl-cgi
+    name: Perl CGI
+    ring: Retired
+    primary_scope: Platform
+    archetypes:
+      - Product
+      - Infrastructure
+    source_type: internal
+    status: prohibited
+    domain: Legacy Systems
+    owner: Business Systems
+    summary: Historic web execution model retired from the supported application stack
+    reasoning: The runtime and hosting model no longer fits security, maintainability, or delivery expectations
+    maturity: retired
+    operation_scope: None for supported platforms
+    operation_model: Archive only, with removal during infrastructure cleanup
+    review_cadence: Quarterly
+    updated: 2026-04-02
+    capabilities:
+      - Historical web scripts
+      - Archive compatibility
+      - Legacy form processing
+    guardrails:
+      - Do not deploy
+      - Migrate any residual logic before reuse
+      - Remove supporting infrastructure where possible
+    signals:
+      - Remaining script count
+      - Residual host dependencies
+      - Decommission progress
+    actions:
+      - Retire remaining execution environments
+      - Migrate retained logic into supported runtimes
+      - Remove from platform standards
+    alternatives:
+      - TypeScript or Node.js services for supported web backends
+      - Python FastAPI for lightweight HTTP services
+      - Modern PHP frameworks for bounded legacy rewrites

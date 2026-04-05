@@ -1,0 +1,183 @@
+overview:
+  title: AI SDLC
+  summary: Operational guide for how teams design, evaluate, ship, and observe AI systems through the software delivery lifecycle.
+  source_of_truth: data/ai-sdlc.yaml
+  updated: 2026-04-04
+  owner: Technology
+  copy:
+    search_placeholder: Search AI SDLC topics
+    index_eyebrow: AI SDLC
+    index_heading: How AI systems move from idea to operations.
+    index_intro: This section defines the operating model for AI delivery. Start with the source-of-truth block, then open the topic pages to work each AI SDLC area in detail.
+    source_section_heading: Source Of Truth
+    source_heading: Source of truth
+    source_owner_label: owner
+    source_updated_label: updated
+    source_topics_label: topics
+    topics_eyebrow: Topics
+    topics_heading: AI SDLC pages
+    topics_count_suffix: pages available
+    topics_section_heading: Topics
+    detail_eyebrow_prefix: AI SDLC
+    operating_model_heading: Operating Model
+    signals_file: readiness-signals.md
+    signals_heading: Readiness signals
+    metadata_file: metadata.json
+    metadata_status_label: status
+    metadata_owner_label: owner
+    metadata_outcome_label: outcome
+    practices_file: core-practices.txt
+    practices_heading: Core practices
+    metrics_file: metrics.csv
+    metrics_heading: Operational metrics
+    links_file: links.md
+    links_heading: Links
+    back_label: Back to AI SDLC
+topics:
+  - slug: agents
+    name: Agents
+    status: Active
+    owner: AI Platform
+    summary: Define where autonomous and semi-autonomous agents are allowed, how they are bounded, and which approval points remain human-owned.
+    outcome: Teams can introduce agentic workflows without losing execution controls, traceability, or release accountability.
+    signals:
+      - Task boundaries are explicit before runtime.
+      - Tool permissions are documented and least-privilege.
+      - Escalation points and fallback paths are defined.
+    practices:
+      - Record the agent objective, available tools, and stop conditions.
+      - Distinguish planning agents from execution agents.
+      - Require approval for actions with production or customer impact.
+      - Capture decision logs for retries, handoffs, and escalations.
+    metrics:
+      - Successful autonomous runs
+      - Human handoff rate
+      - Mean time to recover from failed runs
+    links:
+      - label: OpenAI agents guidance
+        url: https://platform.openai.com/docs/guides/agents
+      - label: Internal AI SDLC index
+        url: /ai-sdlc/
+  - slug: skills
+    name: Skills
+    status: Active
+    owner: Developer Experience
+    summary: Standardize reusable capabilities, prompts, and tool recipes so teams can compose AI workflows without rebuilding the same instructions per project.
+    outcome: Shared AI capabilities become reviewable assets with versioning, provenance, and bounded scope.
+    signals:
+      - Skills have one clear job and known inputs.
+      - Source repositories are approved before adoption.
+      - Installation and update paths are repeatable.
+    practices:
+      - Keep each skill narrowly scoped and testable.
+      - Track source, version, and intended usage context.
+      - Prefer composable skills over large monolithic prompts.
+      - Retire duplicate or weakly maintained skills quickly.
+    metrics:
+      - Reuse across projects
+      - Time to onboard a new capability
+      - Number of approved skill sources
+    links:
+      - label: Skills repositories
+        url: /tech-radar/
+      - label: Internal AI SDLC index
+        url: /ai-sdlc/
+  - slug: monitoring
+    name: Monitoring
+    status: Active
+    owner: Observability
+    summary: Track runtime quality, cost, latency, safety, and drift signals so AI systems can be operated with the same discipline as other production services.
+    outcome: AI workloads expose clear health signals and trigger review before quality or spend degrade materially.
+    signals:
+      - Prompt and model changes are observable in production.
+      - Latency, token usage, and fallback rates are trended.
+      - Safety events and evaluation regressions are reviewable.
+    practices:
+      - Define product, model, and infrastructure metrics separately.
+      - Connect offline evaluations to production rollout criteria.
+      - Alert on quality drift, not only infrastructure failures.
+      - Keep incident review examples tied to prompts, tools, and model versions.
+    metrics:
+      - Cost per successful task
+      - P95 latency
+      - Evaluation regression rate
+      - Safety intervention rate
+    links:
+      - label: Observability context
+        url: /communities/
+      - label: Internal AI SDLC index
+        url: /ai-sdlc/
+  - slug: hooks
+    name: Hooks
+    status: Active
+    owner: Developer Experience
+    summary: Define pre-commit, CI, and workflow hooks that keep AI-assisted changes reviewable, traceable, and aligned with repository controls.
+    outcome: AI-generated changes hit the same policy gates as human-written code before they move into shared branches or release paths.
+    signals:
+      - Hook coverage is defined per repository stage.
+      - AI-specific checks run before merge when applicable.
+      - Failures explain the next remediation step clearly.
+    practices:
+      - Run lightweight checks in local hooks and heavier checks in CI hooks.
+      - Validate prompt artifacts, generated files, and policy metadata when they are part of delivery.
+      - Keep hook output deterministic so retries are easy to interpret.
+      - Version hook rules alongside the repositories they protect.
+    metrics:
+      - Hook pass rate
+      - Mean time to remediate blocked changes
+      - Percentage of repositories with AI policy hooks enabled
+    links:
+      - label: Internal AI SDLC index
+        url: /ai-sdlc/
+      - label: Tech Radar
+        url: /tech-radar/
+  - slug: testing
+    name: Testing
+    status: Active
+    owner: Quality Engineering
+    summary: Establish repeatable test strategy for prompts, tools, outputs, and regressions so AI features can be changed without blind spots.
+    outcome: Teams can ship AI changes with clear confidence boundaries across offline evaluation, integration tests, and user-facing validation.
+    signals:
+      - Test layers are defined for prompt, tool, and product behavior.
+      - Regression suites run against known success and failure cases.
+      - Human review focuses on ambiguous or high-risk outputs.
+    practices:
+      - Keep representative golden cases for prompts and workflows.
+      - Separate deterministic assertions from rubric-based evaluation.
+      - Exercise tool-calling paths with realistic fixtures and failure states.
+      - Tie release approval to regression thresholds, not only anecdotal demos.
+    metrics:
+      - Regression pass rate
+      - Coverage of critical AI journeys
+      - Time to detect behavior drift
+      - Manual review volume per release
+    links:
+      - label: Internal AI SDLC index
+        url: /ai-sdlc/
+      - label: Tech Communities
+        url: /communities/
+  - slug: harness
+    name: Harness
+    status: Active
+    owner: AI Platform
+    summary: Standardize the execution harnesses used to run evaluations, replay cases, benchmark prompts, and compare model or workflow variants.
+    outcome: Teams can compare AI changes under controlled conditions instead of relying on ad hoc spot checks.
+    signals:
+      - Harness inputs and fixtures are versioned.
+      - Evaluation runs are reproducible across environments.
+      - Variant comparison outputs are easy to audit after the run.
+    practices:
+      - Store benchmark fixtures close to the workflows they validate.
+      - Record model, prompt, tool, and environment versions for each run.
+      - Support replay for both successful and failed traces.
+      - Keep harness output compact enough for routine review in CI.
+    metrics:
+      - Reproducibility rate
+      - Benchmark runtime
+      - Variant comparison turnaround time
+      - Number of production issues caught in harness runs
+    links:
+      - label: Internal AI SDLC index
+        url: /ai-sdlc/
+      - label: Cloud Enablement
+        url: /cloud-enablement/

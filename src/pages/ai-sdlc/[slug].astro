@@ -1,0 +1,423 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import StandardPageHeader from "../../components/StandardPageHeader.astro";
+import { getAiSdlcData, getAiSdlcTopicBySlug, getAiSdlcTopics } from "../../lib/ai-sdlc";
+import { getSkillsCatalogData } from "../../lib/skills-repositories";
+
+export async function getStaticPaths() {
+  const topics = await getAiSdlcTopics();
+
+  return topics.map((topic) => ({
+    params: {
+      slug: topic.slug,
+    },
+  }));
+}
+
+const { slug } = Astro.params;
+const { overview } = await getAiSdlcData();
+const topic = slug ? await getAiSdlcTopicBySlug(slug) : undefined;
+const skillsCatalog = topic?.slug === "skills" ? await getSkillsCatalogData() : undefined;
+
+if (!topic) {
+  return Astro.redirect("/ai-sdlc/");
+}
+---
+
+<BaseLayout
+  title={`${topic.name} | ${overview.title} | e*f(x) Technology`}
+  description={topic.summary}
+>
+  <main class="shell shell-narrow standard-page">
+    <StandardPageHeader
+      currentPage="ai-sdlc"
+      searchAction="/ai-sdlc/"
+      searchPlaceholder={overview.copy.searchPlaceholder}
+      searchQuery={topic.name}
+    />
+
+    <section class="standard-page-intro standard-page-intro-detail">
+      <div>
+        <p class="eyebrow">{overview.copy.detailEyebrowPrefix} / {topic.status}</p>
+        <h1 class="standard-page-title">{topic.name}</h1>
+        <p class="copy standard-copy-wide">{topic.summary}</p>
+      </div>
+    </section>
+
+    {topic.slug === "skills" && skillsCatalog ? (
+      <>
+        <section class="bat-grid bat-grid-detail">
+          <article class="bat-card bat-card-wide">
+            <div class="bat-card-bar">
+              <span class="bat-card-file">data/skills-repositories.yaml</span>
+              <span class="bat-card-lang">yaml</span>
+            </div>
+
+            <div class="bat-card-body bat-card-body-stack">
+              <div class="bat-line">
+                <span class="bat-gutter">1</span>
+                <div class="bat-code">
+                  <p class="bat-heading">Approved skill sources</p>
+                  <p class="bat-copy">
+                    The catalog is built from trusted repositories only. Build-time scanning finds
+                    every `SKILL.md`, extracts the skill metadata, derives pack tags from the folder
+                    structure, and generates the install command from repository metadata.
+                  </p>
+                </div>
+              </div>
+              <div class="bat-line">
+                <span class="bat-gutter">2</span>
+                <div class="bat-code bat-meta-row">
+                  <span>repositories: {skillsCatalog.repositories.length}</span>
+                  <span>skills: {skillsCatalog.skills.length}</span>
+                  <span>owner: {topic.owner}</span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="bat-card">
+            <div class="bat-card-bar">
+              <span class="bat-card-file">{overview.copy.metadataFile}</span>
+              <span class="bat-card-lang">json</span>
+            </div>
+
+            <div class="bat-card-body bat-card-body-stack">
+              <div class="bat-line">
+                <span class="bat-gutter">1</span>
+                <div class="bat-code">
+                  <dl class="bat-definition-list">
+                    <div>
+                      <dt>{overview.copy.metadataStatusLabel}</dt>
+                      <dd>{topic.status}</dd>
+                    </div>
+                    <div>
+                      <dt>{overview.copy.metadataOwnerLabel}</dt>
+                      <dd>{topic.owner}</dd>
+                    </div>
+                    <div>
+                      <dt>{overview.copy.metadataOutcomeLabel}</dt>
+                      <dd>{topic.outcome}</dd>
+                    </div>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="standard-section-heading">
+          <div>
+            <p class="eyebrow">Repositories</p>
+            <h2>Trusted skill sources</h2>
+          </div>
+          <p class="standard-section-meta">{skillsCatalog.repositories.length} repositories configured</p>
+        </section>
+
+        <section class="skills-repository-grid">
+          {skillsCatalog.repositories.map((repository) => (
+            <article class="skills-repository-card">
+              <div class="skills-repository-topline">
+                <p class="skills-repository-title">{repository.name}</p>
+                <span class="community-card-index">{String(repository.skillCount).padStart(2, "0")} skills</span>
+              </div>
+              <p class="skills-repository-copy">{repository.purpose}</p>
+              <div class="skills-repository-meta">
+                <span>source: {repository.source}</span>
+                <span>ref: {repository.ref}</span>
+              </div>
+              <div class="skills-repository-links">
+                {repository.repository ? (
+                  <a href={`https://github.com/${repository.repository}`}>{repository.repository}</a>
+                ) : (
+                  <span>{repository.location}</span>
+                )}
+              </div>
+            </article>
+          ))}
+        </section>
+
+        <section class="standard-toolbar skills-toolbar" aria-label="Skills filters">
+          <div class="radar-control">
+            <label class="standard-label" for="skills-search">Search skills</label>
+            <input
+              id="skills-search"
+              class="standard-select"
+              type="search"
+              placeholder="Filter by name, description, tag, or repository"
+            />
+          </div>
+
+          <div class="radar-control">
+            <span class="standard-label">Repository</span>
+            <div class="standard-toggle-group standard-toggle-group-vertical skills-filter-group" id="skills-repository-filter">
+              <button class="standard-toggle-button is-active" type="button" data-repository-filter="">
+                All
+              </button>
+              {skillsCatalog.repositories.map((repository) => (
+                <button class="standard-toggle-button" type="button" data-repository-filter={repository.slug}>
+                  {repository.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section class="standard-section-heading">
+          <div>
+            <p class="eyebrow">Catalog</p>
+            <h2>Approved skills</h2>
+          </div>
+          <p class="standard-section-meta" id="skills-results-count">{skillsCatalog.skills.length} skills visible</p>
+        </section>
+
+        <section class="bat-list" id="skills-list">
+          {skillsCatalog.skills.map((skill, index) => (
+            <article
+              class="bat-card bat-entry skills-entry"
+              data-repository={skill.repositorySlug}
+              data-tags={skill.tags.join("|")}
+              data-search={`${skill.name} ${skill.description} ${skill.tags.join(" ")} ${skill.repositoryLabel} ${skill.installPath}`.toLowerCase()}
+            >
+              <div class="bat-card-bar">
+                <span class="bat-card-file">{skill.relativePath}/SKILL.md</span>
+                <span class="skills-repository-pill">{skill.repositoryName}</span>
+              </div>
+
+              <div class="bat-card-body bat-card-body-stack">
+                <div class="bat-line">
+                  <span class="bat-gutter">{index * 5 + 1}</span>
+                  <div class="bat-code bat-entry-heading">
+                    <h3 class="bat-entry-title">{skill.name}</h3>
+                    <span class="bat-meta">{skill.slug}</span>
+                  </div>
+                </div>
+                <div class="bat-line">
+                  <span class="bat-gutter">{index * 5 + 2}</span>
+                  <div class="bat-code">
+                    <p class="bat-copy">{skill.description}</p>
+                  </div>
+                </div>
+                <div class="bat-line">
+                  <span class="bat-gutter">{index * 5 + 3}</span>
+                  <div class="bat-code">
+                    <div class="skills-tag-list">
+                      {skill.tags.length > 0 ? (
+                        skill.tags.map((tag) => <span class="skills-tag-pill">{tag}</span>)
+                      ) : (
+                        <span class="skills-tag-pill is-muted">root</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div class="bat-line">
+                  <span class="bat-gutter">{index * 5 + 4}</span>
+                  <div class="bat-code bat-meta-row">
+                    <span>repo: {skill.repositoryLabel}</span>
+                    <span>path: {skill.installPath}</span>
+                    <span>source: {skill.repositorySource}</span>
+                  </div>
+                </div>
+                <div class="bat-line">
+                  <span class="bat-gutter">{index * 5 + 5}</span>
+                  <div class="bat-code">
+                    <p class="bat-heading bat-heading-inline">Install</p>
+                    <pre class="skills-install-code"><code>{skill.installAvailable ? skill.installCommand : `# Local-only trusted source\n# Publish remote install metadata to enable npx skills add`}</code></pre>
+                    <div class="bat-link-row">
+                      {skill.repositoryUrl ? <a href={skill.repositoryUrl}>open repository</a> : null}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </article>
+          ))}
+        </section>
+
+        <p class="standard-empty-state" id="skills-empty-state" hidden>
+          No skills match the current filters.
+        </p>
+      </>
+    ) : (
+      <>
+        <section class="bat-grid bat-grid-detail">
+          <article class="bat-card bat-card-wide">
+            <div class="bat-card-bar">
+              <span class="bat-card-file">{overview.copy.signalsFile}</span>
+              <span class="bat-card-lang">md</span>
+            </div>
+
+            <div class="bat-card-body bat-card-body-stack">
+              <div class="bat-line">
+                <span class="bat-gutter">1</span>
+                <div class="bat-code">
+                  <p class="bat-heading bat-heading-inline">{overview.copy.signalsHeading}</p>
+                  <ul class="bat-list-block">
+                    {topic.signals.map((signal) => <li>{signal}</li>)}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="bat-card">
+            <div class="bat-card-bar">
+              <span class="bat-card-file">{overview.copy.metadataFile}</span>
+              <span class="bat-card-lang">json</span>
+            </div>
+
+            <div class="bat-card-body bat-card-body-stack">
+              <div class="bat-line">
+                <span class="bat-gutter">1</span>
+                <div class="bat-code">
+                  <dl class="bat-definition-list">
+                    <div>
+                      <dt>{overview.copy.metadataStatusLabel}</dt>
+                      <dd>{topic.status}</dd>
+                    </div>
+                    <div>
+                      <dt>{overview.copy.metadataOwnerLabel}</dt>
+                      <dd>{topic.owner}</dd>
+                    </div>
+                    <div>
+                      <dt>{overview.copy.metadataOutcomeLabel}</dt>
+                      <dd>{topic.outcome}</dd>
+                    </div>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="bat-grid bat-grid-detail">
+          <article class="bat-card bat-card-wide">
+            <div class="bat-card-bar">
+              <span class="bat-card-file">{overview.copy.practicesFile}</span>
+              <span class="bat-card-lang">text</span>
+            </div>
+
+            <div class="bat-card-body bat-card-body-stack">
+              <div class="bat-line">
+                <span class="bat-gutter">1</span>
+                <div class="bat-code">
+                  <p class="bat-heading bat-heading-inline">{overview.copy.practicesHeading}</p>
+                  <ul class="bat-list-block">
+                    {topic.practices.map((practice) => <li>{practice}</li>)}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="bat-grid bat-grid-detail">
+          <article class="bat-card">
+            <div class="bat-card-bar">
+              <span class="bat-card-file">{overview.copy.metricsFile}</span>
+              <span class="bat-card-lang">csv</span>
+            </div>
+
+            <div class="bat-card-body bat-card-body-stack">
+              <div class="bat-line">
+                <span class="bat-gutter">1</span>
+                <div class="bat-code">
+                  <p class="bat-heading bat-heading-inline">{overview.copy.metricsHeading}</p>
+                  <ul class="bat-list-block">
+                    {topic.metrics.map((metric) => <li>{metric}</li>)}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="bat-card">
+            <div class="bat-card-bar">
+              <span class="bat-card-file">{overview.copy.linksFile}</span>
+              <span class="bat-card-lang">md</span>
+            </div>
+
+            <div class="bat-card-body bat-card-body-stack">
+              <div class="bat-line">
+                <span class="bat-gutter">1</span>
+                <div class="bat-code bat-link-row">
+                  {topic.links.map((link) => (
+                    <a href={link.url}>{link.label}</a>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </article>
+        </section>
+      </>
+    )}
+
+    <section class="standard-footer-actions">
+      <a class="button button-secondary" href="/ai-sdlc/">
+        {overview.copy.backLabel}
+      </a>
+    </section>
+  </main>
+</BaseLayout>
+
+{topic.slug === "skills" ? (
+  <script is:inline>
+    const skillsList = document.querySelector("#skills-list");
+    const skillEntries = skillsList ? [...skillsList.querySelectorAll(".skills-entry")] : [];
+    const skillsSearch = document.querySelector("#skills-search");
+    const skillsResultsCount = document.querySelector("#skills-results-count");
+    const skillsEmptyState = document.querySelector("#skills-empty-state");
+    const skillsRepositoryFilter = document.querySelector("#skills-repository-filter");
+    const repositoryButtons = skillsRepositoryFilter
+      ? [...skillsRepositoryFilter.querySelectorAll("[data-repository-filter]")]
+      : [];
+
+    const normalize = (value) => value.trim().toLowerCase();
+
+    const getFilters = () => ({
+      search: skillsSearch instanceof HTMLInputElement ? normalize(skillsSearch.value) : "",
+      repository:
+        repositoryButtons.find((button) => button.classList.contains("is-active"))?.getAttribute("data-repository-filter") ?? "",
+    });
+
+    const updateSkillResults = () => {
+      const filters = getFilters();
+      let visibleCount = 0;
+
+      skillEntries.forEach((entry) => {
+        const matchesSearch = !filters.search || entry.dataset.search?.includes(filters.search);
+        const matchesRepository = !filters.repository || entry.dataset.repository === filters.repository;
+        const shouldShow = Boolean(matchesSearch && matchesRepository);
+
+        entry.toggleAttribute("hidden", !shouldShow);
+
+        if (shouldShow) {
+          visibleCount += 1;
+        }
+      });
+
+      if (skillsResultsCount) {
+        skillsResultsCount.textContent = `${visibleCount} skills visible`;
+      }
+
+      if (skillsEmptyState instanceof HTMLElement) {
+        skillsEmptyState.hidden = visibleCount > 0;
+      }
+    };
+
+    [skillsSearch].forEach((control) => {
+      control?.addEventListener("input", updateSkillResults);
+      control?.addEventListener("change", updateSkillResults);
+    });
+
+    repositoryButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        repositoryButtons.forEach((candidate) => {
+          candidate.classList.toggle("is-active", candidate === button);
+        });
+        updateSkillResults();
+      });
+    });
+
+    updateSkillResults();
+  </script>
+) : null}

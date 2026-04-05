@@ -1,0 +1,913 @@
+---
+export interface CommandLink {
+  label: string;
+  href: string;
+  command?: string;
+}
+
+export interface DomainLink {
+  label: string;
+  href: string;
+}
+
+export interface Props {
+  pathLabel?: string;
+  title?: string;
+  intro?: string;
+  summary?: string;
+  rights?: string[];
+  commands?: CommandLink[];
+  domains?: DomainLink[];
+  statusLabel?: string;
+  shellClass?: string;
+  shellStyle?: string;
+  commandConfigs?: Array<{
+    command: string;
+    description: string;
+    kind: "builtin" | "markdown-page";
+    htmlUrl: string | null;
+    markdownUrl: string | null;
+    fileName: string | null;
+  }>;
+  searchNamespaces?: Array<{
+    namespace: string;
+    description: string;
+    documents: Array<{
+      namespace: string;
+      title: string;
+      slug: string;
+      summary: string;
+      fileName: string;
+      htmlUrl: string | null;
+      markdownUrl: string | null;
+      markdown: string;
+      searchText: string;
+    }>;
+  }>;
+}
+
+const props = Astro.props;
+const pathLabel = props.pathLabel ?? "efx@technology ~ /landing";
+const intro =
+  props.intro ??
+  "This landing page should behave like a guided terminal. It introduces the company technology landscape, points visitors to the right section quickly, and keeps the experience opinionated instead of generic.";
+const summary =
+  props.summary ??
+  "Use this workspace to understand what the company runs, what teams should adopt next, and where standards already exist.";
+const rights = props.rights ?? [];
+const commands = props.commands ?? [];
+const domains = props.domains ?? [];
+const statusLabel = props.statusLabel ?? "Current platform status: aligned";
+const shellClass = props.shellClass ?? "";
+const shellStyle = props.shellStyle ?? "";
+const commandConfigs = props.commandConfigs ?? [];
+const searchNamespaces = props.searchNamespaces ?? [];
+---
+
+<div
+  class:list={["terminal-shell", shellClass]}
+  style={shellStyle}
+  data-terminal-command-configs={JSON.stringify(commandConfigs)}
+  data-terminal-search-namespaces={JSON.stringify(searchNamespaces)}
+>
+  <div class="terminal-bar">
+    <div class="terminal-controls" aria-hidden="true">
+      <span class="terminal-dot terminal-dot-red"></span>
+      <span class="terminal-dot terminal-dot-yellow"></span>
+      <span class="terminal-dot terminal-dot-green"></span>
+    </div>
+    <p class="terminal-path">{pathLabel}</p>
+  </div>
+
+  <div class="terminal-body terminal-body-scroll">
+    <div class="terminal-hero-grid">
+      <section class="terminal-primary">
+        <p class="terminal-line">e*f(x) technology workspace ready.</p>
+        <p class="terminal-prompt">visitor@efx:~$ cat welcome.md</p>
+        <h1 class="terminal-title">
+          <span class="terminal-title-brand">e*f(x)</span>
+          <span class="terminal-title-divider" aria-hidden="true"> </span>
+          <span class="terminal-title-text">Technology</span>
+        </h1>
+        <p class="terminal-subtitle">## Welcome, team.</p>
+        <p class="terminal-copy">{intro}</p>
+        <p class="terminal-copy terminal-copy-strong">{summary}</p>
+
+        <div class="terminal-block terminal-status-row">
+          <p class="terminal-subtitle terminal-subtitle-green">{statusLabel}</p>
+          <span class="terminal-badge">Guided entry point</span>
+        </div>
+
+        <div class="terminal-block">
+          <p class="terminal-subtitle">## Suggested commands</p>
+          <div class="terminal-command-list" aria-label="Suggested commands">
+            {commands.map((command) => (
+              <a
+                class="terminal-command"
+                href={command.href}
+                data-terminal-command={command.command ?? command.label}
+              >
+                <span class="terminal-command-prefix">$</span>
+                {command.label}
+              </a>
+            ))}
+          </div>
+        </div>
+
+        <div class="terminal-block">
+          <p class="terminal-subtitle">## Capabilities</p>
+          <ul class="terminal-list terminal-list-compact">
+            <li>Technology standards and platform guidance</li>
+            <li>Engineering delivery patterns and governance</li>
+            <li>AI, data, and decision intelligence direction</li>
+            <li>Approved tools through a shared technology radar</li>
+          </ul>
+        </div>
+
+        <div class="terminal-block terminal-runtime-block" id="terminal-runtime-block" hidden>
+          <p class="terminal-subtitle">## Command output</p>
+          <div class="terminal-runtime-output" id="terminal-runtime-output"></div>
+        </div>
+      </section>
+
+      <aside class="terminal-sidebar">
+        <div class="terminal-panel">
+          <p class="terminal-panel-label">First route</p>
+          <p class="terminal-panel-title">Start with the right domain, not with a random page.</p>
+          <div class="terminal-domain-list" aria-label="Technology domains">
+            {domains.map((domain) => (
+              <a class="terminal-domain-chip" href={domain.href}>
+                <span class="terminal-domain-prefix">&gt;</span>
+                {domain.label}
+              </a>
+            ))}
+          </div>
+        </div>
+
+        <div class="terminal-panel">
+          <p class="terminal-panel-label">Technology rights</p>
+          <p class="terminal-copy">Teams working in this environment should be able to:</p>
+          <ul class="terminal-list terminal-list-accent">
+            {rights.map((item) => <li>{item}</li>)}
+          </ul>
+          <p class="terminal-copy terminal-copy-warm">
+            To propose a change or ask questions, start with the tech radar and continue
+            into the relevant standards page.
+          </p>
+        </div>
+
+        <div class="terminal-panel terminal-footnote">
+          <p class="terminal-copy terminal-copy-muted">
+            Still there? Try <a class="terminal-inline-link" href="/tech-radar/">/tech-radar</a> to review approved technologies.
+          </p>
+          <p class="terminal-copy terminal-copy-muted">
+            This terminal has more standards than you think...
+          </p>
+          <p class="terminal-prompt">technology-agent@efx:~$ next</p>
+          <p class="terminal-response">
+            Start from the radar for approved technologies, then move into domain pages and
+            operating standards.
+          </p>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <form class="terminal-inputbar" id="terminal-command-form" autocomplete="off">
+    <span class="terminal-input-prefix">&gt;</span>
+    <div class="terminal-inputbox">
+      <label class="sr-only" for="terminal-command-input">Terminal command</label>
+      <input
+        class="terminal-input"
+        id="terminal-command-input"
+        name="command"
+        type="text"
+        placeholder='Type a command... try "/help"'
+        spellcheck="false"
+        autocomplete="off"
+        aria-autocomplete="list"
+        aria-controls="terminal-command-suggestions"
+        aria-expanded="false"
+      />
+      <div
+        class="terminal-suggestions"
+        id="terminal-command-suggestions"
+        role="listbox"
+        aria-label="Command suggestions"
+        hidden
+      ></div>
+    </div>
+  </form>
+</div>
+
+<script is:inline>
+  const shells = [...document.querySelectorAll(".terminal-shell[data-terminal-command-configs]")];
+
+  const escapeHtml = (value) =>
+    value
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+
+  const getMarkdownLines = (markdown) => markdown.replace(/\r\n/g, "\n").split("\n");
+
+  const renderInlineMarkdown = (value) => {
+    let rendered = escapeHtml(value);
+
+    rendered = rendered.replace(
+      /`([^`]+)`/g,
+      '<span class="terminal-md-inline-code">`$1`</span>'
+    );
+    rendered = rendered.replace(
+      /\[([^\]]+)\]\(([^)]+)\)/g,
+      '<span class="terminal-md-link">[$1]</span><span class="terminal-md-muted">($2)</span>'
+    );
+    rendered = rendered.replace(
+      /(\*\*[^*]+\*\*)/g,
+      '<span class="terminal-md-strong">$1</span>'
+    );
+    rendered = rendered.replace(
+      /(^|[^\*])(\*[^*]+\*)/g,
+      '$1<span class="terminal-md-emphasis">$2</span>'
+    );
+
+    return rendered;
+  };
+
+  const renderMarkdownLine = (line, state) => {
+    if (!line.length) {
+      return "&nbsp;";
+    }
+
+    if (line === "---") {
+      state.inFrontmatter = !state.inFrontmatter;
+      return '<span class="terminal-md-fence">---</span>';
+    }
+
+    if (state.inFence) {
+      if (line.startsWith("```")) {
+        state.inFence = false;
+        return `<span class="terminal-md-fence">${escapeHtml(line)}</span>`;
+      }
+
+      return `<span class="terminal-md-code-block">${escapeHtml(line)}</span>`;
+    }
+
+    if (line.startsWith("```")) {
+      state.inFence = true;
+      return `<span class="terminal-md-fence">${escapeHtml(line)}</span>`;
+    }
+
+    if (state.inFrontmatter) {
+      const frontmatterMatch = line.match(/^([A-Za-z0-9_-]+)(:\s*)(.*)$/);
+
+      if (frontmatterMatch) {
+        const [, key, separator, value] = frontmatterMatch;
+        return `<span class="terminal-md-key">${escapeHtml(key)}</span><span class="terminal-md-punctuation">${escapeHtml(separator)}</span><span class="terminal-md-string">${escapeHtml(value)}</span>`;
+      }
+
+      return `<span class="terminal-md-string">${escapeHtml(line)}</span>`;
+    }
+
+    const headingMatch = line.match(/^(#{1,6})(\s+)(.*)$/);
+
+    if (headingMatch) {
+      const [, hashes, spacing, content] = headingMatch;
+      return `<span class="terminal-md-punctuation">${escapeHtml(hashes)}</span><span class="terminal-md-muted">${escapeHtml(spacing)}</span><span class="terminal-md-heading">${renderInlineMarkdown(content)}</span>`;
+    }
+
+    const listMatch = line.match(/^(\s*)([-*+]|\d+\.)(\s+)(.*)$/);
+
+    if (listMatch) {
+      const [, indent, marker, spacing, content] = listMatch;
+      return `${escapeHtml(indent)}<span class="terminal-md-bullet">${escapeHtml(marker)}</span><span class="terminal-md-muted">${escapeHtml(spacing)}</span>${renderInlineMarkdown(content)}`;
+    }
+
+    const quoteMatch = line.match(/^(\s*)(>+)(\s?)(.*)$/);
+
+    if (quoteMatch) {
+      const [, indent, marker, spacing, content] = quoteMatch;
+      return `${escapeHtml(indent)}<span class="terminal-md-quote">${escapeHtml(marker)}</span><span class="terminal-md-muted">${escapeHtml(spacing)}</span>${renderInlineMarkdown(content)}`;
+    }
+
+    if (/^(-{3,}|\*{3,}|_{3,})$/.test(line.trim())) {
+      return `<span class="terminal-md-fence">${escapeHtml(line)}</span>`;
+    }
+
+    return renderInlineMarkdown(line);
+  };
+
+  const renderBatCard = (fileName, markdown, sourceUrl) => {
+    const lines = getMarkdownLines(markdown);
+    const state = { inFrontmatter: false, inFence: false };
+    const renderedLines = lines
+      .map((line, index) => {
+        const highlightedLine = renderMarkdownLine(line, state);
+        return `
+          <div class="bat-line">
+            <span class="bat-gutter">${index + 1}</span>
+            <div class="bat-code"><pre class="terminal-bat-line">${highlightedLine}</pre></div>
+          </div>
+        `;
+      })
+      .join("");
+
+    const sourceMeta = sourceUrl
+      ? `<a class="terminal-runtime-link" href="${sourceUrl}">open source</a>`
+      : "";
+
+    return `
+      <article class="bat-card terminal-bat-card">
+        <div class="bat-card-bar">
+          <span class="bat-card-file">${escapeHtml(fileName)}</span>
+          <span class="bat-card-lang">markdown</span>
+        </div>
+        <div class="bat-card-body bat-card-body-stack">
+          ${renderedLines}
+        </div>
+        ${sourceMeta ? `<div class="terminal-runtime-meta">${sourceMeta}</div>` : ""}
+      </article>
+    `;
+  };
+
+  const renderSystemMessage = (title, body, tone = "") => `
+    <article class="terminal-runtime-message ${tone}">
+      <p class="terminal-runtime-title">${escapeHtml(title)}</p>
+      <p class="terminal-runtime-copy">${escapeHtml(body)}</p>
+    </article>
+  `;
+
+  const renderHelp = (configs, namespaces) => {
+    const builtinLines = configs
+      .map((entry, index) => `
+        <div class="bat-line">
+          <span class="bat-gutter">${index + 1}</span>
+          <div class="bat-code">
+            <p class="terminal-runtime-title">${escapeHtml(entry.command)}</p>
+            <p class="terminal-runtime-copy">${escapeHtml(entry.description)}</p>
+          </div>
+        </div>
+      `)
+      .join("");
+
+    const offset = configs.length;
+    const namespaceLines = namespaces
+      .map((entry, index) => `
+        <div class="bat-line">
+          <span class="bat-gutter">${offset + index + 1}</span>
+          <div class="bat-code">
+            <p class="terminal-runtime-title">${escapeHtml(`/${entry.namespace} <terms>`)}</p>
+            <p class="terminal-runtime-copy">${escapeHtml(entry.description)}</p>
+          </div>
+        </div>
+      `)
+      .join("");
+
+    return `
+      <article class="bat-card terminal-bat-card">
+        <div class="bat-card-bar">
+          <span class="bat-card-file">help.txt</span>
+          <span class="bat-card-lang">commands</span>
+        </div>
+        <div class="bat-card-body bat-card-body-stack">
+          ${builtinLines}
+          ${namespaceLines}
+        </div>
+      </article>
+    `;
+  };
+
+  const renderSearchResults = (namespace, query, results) => {
+    const resultLines = results
+      .map((entry, index) => {
+        const sourceLink = entry.htmlUrl
+          ? `<a class="terminal-runtime-link" href="${entry.htmlUrl}">open page</a>`
+          : "";
+
+        return `
+          <div class="bat-line">
+            <span class="bat-gutter">${index + 1}</span>
+            <div class="bat-code">
+              <p class="terminal-runtime-title">${escapeHtml(entry.title)}</p>
+              <p class="terminal-runtime-copy">${escapeHtml(entry.summary)}</p>
+              ${sourceLink ? `<div class="terminal-runtime-meta">${sourceLink}</div>` : ""}
+            </div>
+          </div>
+        `;
+      })
+      .join("");
+
+    return `
+      <article class="bat-card terminal-bat-card">
+        <div class="bat-card-bar">
+          <span class="bat-card-file">${escapeHtml(namespace)}.search</span>
+          <span class="bat-card-lang">results</span>
+        </div>
+        <div class="bat-card-body bat-card-body-stack">
+          <div class="bat-line">
+            <span class="bat-gutter">#</span>
+            <div class="bat-code">
+              <p class="terminal-runtime-copy">${escapeHtml(`Query: ${query}`)}</p>
+            </div>
+          </div>
+          ${resultLines}
+        </div>
+      </article>
+    `;
+  };
+
+  const normalizeCommand = (value) => value.trim().replace(/\s+/g, " ").toLowerCase();
+  const normalizeSearchText = (value) => normalizeCommand(value);
+  const getSearchTokens = (value) => normalizeSearchText(value).split(" ").filter(Boolean);
+  const scoreSearchResult = (entry, normalizedQuery, tokens) => {
+    let score = 0;
+    const title = normalizeSearchText(entry.title);
+    const slug = normalizeSearchText(entry.slug);
+    const summary = normalizeSearchText(entry.summary);
+    const haystack = normalizeSearchText(entry.searchText);
+
+    if (title === normalizedQuery || slug === normalizedQuery) {
+      score += 200;
+    }
+
+    if (title.includes(normalizedQuery)) {
+      score += 80;
+    }
+
+    if (slug.includes(normalizedQuery)) {
+      score += 60;
+    }
+
+    if (summary.includes(normalizedQuery)) {
+      score += 30;
+    }
+
+    for (const token of tokens) {
+      if (title.includes(token)) {
+        score += 20;
+      }
+
+      if (slug.includes(token)) {
+        score += 16;
+      }
+
+      if (summary.includes(token)) {
+        score += 8;
+      }
+
+      const matches = haystack.split(token).length - 1;
+      score += Math.min(matches, 5);
+    }
+
+    return score;
+  };
+
+  const appendRuntimeEntry = (container, prompt, html, scrollContainer) => {
+    container.insertAdjacentHTML(
+      "beforeend",
+      `
+        <div class="terminal-runtime-entry">
+          <p class="terminal-prompt terminal-runtime-prompt">visitor@efx:~$ ${escapeHtml(prompt)}</p>
+          ${html}
+        </div>
+      `
+    );
+    container.scrollTop = container.scrollHeight;
+    if (scrollContainer instanceof HTMLElement) {
+      requestAnimationFrame(() => {
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      });
+    }
+  };
+
+  const getSuggestionMatchIndex = (suggestionValue, query) => {
+    if (!query) {
+      return 0;
+    }
+
+    return normalizeSearchText(suggestionValue).indexOf(normalizeSearchText(query));
+  };
+
+  const scoreSuggestion = (suggestion, query) => {
+    const normalizedValue = normalizeSearchText(suggestion.value);
+    const normalizedQuery = normalizeSearchText(query);
+    let score = 0;
+
+    if (!normalizedQuery) {
+      score += suggestion.kind === "command" ? 20 : 10;
+    }
+
+    if (normalizedValue === normalizedQuery) {
+      score += 200;
+    }
+
+    if (normalizedValue.startsWith(normalizedQuery)) {
+      score += 120;
+    }
+
+    const matchIndex = getSuggestionMatchIndex(suggestion.value, query);
+
+    if (matchIndex >= 0) {
+      score += Math.max(0, 60 - matchIndex * 4);
+    }
+
+    if (suggestion.kind === "command") {
+      score += 30;
+    }
+
+    if (suggestion.kind === "namespace") {
+      score += 20;
+    }
+
+    if (suggestion.kind === "document") {
+      score += 10;
+    }
+
+    return score;
+  };
+
+  const renderSuggestions = (container, suggestions, activeIndex) => {
+    container.innerHTML = suggestions
+      .map((suggestion, index) => {
+        const description = suggestion.description
+          ? `<span class="terminal-suggestion-copy">${escapeHtml(suggestion.description)}</span>`
+          : "";
+
+        return `
+          <button
+            class="terminal-suggestion ${index === activeIndex ? "is-active" : ""}"
+            id="terminal-suggestion-${index}"
+            type="button"
+            role="option"
+            aria-selected="${index === activeIndex ? "true" : "false"}"
+            data-suggestion-value="${escapeHtml(suggestion.value)}"
+          >
+            <span class="terminal-suggestion-value">${escapeHtml(suggestion.value)}</span>
+            ${description}
+          </button>
+        `;
+      })
+      .join("");
+  };
+
+  for (const shell of shells) {
+    const rawConfigs = shell.getAttribute("data-terminal-command-configs") ?? "[]";
+    const rawSearchNamespaces = shell.getAttribute("data-terminal-search-namespaces") ?? "[]";
+    const configs = JSON.parse(rawConfigs);
+    const namespaces = JSON.parse(rawSearchNamespaces);
+    const configMap = new Map(configs.map((entry) => [normalizeCommand(entry.command), entry]));
+    const namespaceMap = new Map(
+      namespaces.map((entry) => [`/${normalizeCommand(entry.namespace).replace(/^\//, "")}`, entry])
+    );
+    const form = shell.querySelector("#terminal-command-form");
+    const input = shell.querySelector("#terminal-command-input");
+    const suggestions = shell.querySelector("#terminal-command-suggestions");
+    const bodyScroll = shell.querySelector(".terminal-body-scroll");
+    const runtimeBlock = shell.querySelector("#terminal-runtime-block");
+    const runtimeOutput = shell.querySelector("#terminal-runtime-output");
+    const commandLinks = [...shell.querySelectorAll("[data-terminal-command]")];
+
+    if (!(form instanceof HTMLFormElement) || !(input instanceof HTMLInputElement) || !(suggestions instanceof HTMLElement) || !(runtimeBlock instanceof HTMLElement) || !(runtimeOutput instanceof HTMLElement)) {
+      continue;
+    }
+
+    const baseSuggestions = [
+      ...configs.map((entry) => ({
+        kind: "command",
+        value: entry.command,
+        description: entry.description,
+      })),
+      ...namespaces.map((entry) => ({
+        kind: "namespace",
+        value: `/${entry.namespace}`,
+        description: entry.description,
+      })),
+      ...namespaces.flatMap((entry) =>
+        entry.documents.map((document) => ({
+          kind: "document",
+          value: `/${entry.namespace} ${document.slug}`,
+          description: document.title,
+        }))
+      ),
+    ];
+
+    let currentSuggestions = [];
+    let activeSuggestionIndex = -1;
+    let blurTimeout = 0;
+
+    const closeSuggestions = () => {
+      currentSuggestions = [];
+      activeSuggestionIndex = -1;
+      suggestions.hidden = true;
+      suggestions.innerHTML = "";
+      input.setAttribute("aria-expanded", "false");
+      input.removeAttribute("aria-activedescendant");
+    };
+
+    const openSuggestions = () => {
+      suggestions.hidden = false;
+      input.setAttribute("aria-expanded", "true");
+      if (activeSuggestionIndex >= 0) {
+        input.setAttribute("aria-activedescendant", `terminal-suggestion-${activeSuggestionIndex}`);
+      } else {
+        input.removeAttribute("aria-activedescendant");
+      }
+    };
+
+    const applySuggestion = (suggestion, { submit = false } = {}) => {
+      input.value = suggestion.value;
+      closeSuggestions();
+      input.focus();
+
+      if (submit) {
+        form.requestSubmit();
+      }
+    };
+
+    const updateSuggestions = () => {
+      const rawValue = input.value;
+      const normalizedValue = normalizeSearchText(rawValue);
+
+      if (!rawValue.trim().startsWith("/")) {
+        closeSuggestions();
+        return;
+      }
+
+      const matchingSuggestions = baseSuggestions
+        .filter((suggestion) => {
+          if (!normalizedValue) {
+            return true;
+          }
+
+          return normalizeSearchText(suggestion.value).includes(normalizedValue);
+        })
+        .map((suggestion) => ({
+          ...suggestion,
+          score: scoreSuggestion(suggestion, rawValue),
+        }))
+        .sort((left, right) => right.score - left.score || left.value.localeCompare(right.value))
+        .slice(0, 8);
+
+      if (matchingSuggestions.length === 0) {
+        closeSuggestions();
+        return;
+      }
+
+      currentSuggestions = matchingSuggestions;
+      activeSuggestionIndex = 0;
+      renderSuggestions(suggestions, currentSuggestions, activeSuggestionIndex);
+      openSuggestions();
+    };
+
+    const executeCommand = async (rawCommand) => {
+      const prompt = rawCommand.trim();
+
+      if (!prompt) {
+        return;
+      }
+
+      runtimeBlock.hidden = false;
+
+      const command = normalizeCommand(prompt);
+      const match = configMap.get(command);
+
+      if (!match) {
+        const searchMatch = command.match(/^\/([a-z0-9-]+)(?:\s+(.*))?$/i);
+
+        if (searchMatch) {
+          const namespace = `/${normalizeCommand(searchMatch[1]).replace(/^\//, "")}`;
+          const query = searchMatch[2]?.trim() ?? "";
+          const namespaceConfig = namespaceMap.get(namespace);
+
+          if (namespaceConfig) {
+            if (!query) {
+              appendRuntimeEntry(
+                runtimeOutput,
+                prompt,
+                renderSystemMessage(
+                  "Search query required",
+                  `Usage: ${namespace} <terms>. ${namespaceConfig.description}`,
+                  "is-error"
+                ),
+                bodyScroll
+              );
+              return;
+            }
+
+            const normalizedQuery = normalizeSearchText(query);
+            const tokens = getSearchTokens(query);
+            const results = [...namespaceConfig.documents]
+              .filter((entry) => tokens.every((token) => normalizeSearchText(entry.searchText).includes(token)))
+              .map((entry) => ({
+                ...entry,
+                score: scoreSearchResult(entry, normalizedQuery, tokens),
+              }))
+              .sort((left, right) => right.score - left.score || left.title.localeCompare(right.title))
+              .slice(0, 5);
+
+            if (results.length === 0) {
+              appendRuntimeEntry(
+                runtimeOutput,
+                prompt,
+                renderSystemMessage(
+                  "No matches found",
+                  `No ${namespace.slice(1)} entries matched "${query}".`,
+                  "is-error"
+                ),
+                bodyScroll
+              );
+              return;
+            }
+
+            appendRuntimeEntry(
+              runtimeOutput,
+              prompt,
+              `${renderSearchResults(namespace.slice(1), query, results)}${renderBatCard(
+                results[0].fileName,
+                results[0].markdown,
+                results[0].htmlUrl
+              )}`,
+              bodyScroll
+            );
+            return;
+          }
+        }
+
+        appendRuntimeEntry(
+          runtimeOutput,
+          prompt,
+          renderSystemMessage("Command not found", 'Try "/help" to list the available commands.', "is-error"),
+          bodyScroll
+        );
+        return;
+      }
+
+      if (match.kind === "builtin") {
+        appendRuntimeEntry(runtimeOutput, prompt, renderHelp(configs, namespaces), bodyScroll);
+        return;
+      }
+
+      if (!match.markdownUrl || !match.fileName) {
+        appendRuntimeEntry(
+          runtimeOutput,
+          prompt,
+          renderSystemMessage("Command misconfigured", "This command is missing a Markdown source.", "is-error"),
+          bodyScroll
+        );
+        return;
+      }
+
+      appendRuntimeEntry(
+        runtimeOutput,
+        prompt,
+        renderSystemMessage("Fetching Markdown", `Loading ${match.fileName} from ${match.markdownUrl} ...`),
+        bodyScroll
+      );
+
+      try {
+        const response = await fetch(match.markdownUrl, {
+          headers: {
+            Accept: "text/markdown, text/plain;q=0.9, */*;q=0.1",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Request failed with status ${response.status}`);
+        }
+
+        const markdown = await response.text();
+        runtimeOutput.lastElementChild?.remove();
+        appendRuntimeEntry(runtimeOutput, prompt, renderBatCard(match.fileName, markdown, match.htmlUrl), bodyScroll);
+      } catch (error) {
+        runtimeOutput.lastElementChild?.remove();
+        appendRuntimeEntry(
+          runtimeOutput,
+          prompt,
+          renderSystemMessage(
+            "Request failed",
+            error instanceof Error ? error.message : "Unknown request failure.",
+            "is-error"
+          ),
+          bodyScroll
+        );
+      }
+    };
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const command = input.value;
+      input.value = "";
+      closeSuggestions();
+      await executeCommand(command);
+    });
+
+    input.addEventListener("input", () => {
+      updateSuggestions();
+    });
+
+    input.addEventListener("focus", () => {
+      window.clearTimeout(blurTimeout);
+      updateSuggestions();
+    });
+
+    input.addEventListener("blur", () => {
+      blurTimeout = window.setTimeout(() => {
+        closeSuggestions();
+      }, 120);
+    });
+
+    input.addEventListener("keydown", (event) => {
+      if (currentSuggestions.length === 0) {
+        return;
+      }
+
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        activeSuggestionIndex = (activeSuggestionIndex + 1) % currentSuggestions.length;
+        renderSuggestions(suggestions, currentSuggestions, activeSuggestionIndex);
+        openSuggestions();
+        return;
+      }
+
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        activeSuggestionIndex =
+          (activeSuggestionIndex - 1 + currentSuggestions.length) % currentSuggestions.length;
+        renderSuggestions(suggestions, currentSuggestions, activeSuggestionIndex);
+        openSuggestions();
+        return;
+      }
+
+      if (event.key === "Tab") {
+        event.preventDefault();
+        const activeSuggestion = currentSuggestions[activeSuggestionIndex] ?? currentSuggestions[0];
+        if (activeSuggestion) {
+          applySuggestion(activeSuggestion);
+        }
+        return;
+      }
+
+      if (event.key === "Escape") {
+        closeSuggestions();
+      }
+    });
+
+    suggestions.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+    });
+
+    suggestions.addEventListener("click", (event) => {
+      const button = event.target instanceof HTMLElement
+        ? event.target.closest("[data-suggestion-value]")
+        : null;
+
+      if (!(button instanceof HTMLElement)) {
+        return;
+      }
+
+      const nextValue = button.getAttribute("data-suggestion-value");
+      const suggestion = currentSuggestions.find((entry) => entry.value === nextValue);
+
+      if (suggestion) {
+        applySuggestion(suggestion);
+      }
+    });
+
+    commandLinks.forEach((link) => {
+      link.addEventListener("click", async (event) => {
+        const nextCommand = link.getAttribute("data-terminal-command");
+
+        if (!nextCommand) {
+          return;
+        }
+
+        event.preventDefault();
+        input.value = nextCommand;
+        input.focus();
+        closeSuggestions();
+        await executeCommand(nextCommand);
+      });
+    });
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const autoRunCommands = urlParams.getAll("run");
+    const presetPrompt = urlParams.get("prompt");
+
+    if (presetPrompt && autoRunCommands.length === 0) {
+      input.value = presetPrompt;
+      updateSuggestions();
+    }
+
+    if (autoRunCommands.length > 0) {
+      const runSequentially = async () => {
+        for (const command of autoRunCommands) {
+          await executeCommand(command);
+        }
+      };
+
+      runSequentially();
+    }
+  }
+</script>

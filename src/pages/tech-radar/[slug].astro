@@ -1,0 +1,202 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import StandardPageHeader from "../../components/StandardPageHeader.astro";
+import { getRadarEntries, getRadarEntryBySlug } from "../../lib/tech-radar";
+
+export async function getStaticPaths() {
+  const entries = await getRadarEntries();
+
+  return entries.map((entry) => ({
+    params: { slug: entry.slug },
+  }));
+}
+
+const { slug } = Astro.params;
+const entry = slug ? await getRadarEntryBySlug(slug) : undefined;
+
+if (!entry) {
+  return Astro.redirect("/tech-radar/");
+}
+---
+
+<BaseLayout
+  title={`${entry.name} | Tech Radar | e*f(x) Technology`}
+  description={`${entry.name} operational guidance and adoption details.`}
+>
+  <main class="shell shell-narrow standard-page">
+    <StandardPageHeader
+      currentPage="tech-radar"
+      searchAction="/tech-radar/"
+      searchPlaceholder="Search technologies"
+      searchQuery={entry.name}
+    />
+
+    <section class="standard-page-intro standard-page-intro-detail">
+      <div>
+        <p class="eyebrow">{entry.ring} / {entry.primaryScope}</p>
+        <h1 class="standard-page-title">{entry.name}</h1>
+        <p class="copy standard-copy-wide">{entry.summary}</p>
+      </div>
+    </section>
+
+    <section class="bat-grid bat-grid-detail">
+      <article class="bat-card bat-card-wide">
+        <div class="bat-card-bar">
+          <span class="bat-card-file">decision.txt</span>
+          <span class="bat-card-lang">text</span>
+        </div>
+
+        <div class="bat-card-body bat-card-body-stack">
+          <div class="bat-line">
+            <span class="bat-gutter">1</span>
+            <div class="bat-code">
+              <p class="bat-heading">Decision</p>
+              <p class="bat-copy">{entry.reasoning}</p>
+            </div>
+          </div>
+          <div class="bat-line">
+            <span class="bat-gutter">2</span>
+            <div class="bat-code">
+              <p class="bat-heading bat-heading-inline">Adoption actions</p>
+              <ul class="bat-list-block">
+                {entry.actions.map((action) => <li>{action}</li>)}
+              </ul>
+            </div>
+          </div>
+          <div class="bat-line">
+            <span class="bat-gutter">3</span>
+            <div class="bat-code">
+              <p class="bat-heading bat-heading-inline">Core capabilities</p>
+              <ul class="bat-list-block">
+                {entry.capabilities.map((capability) => <li>{capability}</li>)}
+              </ul>
+            </div>
+          </div>
+          {entry.alternatives.length > 0 && (
+            <div class="bat-line">
+              <span class="bat-gutter">4</span>
+              <div class="bat-code">
+                <p class="bat-heading bat-heading-inline">Alternatives</p>
+                <ul class="bat-list-block">
+                  {entry.alternatives.map((alternative) => <li>{alternative}</li>)}
+                </ul>
+              </div>
+            </div>
+          )}
+        </div>
+      </article>
+
+      <article class="bat-card">
+        <div class="bat-card-bar">
+          <span class="bat-card-file">metadata.json</span>
+          <span class="bat-card-lang">json</span>
+        </div>
+
+        <div class="bat-card-body bat-card-body-stack">
+          <div class="bat-line">
+            <span class="bat-gutter">1</span>
+            <div class="bat-code">
+              <dl class="bat-definition-list">
+                <div>
+                  <dt>ring</dt>
+                  <dd>{entry.ring}</dd>
+                </div>
+                <div>
+                  <dt>primary scope</dt>
+                  <dd>{entry.primaryScope}</dd>
+                </div>
+                <div>
+                  <dt>source</dt>
+                  <dd>{entry.sourceType}</dd>
+                </div>
+                <div>
+                  <dt>status</dt>
+                  <dd>{entry.status}</dd>
+                </div>
+                <div>
+                  <dt>domain</dt>
+                  <dd>{entry.domain}</dd>
+                </div>
+                <div>
+                  <dt>owner</dt>
+                  <dd>{entry.owner}</dd>
+                </div>
+                <div>
+                  <dt>updated</dt>
+                  <dd>{entry.updated}</dd>
+                </div>
+              </dl>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="bat-grid bat-grid-detail">
+      <article class="bat-card">
+        <div class="bat-card-bar">
+          <span class="bat-card-file">operation.yml</span>
+          <span class="bat-card-lang">yaml</span>
+        </div>
+
+        <div class="bat-card-body bat-card-body-stack">
+          <div class="bat-line">
+            <span class="bat-gutter">1</span>
+            <div class="bat-code">
+              <dl class="bat-definition-list">
+                <div>
+                  <dt>scope</dt>
+                  <dd>{entry.operationScope}</dd>
+                </div>
+                <div>
+                  <dt>model</dt>
+                  <dd>{entry.operationModel}</dd>
+                </div>
+                <div>
+                  <dt>maturity</dt>
+                  <dd>{entry.maturity}</dd>
+                </div>
+                <div>
+                  <dt>review cadence</dt>
+                  <dd>{entry.reviewCadence}</dd>
+                </div>
+              </dl>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="bat-card">
+        <div class="bat-card-bar">
+          <span class="bat-card-file">guardrails.txt</span>
+          <span class="bat-card-lang">txt</span>
+        </div>
+
+        <div class="bat-card-body bat-card-body-stack">
+          <div class="bat-line">
+            <span class="bat-gutter">1</span>
+            <div class="bat-code">
+              <p class="bat-heading bat-heading-inline">Guardrails</p>
+              <ul class="bat-list-block">
+                {entry.guardrails.map((rule) => <li>{rule}</li>)}
+              </ul>
+            </div>
+          </div>
+          <div class="bat-line">
+            <span class="bat-gutter">2</span>
+            <div class="bat-code">
+              <p class="bat-heading bat-heading-inline">Operational signals</p>
+              <ul class="bat-list-block">
+                {entry.signals.map((signal) => <li>{signal}</li>)}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="standard-footer-actions">
+      <a class="button button-secondary" href="/tech-radar/">Back to Tech Radar</a>
+    </section>
+  </main>
+</BaseLayout>

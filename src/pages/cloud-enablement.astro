@@ -1,0 +1,287 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import StandardPageHeader from "../components/StandardPageHeader.astro";
+import { getCloudEnablementProviders } from "../lib/cloud-enablement";
+
+const providers = await getCloudEnablementProviders();
+const archetypes = ["Infrastructure", "Tool", "Product"] as const;
+const entries = providers.flatMap((provider) =>
+  provider.products.map((product) => ({
+    ...product,
+    providerSlug: provider.slug,
+    providerName: provider.name,
+    providerShortName: provider.shortName,
+    providerPriority: provider.priority,
+    providerUpdated: provider.updated,
+  })),
+);
+---
+
+<BaseLayout
+  title="Cloud Enablement | e*f(x) Technology"
+  description="Google Cloud and AWS enablement inventory with official catalog sources and seeded known features."
+>
+  <main class="shell shell-narrow standard-page">
+    <StandardPageHeader
+      currentPage="cloud-enablement"
+      searchAction="/cloud-enablement/"
+      searchPlaceholder="Search product, feature, or category"
+    />
+
+    <section class="standard-page-intro">
+      <div>
+        <p class="eyebrow">Cloud Enablement</p>
+        <h1 class="standard-page-title">Google Cloud first, AWS alongside it.</h1>
+        <p class="copy standard-copy-wide">
+          Review cloud products through the same operational lens as the radar: start with
+          archetype and cloud filters, then search and scan the seeded product index.
+        </p>
+      </div>
+    </section>
+
+    <section class="tech-radar-top" id="cloud-enablement-top">
+      <div class="radar-floating-rail-anchor">
+        <aside class="standard-floating-rail is-inline-top" aria-label="Cloud enablement filters">
+          <div class="standard-floating-rail-inner">
+            <div class="radar-top-filters">
+              <div class="radar-control">
+                <span class="standard-label">Archetype</span>
+                <div class="standard-toggle-group standard-toggle-group-vertical" id="cloud-archetype-filter">
+                  <button class="standard-toggle-button is-active" type="button" data-archetype-filter="">
+                    All
+                  </button>
+                  {archetypes.map((archetype) => (
+                    <button class="standard-toggle-button" type="button" data-archetype-filter={archetype}>
+                      {archetype}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div class="radar-control">
+                <span class="standard-label">Cloud</span>
+                <div class="standard-toggle-group standard-toggle-group-vertical" id="cloud-provider-filter">
+                  <button class="standard-toggle-button is-active" type="button" data-provider-filter="">
+                    All
+                  </button>
+                  {providers.map((provider) => (
+                    <button class="standard-toggle-button" type="button" data-provider-filter={provider.slug}>
+                      {provider.shortName}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="standard-toolbar radar-entry-toolbar" aria-label="Cloud enablement entry filters">
+      <div class="radar-control">
+        <label class="standard-label" for="entries-search">Search entries</label>
+        <input
+          id="entries-search"
+          class="standard-select"
+          type="search"
+          placeholder="Filter by name, summary, or known features"
+        />
+      </div>
+    </section>
+
+    <section class="standard-section-heading">
+      <div>
+        <p class="eyebrow">Index</p>
+        <h2>Cloud products</h2>
+      </div>
+      <p class="standard-section-meta" id="cloud-results-count">{entries.length} products visible</p>
+    </section>
+
+    <section class="bat-list" id="cloud-list">
+      {entries.map((entry, index) => (
+        <article
+          class="bat-card bat-entry"
+          data-provider={entry.providerSlug}
+          data-archetype={entry.archetype}
+          data-name={entry.name}
+          data-search={`${entry.providerName} ${entry.providerShortName} ${entry.name} ${entry.archetype} ${entry.category} ${entry.summary} ${entry.knownFeatures.join(" ")}`.toLowerCase()}
+        >
+          <div class="bat-card-bar">
+            <span class="bat-card-file">{entry.providerSlug}/{entry.slug}.yaml</span>
+            <span class={`cloud-provider-pill cloud-provider-pill-${entry.providerSlug}`}>{entry.providerShortName}</span>
+          </div>
+
+          <div class="bat-card-body bat-card-body-stack">
+            <div class="bat-line">
+              <span class="bat-gutter">{index * 4 + 1}</span>
+              <div class="bat-code bat-entry-heading">
+                <h3 class="bat-entry-title">{entry.name}</h3>
+                <span class="bat-meta">{entry.archetype}</span>
+              </div>
+            </div>
+            <div class="bat-line">
+              <span class="bat-gutter">{index * 4 + 2}</span>
+              <div class="bat-code">
+                <p class="bat-copy">{entry.summary}</p>
+              </div>
+            </div>
+            <div class="bat-line">
+              <span class="bat-gutter">{index * 4 + 3}</span>
+              <div class="bat-code bat-meta-row">
+                <span>cloud: {entry.providerShortName}</span>
+                <span>archetype: {entry.archetype}</span>
+                <span>category: {entry.category}</span>
+                <span>coverage: {entry.featureCoverage}</span>
+                <span>updated: {entry.providerUpdated}</span>
+              </div>
+            </div>
+            <div class="bat-line">
+              <span class="bat-gutter">{index * 4 + 4}</span>
+              <div class="bat-code">
+                <p class="bat-heading bat-heading-inline">Known features</p>
+                <ul class="bat-list-block">
+                  {entry.knownFeatures.map((feature) => <li>{feature}</li>)}
+                </ul>
+              </div>
+            </div>
+            <div class="bat-line">
+              <span class="bat-gutter">{index * 4 + 5}</span>
+              <div class="bat-code bat-link-row">
+                <a href={`/cloud-enablement/${entry.providerSlug}/${entry.slug}/`}>open detail</a>
+                <a href={entry.productUrl} target="_blank" rel="noreferrer">open product page</a>
+                <a href={entry.featureSourceUrl} target="_blank" rel="noreferrer">open feature source</a>
+              </div>
+            </div>
+          </div>
+        </article>
+      ))}
+    </section>
+
+    <p class="standard-empty-state" id="cloud-empty-state" hidden>
+      No cloud products match the current filters.
+    </p>
+  </main>
+</BaseLayout>
+
+<script is:inline>
+  const list = document.querySelector("#cloud-list");
+  const entries = list ? [...list.querySelectorAll(".bat-entry")] : [];
+  const searchInput = document.querySelector("#entries-search");
+  const archetypeFilter = document.querySelector("#cloud-archetype-filter");
+  const archetypeButtons = archetypeFilter ? [...archetypeFilter.querySelectorAll("[data-archetype-filter]")] : [];
+  const providerFilter = document.querySelector("#cloud-provider-filter");
+  const providerButtons = providerFilter ? [...providerFilter.querySelectorAll("[data-provider-filter]")] : [];
+  const countLabel = document.querySelector("#cloud-results-count");
+  const emptyState = document.querySelector("#cloud-empty-state");
+  const params = new URLSearchParams(window.location.search);
+
+  const normalize = (value) => value.trim().toLowerCase();
+
+  const getActiveValue = (buttons, attributeName) =>
+    buttons.find((button) => button.classList.contains("is-active"))?.getAttribute(attributeName) ?? "";
+
+  const getFilters = () => ({
+    search: searchInput instanceof HTMLInputElement ? normalize(searchInput.value) : "",
+    archetype: getActiveValue(archetypeButtons, "data-archetype-filter"),
+    provider: getActiveValue(providerButtons, "data-provider-filter"),
+  });
+
+  const hydrateButtons = (buttons, attributeName, value) => {
+    buttons.forEach((button) => {
+      button.classList.toggle("is-active", (button.getAttribute(attributeName) ?? "") === value);
+    });
+  };
+
+  const syncQueryParams = () => {
+    const nextParams = new URLSearchParams(window.location.search);
+    const filters = getFilters();
+    const values = [
+      ["q", searchInput instanceof HTMLInputElement ? searchInput.value.trim() : ""],
+      ["archetype", filters.archetype],
+      ["provider", filters.provider],
+    ];
+
+    values.forEach(([key, value]) => {
+      if (value) {
+        nextParams.set(key, value);
+      } else {
+        nextParams.delete(key);
+      }
+    });
+
+    const nextUrl = nextParams.toString() ? `?${nextParams.toString()}` : window.location.pathname;
+    window.history.replaceState({}, "", nextUrl);
+  };
+
+  const updateResults = () => {
+    const filters = getFilters();
+    const visibleEntries = [];
+
+    entries.forEach((entry) => {
+      const search = entry.getAttribute("data-search") ?? "";
+      const matchesSearch = !filters.search || search.includes(filters.search);
+      const matchesArchetype = !filters.archetype || entry.getAttribute("data-archetype") === filters.archetype;
+      const matchesProvider = !filters.provider || entry.getAttribute("data-provider") === filters.provider;
+      const shouldShow = matchesSearch && matchesArchetype && matchesProvider;
+
+      if (shouldShow) {
+        if (entry instanceof HTMLElement) {
+          entry.style.display = "";
+        }
+        entry.removeAttribute("hidden");
+        visibleEntries.push(entry);
+      } else {
+        if (entry instanceof HTMLElement) {
+          entry.style.display = "none";
+        }
+        entry.setAttribute("hidden", "");
+      }
+    });
+
+    if (countLabel) {
+      countLabel.textContent = `${visibleEntries.length} products visible`;
+    }
+
+    if (emptyState instanceof HTMLElement) {
+      emptyState.hidden = visibleEntries.length > 0;
+    }
+
+    syncQueryParams();
+  };
+
+  if (searchInput instanceof HTMLInputElement && params.has("q")) {
+    searchInput.value = params.get("q") ?? "";
+  }
+
+  hydrateButtons(archetypeButtons, "data-archetype-filter", params.get("archetype") ?? "");
+  hydrateButtons(providerButtons, "data-provider-filter", params.get("provider") ?? "");
+
+  if (searchInput instanceof HTMLInputElement) {
+    searchInput.addEventListener("input", updateResults);
+    searchInput.addEventListener("change", updateResults);
+  }
+
+  archetypeFilter?.addEventListener("click", (event) => {
+    const button = event.target instanceof HTMLElement ? event.target.closest("[data-archetype-filter]") : null;
+
+    if (!(button instanceof HTMLElement)) {
+      return;
+    }
+
+    hydrateButtons(archetypeButtons, "data-archetype-filter", button.getAttribute("data-archetype-filter") ?? "");
+    updateResults();
+  });
+
+  providerFilter?.addEventListener("click", (event) => {
+    const button = event.target instanceof HTMLElement ? event.target.closest("[data-provider-filter]") : null;
+
+    if (!(button instanceof HTMLElement)) {
+      return;
+    }
+
+    hydrateButtons(providerButtons, "data-provider-filter", button.getAttribute("data-provider-filter") ?? "");
+    updateResults();
+  });
+  updateResults();
+</script>

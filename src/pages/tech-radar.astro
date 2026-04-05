@@ -1,0 +1,872 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import StandardPageHeader from "../components/StandardPageHeader.astro";
+import {
+  defaultVisibleRings,
+  getRadarBlipLayouts,
+  getRadarEntries,
+  getRingDefinition,
+  getRadarRingToken,
+  radarArchetypes,
+  radarQuadrants,
+  radarRings,
+} from "../lib/tech-radar";
+
+const entries = await getRadarEntries();
+const radarLayouts = getRadarBlipLayouts(entries);
+const radarGroupSizes = entries.reduce((groups, entry) => {
+  const key = `${entry.ring}:${entry.primaryScope}`;
+  groups.set(key, (groups.get(key) ?? 0) + 1);
+  return groups;
+}, new Map<string, number>());
+const maxRadarGroupSize = Math.max(...radarGroupSizes.values(), 1);
+const radarDensityScore = Math.max(entries.length / 24, maxRadarGroupSize / 6);
+const radarVisualScale = Math.max(0.62, Math.min(1, 1 - (radarDensityScore - 1) * 0.12));
+const radarBlipRadius = Number((4.2 * radarVisualScale).toFixed(2));
+const radarBlipHoverRadius = Number((5.6 * radarVisualScale).toFixed(2));
+const radarLabelSize = Number((5 * radarVisualScale).toFixed(2));
+const radarAxisLabelSize = Number((5.5 * radarVisualScale).toFixed(2));
+const lifecycleDisplayOrder = ["To evaluate", "Explore", "Adopt", "Endure", "Retired"] as const;
+const primaryScopes = [...new Set(entries.map((entry) => entry.primaryScope))];
+const ringCounts = lifecycleDisplayOrder.map((ring) => ({
+  ring,
+  total: entries.filter((entry) => entry.ring === ring).length,
+}));
+const radarEntries = entries.map((entry) => ({
+  ...entry,
+  point: radarLayouts.get(entry.slug),
+  ringMeta: getRingDefinition(entry.ring),
+}));
+const lifecycleMermaid = `
+stateDiagram-v2
+direction TB
+[*] --> ToEvaluate
+ToEvaluate --> Explore
+Explore --> Adopt
+Explore --> Retired
+Adopt --> Endure
+Adopt --> Retired
+Endure --> Retired
+
+state "To evaluate" as ToEvaluate
+state "Explore" as Explore
+state "Adopt" as Adopt
+state "Endure" as Endure
+state "Retired" as Retired
+
+classDef toEvaluate fill:#fff1c7,stroke:#e6cd78,color:#6c5200
+classDef explore fill:#dff2fa,stroke:#95cde0,color:#0d4f68
+classDef adopt fill:#e5f4dd,stroke:#a5cb93,color:#214d12
+classDef endure fill:#ffe8d6,stroke:#e7bc91,color:#7b4512
+classDef retired fill:#f9d9df,stroke:#e3a5b2,color:#7a1830
+
+class ToEvaluate toEvaluate
+class Explore explore
+class Adopt adopt
+class Endure endure
+class Retired retired
+`.trim();
+---
+
+<BaseLayout
+  title="Tech Radar | e*f(x) Technology"
+  description="The technology radar for evaluated, exploratory, retired, and not yet evaluated technologies at e*f(x)."
+>
+  <main
+    class="shell shell-narrow standard-page"
+    data-default-visible-rings={defaultVisibleRings.join(",")}
+  >
+    <StandardPageHeader
+      currentPage="tech-radar"
+      searchAction="/tech-radar/"
+      searchPlaceholder="Search by technology or capability"
+    />
+
+    <section class="standard-page-intro">
+      <div>
+        <p class="eyebrow">Technology Radar</p>
+        <h1 class="standard-page-title">Lifecycle decisions across technology scopes.</h1>
+        <p class="copy standard-copy-wide">
+          The radar combines lifecycle state with a primary scope dimension. Use the radial map
+          for posture, then narrow by lifecycle, software archetype, source, and free-text matching in the index.
+        </p>
+      </div>
+    </section>
+
+    <section class="tech-radar-top" id="tech-radar-top">
+      <div class="radar-floating-rail-anchor" id="source-floating-rail-anchor">
+        <aside class="standard-floating-rail is-inline-top" id="source-floating-rail" aria-label="Source filter">
+          <div class="standard-floating-rail-inner">
+            <div class="radar-top-filters">
+              <div class="radar-control">
+                <span class="standard-label">Archetype</span>
+                <div class="standard-toggle-group standard-toggle-group-vertical" id="archetype-filter">
+                  <button class="standard-toggle-button is-active" type="button" data-archetype-filter="">
+                    All
+                  </button>
+                  {radarArchetypes.map((archetype) => (
+                    <button class="standard-toggle-button" type="button" data-archetype-filter={archetype}>
+                      {archetype}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div class="radar-control">
+                <span class="standard-label">Source</span>
+                <div class="standard-toggle-group standard-toggle-group-vertical" id="source-filter">
+                  <button class="standard-toggle-button is-active" type="button" data-source-filter="">
+                    All
+                  </button>
+                  <button class="standard-toggle-button" type="button" data-source-filter="oss">
+                    OSS
+                  </button>
+                  <button class="standard-toggle-button" type="button" data-source-filter="non-oss">
+                    Vendor
+                  </button>
+                  <button class="standard-toggle-button" type="button" data-source-filter="internal">
+                    Internal
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <div class="tech-radar-top-content">
+        <section class="bat-grid bat-grid-hero">
+          <article class="bat-card bat-card-wide">
+            <div class="bat-card-bar">
+              <span class="bat-card-file">tech-radar.yaml</span>
+              <span class="bat-card-lang">yaml</span>
+            </div>
+
+            <div class="bat-card-body">
+              <div class="bat-line">
+                <span class="bat-gutter">1</span>
+                <div class="bat-code">
+                  <p class="bat-heading">entries:</p>
+                </div>
+              </div>
+              <div class="bat-line">
+                <span class="bat-gutter">2</span>
+                <div class="bat-code">
+                  <p class="bat-copy">
+                    Source of truth for lifecycle state, primary scope, ownership, and operational
+                    guidance. The diagram is driven by `ring` and `primary_scope` from YAML.
+                  </p>
+                </div>
+              </div>
+              <div class="bat-line">
+                <span class="bat-gutter">3</span>
+                <div class="bat-code bat-tag-row">
+                  {ringCounts.map((item) => (
+                    <span
+                      class={`radar-ring-pill radar-ring-pill-${getRadarRingToken(item.ring)}`}
+                      data-ring-count={item.ring}
+                    >
+                      {item.ring}: {item.total}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div class="bat-line">
+                <span class="bat-gutter">4</span>
+                <div class="bat-code">
+                  <p class="bat-meta" id="radar-scope-meta">
+                    Primary scopes in the current dataset: {primaryScopes.join(", ")}.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="bat-card">
+            <div class="bat-card-bar">
+              <span class="bat-card-file">states.mmd</span>
+              <span class="bat-card-lang">mmd</span>
+            </div>
+
+            <div class="bat-card-body bat-card-body-stack">
+              <div class="bat-line">
+                <span class="bat-gutter">1</span>
+                <div class="bat-code">
+                  <pre class="bat-mermaid-diagram mermaid" aria-label="Technology lifecycle flow">
+{lifecycleMermaid}
+                  </pre>
+                </div>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="bat-grid bat-grid-radar">
+          <article class="bat-card bat-card-wide">
+        <div class="bat-card-bar">
+          <span class="bat-card-file">radar-view.svg</span>
+          <span class="bat-card-lang">svg</span>
+        </div>
+
+        <div class="bat-card-body">
+          <div class="bat-line bat-line-visual">
+            <span class="bat-gutter">1</span>
+            <div class="bat-code">
+              <div class="radar-visual-toolbar">
+                <div>
+                  <p class="bat-heading">Lifecycle radial</p>
+                  <p class="bat-meta" id="radar-visual-meta">
+                    Default view shows Adopt, Explore, To evaluate, and Endure. Extended view adds
+                    Retired.
+                  </p>
+                </div>
+                <button class="standard-toggle-button radar-extended-toggle" id="radar-extended-toggle" type="button">
+                  Show extended states
+                </button>
+              </div>
+              <div
+                class="radar-svg-wrap radar-svg-wrap-light"
+                id="radar-svg-wrap"
+                style={`--radar-blip-radius:${radarBlipRadius}; --radar-blip-radius-active:${radarBlipHoverRadius}; --radar-blip-label-size:${radarLabelSize}px; --radar-axis-label-size:${radarAxisLabelSize}px;`}
+              >
+                <svg
+                  class="radar-svg"
+                  id="radar-svg"
+                  viewBox="-120 -120 240 240"
+                  role="img"
+                  aria-labelledby="radar-title"
+                >
+                  <title id="radar-title">Technology radar</title>
+
+                  {radarRings
+                    .slice()
+                    .reverse()
+                    .map((ring) => (
+                      <circle
+                        cx="0"
+                        cy="0"
+                        r={ring.radius * 100}
+                        fill="none"
+                        stroke="rgba(51, 62, 72, 0.12)"
+                        stroke-width="1"
+                        data-ring-circle={ring.name}
+                      />
+                    ))}
+
+                  <line x1="-100" y1="0" x2="100" y2="0" class="radar-axis-line radar-axis-line-light" />
+                  <line x1="0" y1="-100" x2="0" y2="100" class="radar-axis-line radar-axis-line-light" />
+
+                  {radarQuadrants.map((quadrant, index) => (
+                    <text
+                      x={index === 0 || index === 3 ? -84 : 84}
+                      y={index < 2 ? -88 : 92}
+                      text-anchor={index === 0 || index === 3 ? "start" : "end"}
+                      class="radar-axis-label radar-axis-label-light"
+                    >
+                      {quadrant.name}
+                    </text>
+                  ))}
+
+                  {radarRings.map((ring) => (
+                    <text
+                      x="0"
+                      y={-ring.radius * 100 + 6}
+                      text-anchor="middle"
+                      class="radar-ring-label radar-ring-label-light"
+                      data-ring-label={ring.name}
+                    >
+                      {ring.name}
+                    </text>
+                  ))}
+
+                  {radarEntries.map((entry) => (
+                    <a
+                      href={`/tech-radar/${entry.slug}/`}
+                      class="radar-blip-link"
+                      data-blip={entry.slug}
+                      data-name={entry.name}
+                      data-ring={entry.ring}
+                      data-default-visible={defaultVisibleRings.includes(entry.ring)}
+                    >
+                      <circle
+                        cx={(entry.point?.x ?? 0) * 100}
+                        cy={(entry.point?.y ?? 0) * 100}
+                        r={radarBlipRadius}
+                        class={`radar-blip radar-blip-${getRadarRingToken(entry.ring)}`}
+                      />
+                      <text
+                        x={entry.point?.labelX ?? 0}
+                        y={entry.point?.labelY ?? 0}
+                        text-anchor={entry.point?.labelAnchor ?? "start"}
+                        class="radar-blip-label radar-blip-label-light"
+                      >
+                        {entry.name}
+                      </text>
+                    </a>
+                  ))}
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+          </article>
+        </section>
+
+        <div class="radar-floating-rail-dock" id="source-floating-rail-dock" aria-hidden="true"></div>
+
+      </div>
+    </section>
+
+    <section class="standard-toolbar radar-entry-toolbar" aria-label="Tech radar entry filters">
+      <div class="radar-control">
+        <label class="standard-label" for="entries-search">Search entries</label>
+        <input
+          id="entries-search"
+          class="standard-select"
+          type="search"
+          placeholder="Filter by name, summary, or capabilities"
+        />
+      </div>
+    </section>
+
+    <section class="standard-section-heading">
+      <div>
+        <p class="eyebrow">Index</p>
+        <h2>Technology entries</h2>
+      </div>
+      <p class="standard-section-meta" id="radar-results-count">{entries.length} technologies visible</p>
+    </section>
+
+    <section class="bat-list" id="radar-list">
+      {entries.map((entry, index) => (
+        <article
+          class="bat-card bat-entry"
+          id={`radar-entry-${entry.slug}`}
+          data-ring={entry.ring}
+          data-domain={entry.domain}
+          data-archetypes={entry.archetypes.join("|")}
+          data-status={entry.status}
+          data-source-type={entry.sourceType}
+          data-primary-scope={entry.primaryScope}
+          data-name={entry.name}
+          data-slug={entry.slug}
+          data-summary={entry.summary}
+          data-search={`${entry.name} ${entry.summary} ${entry.capabilities.join(" ")} ${entry.alternatives.join(" ")}`.toLowerCase()}
+        >
+          <div class="bat-card-bar">
+            <span class="bat-card-file">{entry.slug}.yaml</span>
+            <span class={`radar-ring-pill radar-ring-pill-${getRadarRingToken(entry.ring)}`}>{entry.ring}</span>
+          </div>
+
+          <div class="bat-card-body bat-card-body-stack">
+            <div class="bat-line">
+              <span class="bat-gutter">{index * 4 + 1}</span>
+              <div class="bat-code bat-entry-heading">
+                <h3 class="bat-entry-title">{entry.name}</h3>
+                <span class="bat-meta">{entry.primaryScope}</span>
+              </div>
+            </div>
+            <div class="bat-line">
+              <span class="bat-gutter">{index * 4 + 2}</span>
+              <div class="bat-code">
+                <p class="bat-copy">{entry.summary}</p>
+              </div>
+            </div>
+            <div class="bat-line">
+              <span class="bat-gutter">{index * 4 + 3}</span>
+              <div class="bat-code bat-meta-row">
+                <span>scope: {entry.primaryScope}</span>
+                <span>source: {entry.sourceType}</span>
+                <span>status: {entry.status}</span>
+                <span>updated: {entry.updated}</span>
+              </div>
+            </div>
+            <div class="bat-line">
+              <span class="bat-gutter">{index * 4 + 4}</span>
+              <div class="bat-code">
+                <p class="bat-heading bat-heading-inline">Alternatives</p>
+                <ul class="bat-list-block">
+                  {entry.alternatives.map((alternative) => <li>{alternative}</li>)}
+                </ul>
+              </div>
+            </div>
+            <div class="bat-line">
+              <span class="bat-gutter">{index * 4 + 5}</span>
+              <div class="bat-code bat-link-row">
+                <a href={`/tech-radar/${entry.slug}/`}>open recommendation</a>
+              </div>
+            </div>
+          </div>
+        </article>
+      ))}
+    </section>
+
+    <p class="standard-empty-state" id="radar-empty-state" hidden>
+      No technologies match the current filters.
+    </p>
+  </main>
+</BaseLayout>
+
+<script is:inline>
+  const list = document.querySelector("#radar-list");
+  const entries = list ? [...list.querySelectorAll(".bat-entry")] : [];
+  const blips = [...document.querySelectorAll("[data-blip]")];
+  const searchInput = document.querySelector("#entries-search");
+  const archetypeFilter = document.querySelector("#archetype-filter");
+  const archetypeButtons = archetypeFilter ? [...archetypeFilter.querySelectorAll("[data-archetype-filter]")] : [];
+  const sourceFilter = document.querySelector("#source-filter");
+  const sourceButtons = sourceFilter ? [...sourceFilter.querySelectorAll("[data-source-filter]")] : [];
+  const sourceFloatingRailAnchor = document.querySelector("#source-floating-rail-anchor");
+  const sourceFloatingRail = document.querySelector("#source-floating-rail");
+  const sourceFloatingRailDock = document.querySelector("#source-floating-rail-dock");
+  const countLabel = document.querySelector("#radar-results-count");
+  const emptyState = document.querySelector("#radar-empty-state");
+  const ringCountPills = [...document.querySelectorAll("[data-ring-count]")];
+  const scopeMeta = document.querySelector("#radar-scope-meta");
+  const visualMeta = document.querySelector("#radar-visual-meta");
+  const extendedToggle = document.querySelector("#radar-extended-toggle");
+  const radarSvg = document.querySelector("#radar-svg");
+  const radarSvgWrap = document.querySelector("#radar-svg-wrap");
+  const radarRingCircles = [...document.querySelectorAll("[data-ring-circle]")];
+  const radarRingLabels = [...document.querySelectorAll("[data-ring-label]")];
+  const params = new URLSearchParams(window.location.search);
+  const pageRoot = document.querySelector(".standard-page");
+  const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const defaultVisibleRings = new Set(
+    (pageRoot?.getAttribute("data-default-visible-rings") ?? "").split(",").filter(Boolean)
+  );
+  let showExtendedStates = params.get("view") === "extended";
+  let radarViewBoxAnimationFrame = 0;
+
+  const normalize = (value) => value.trim().toLowerCase();
+  const ringOrder = ["Adopt", "Explore", "To evaluate", "Endure", "Retired"];
+  const ringRadius = new Map([
+    ["Adopt", 18],
+    ["Explore", 34],
+    ["To evaluate", 50],
+    ["Endure", 68],
+    ["Retired", 86],
+  ]);
+  const fullViewBox = "-120 -120 240 240";
+  const parseViewBox = (value) =>
+    value
+      .trim()
+      .split(/[ ,]+/)
+      .map((item) => Number(item));
+  const formatViewBox = (value) => value.map((item) => Number(item.toFixed(2))).join(" ");
+
+  const getFilterState = () => ({
+    search: searchInput instanceof HTMLInputElement ? normalize(searchInput.value) : "",
+    archetype:
+      archetypeButtons.find((button) => button.classList.contains("is-active"))?.getAttribute("data-archetype-filter") ?? "",
+    source:
+      sourceButtons.find((button) => button.classList.contains("is-active"))?.getAttribute("data-source-filter") ?? "",
+  });
+
+  const getEntryMatches = (entry, filters) => {
+    const matchesSearch = !filters.search || entry.dataset.search?.includes(filters.search);
+    const matchesArchetype =
+      !filters.archetype ||
+      (entry.dataset.archetypes ?? "")
+        .split("|")
+        .filter(Boolean)
+        .includes(filters.archetype);
+    const matchesSource = !filters.source || entry.dataset.sourceType === filters.source;
+    const matchesLifecycleView =
+      showExtendedStates || defaultVisibleRings.has(entry.dataset.ring ?? "");
+
+    return {
+      matchesSearch,
+      matchesArchetype,
+      matchesSource,
+      matchesLifecycleView,
+      shouldShow: Boolean(
+        matchesSearch &&
+          matchesArchetype &&
+          matchesSource &&
+          matchesLifecycleView
+      ),
+    };
+  };
+
+  const updateSummaries = (visibleEntries, filters) => {
+    const ringCounts = new Map(ringOrder.map((ring) => [ring, 0]));
+    const visibleScopes = [...new Set(visibleEntries.map((entry) => entry.dataset.primaryScope).filter(Boolean))];
+
+    visibleEntries.forEach((entry) => {
+      const ring = entry.dataset.ring;
+
+      if (ring && ringCounts.has(ring)) {
+        ringCounts.set(ring, (ringCounts.get(ring) ?? 0) + 1);
+      }
+    });
+
+    ringCountPills.forEach((pill) => {
+      const ring = pill.getAttribute("data-ring-count") ?? "";
+      pill.textContent = `${ring}: ${ringCounts.get(ring) ?? 0}`;
+    });
+
+    if (scopeMeta) {
+      scopeMeta.textContent = visibleScopes.length
+        ? `Primary scopes in the current view: ${visibleScopes.join(", ")}.`
+        : "Primary scopes in the current view: none.";
+    }
+
+    if (visualMeta) {
+      const archetypeLabel = filters.archetype ? filters.archetype : "All archetypes";
+      const sourceLabel = filters.source
+        ? filters.source === "non-oss"
+          ? "Vendor"
+          : filters.source.charAt(0).toUpperCase() + filters.source.slice(1)
+        : "All sources";
+      visualMeta.textContent = `${visibleEntries.length} technologies visible in the radial for ${archetypeLabel} and ${sourceLabel}.`;
+    }
+  };
+
+  const syncQueryParams = () => {
+    const nextParams = new URLSearchParams(window.location.search);
+    const controlValues = [
+      ["q", searchInput instanceof HTMLInputElement ? searchInput.value.trim() : ""],
+      ["archetype", archetypeButtons.find((button) => button.classList.contains("is-active"))?.getAttribute("data-archetype-filter") ?? ""],
+      ["source", sourceButtons.find((button) => button.classList.contains("is-active"))?.getAttribute("data-source-filter") ?? ""],
+    ];
+
+    controlValues.forEach(([key, value]) => {
+      if (value) {
+        nextParams.set(key, value);
+      } else {
+        nextParams.delete(key);
+      }
+    });
+
+    if (showExtendedStates) {
+      nextParams.set("view", "extended");
+    } else {
+      nextParams.delete("view");
+    }
+
+    const nextUrl = nextParams.toString() ? `?${nextParams.toString()}` : window.location.pathname;
+    window.history.replaceState({}, "", nextUrl);
+  };
+
+  const syncExtendedButton = () => {
+    if (!(extendedToggle instanceof HTMLButtonElement)) {
+      return;
+    }
+
+    extendedToggle.textContent = showExtendedStates
+      ? "Show default states"
+      : "Show extended states";
+    extendedToggle.classList.toggle("is-active", showExtendedStates);
+  };
+
+  const animateRadarViewBox = (targetViewBox) => {
+    if (!(radarSvg instanceof SVGElement)) {
+      return;
+    }
+
+    const next = parseViewBox(targetViewBox);
+    const current = parseViewBox(radarSvg.getAttribute("viewBox") ?? fullViewBox);
+
+    if (
+      reduceMotionQuery.matches ||
+      current.length !== 4 ||
+      next.length !== 4 ||
+      current.every((value, index) => Math.abs(value - next[index]) < 0.1)
+    ) {
+      radarSvg.setAttribute("viewBox", targetViewBox);
+      return;
+    }
+
+    if (radarViewBoxAnimationFrame) {
+      cancelAnimationFrame(radarViewBoxAnimationFrame);
+    }
+
+    const start = performance.now();
+    const duration = 280;
+    const easeInOutCubic = (progress) =>
+      progress < 0.5
+        ? 4 * progress * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+    const frame = (now) => {
+      const progress = Math.min(1, (now - start) / duration);
+      const eased = easeInOutCubic(progress);
+      const interpolated = current.map((value, index) => value + (next[index] - value) * eased);
+
+      radarSvg.setAttribute("viewBox", formatViewBox(interpolated));
+
+      if (progress < 1) {
+        radarViewBoxAnimationFrame = requestAnimationFrame(frame);
+      } else {
+        radarViewBoxAnimationFrame = 0;
+        radarSvg.setAttribute("viewBox", targetViewBox);
+      }
+    };
+
+    radarViewBoxAnimationFrame = requestAnimationFrame(frame);
+  };
+
+  const syncFloatingRailDock = () => {
+    if (
+      !(sourceFloatingRail instanceof HTMLElement) ||
+      !(sourceFloatingRailAnchor instanceof HTMLElement) ||
+      !(sourceFloatingRailDock instanceof HTMLElement)
+    ) {
+      return;
+    }
+
+    const railHeight = `${sourceFloatingRail.offsetHeight}px`;
+    sourceFloatingRailAnchor.style.height = railHeight;
+    sourceFloatingRailDock.style.height = railHeight;
+  };
+
+  const updateFloatingRailPosition = () => {
+    if (
+      !(sourceFloatingRail instanceof HTMLElement) ||
+      !(sourceFloatingRailAnchor instanceof HTMLElement) ||
+      !(sourceFloatingRailDock instanceof HTMLElement)
+    ) {
+      return;
+    }
+
+    if (window.matchMedia("(max-width: 960px)").matches) {
+      if (sourceFloatingRail.parentElement !== sourceFloatingRailAnchor) {
+        sourceFloatingRailAnchor.append(sourceFloatingRail);
+      }
+
+      sourceFloatingRail.classList.remove("is-floating");
+      sourceFloatingRail.style.removeProperty("--floating-left");
+      sourceFloatingRail.style.removeProperty("--floating-width");
+      return;
+    }
+
+    const rootFontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    const topOffset = rootFontSize * 0.9;
+    const anchorRect = sourceFloatingRailAnchor.getBoundingClientRect();
+    const dockRect = sourceFloatingRailDock.getBoundingClientRect();
+
+    if (anchorRect.top > topOffset) {
+      if (sourceFloatingRail.parentElement !== sourceFloatingRailAnchor) {
+        sourceFloatingRailAnchor.append(sourceFloatingRail);
+      }
+
+      sourceFloatingRail.classList.remove("is-floating");
+      sourceFloatingRail.style.removeProperty("--floating-left");
+      sourceFloatingRail.style.removeProperty("--floating-width");
+      return;
+    }
+
+    if (dockRect.top <= topOffset) {
+      if (sourceFloatingRail.parentElement !== sourceFloatingRailDock) {
+        sourceFloatingRailDock.append(sourceFloatingRail);
+      }
+
+      sourceFloatingRail.classList.remove("is-floating");
+      sourceFloatingRail.style.removeProperty("--floating-left");
+      sourceFloatingRail.style.removeProperty("--floating-width");
+      return;
+    }
+
+    if (sourceFloatingRail.parentElement !== sourceFloatingRailAnchor) {
+      sourceFloatingRailAnchor.append(sourceFloatingRail);
+    }
+
+    sourceFloatingRail.style.setProperty("--floating-left", `${anchorRect.left}px`);
+    sourceFloatingRail.style.setProperty("--floating-width", `${sourceFloatingRailAnchor.offsetWidth}px`);
+    sourceFloatingRail.classList.add("is-floating");
+  };
+
+  const updateRadarViewport = (visibleEntries) => {
+    const visibleRings = new Set(visibleEntries.map((entry) => entry.dataset.ring).filter(Boolean));
+
+    radarRingCircles.forEach((circle) => {
+      const ring = circle.getAttribute("data-ring-circle") ?? "";
+      circle.classList.toggle("radar-ring-hidden", !showExtendedStates && !visibleRings.has(ring));
+    });
+
+    radarRingLabels.forEach((label) => {
+      const ring = label.getAttribute("data-ring-label") ?? "";
+      label.classList.toggle("radar-ring-hidden", !showExtendedStates && !visibleRings.has(ring));
+    });
+
+    if (!(radarSvg instanceof SVGElement)) {
+      return;
+    }
+
+    if (showExtendedStates || visibleEntries.length === 0) {
+      animateRadarViewBox(fullViewBox);
+      radarSvgWrap?.classList.remove("is-default-focus");
+      radarSvgWrap?.classList.add("is-extended-focus");
+      return;
+    }
+
+    const maxVisibleRingRadius = visibleEntries.reduce((maxRadius, entry) => {
+      const currentRadius = ringRadius.get(entry.dataset.ring ?? "") ?? 0;
+      return Math.max(maxRadius, currentRadius);
+    }, 0);
+    const visibleBlipCoordinates = blips
+      .filter((blip) => !blip.classList.contains("radar-blip-hidden"))
+      .flatMap((blip) => {
+        const circle = blip.querySelector("circle");
+
+        if (!(circle instanceof SVGCircleElement)) {
+          return [];
+        }
+
+        return [
+          {
+            x: Number(circle.getAttribute("cx") ?? 0),
+            y: Number(circle.getAttribute("cy") ?? 0),
+          },
+        ];
+      });
+    const blipExtremes = visibleBlipCoordinates.reduce(
+      (accumulator, point) => ({
+        x: Math.max(accumulator.x, Math.abs(point.x)),
+        y: Math.max(accumulator.y, Math.abs(point.y)),
+      }),
+      { x: 0, y: 0 }
+    );
+    const halfSize = Math.max(maxVisibleRingRadius + 18, blipExtremes.x + 18, blipExtremes.y + 18, 58);
+
+    animateRadarViewBox(`${-halfSize} ${-halfSize} ${halfSize * 2} ${halfSize * 2}`);
+    radarSvgWrap?.classList.add("is-default-focus");
+    radarSvgWrap?.classList.remove("is-extended-focus");
+  };
+
+  const updateResults = () => {
+    const filters = getFilterState();
+    const visibleEntries = [];
+
+    let visible = 0;
+
+    entries.forEach((entry) => {
+      const { shouldShow } = getEntryMatches(entry, filters);
+
+      entry.toggleAttribute("hidden", !shouldShow);
+
+      if (shouldShow) {
+        visible += 1;
+        visibleEntries.push(entry);
+      }
+    });
+
+    blips.forEach((blip) => {
+      const slug = blip.getAttribute("data-blip");
+      const relatedEntry = slug ? document.querySelector(`#radar-entry-${slug}`) : null;
+      blip.classList.toggle("radar-blip-hidden", relatedEntry?.hasAttribute("hidden") ?? false);
+    });
+
+    updateRadarViewport(visibleEntries);
+
+    if (countLabel) {
+      countLabel.textContent = `${visible} technologies visible`;
+    }
+
+    if (emptyState instanceof HTMLElement) {
+      emptyState.hidden = visible > 0;
+    }
+
+    updateSummaries(visibleEntries, filters);
+    syncQueryParams();
+    syncExtendedButton();
+  };
+
+  [searchInput].forEach((control) => {
+    control?.addEventListener("input", updateResults);
+    control?.addEventListener("change", updateResults);
+  });
+
+  if (searchInput instanceof HTMLInputElement && params.has("q")) {
+    searchInput.value = params.get("q") ?? "";
+  }
+
+  if (params.has("archetype")) {
+    const current = params.get("archetype") ?? "";
+    archetypeButtons.forEach((button) => {
+      button.classList.toggle("is-active", button.getAttribute("data-archetype-filter") === current);
+    });
+  }
+
+  if ("ResizeObserver" in window && sourceFloatingRail instanceof HTMLElement) {
+    const railObserver = new ResizeObserver(() => {
+      syncFloatingRailDock();
+      updateFloatingRailPosition();
+    });
+
+    railObserver.observe(sourceFloatingRail);
+  }
+
+  window.addEventListener("resize", () => {
+    syncFloatingRailDock();
+    updateFloatingRailPosition();
+  });
+  window.addEventListener("scroll", updateFloatingRailPosition, { passive: true });
+
+  if (params.has("source")) {
+    const current = params.get("source") ?? "";
+    sourceButtons.forEach((button) => {
+      button.classList.toggle("is-active", button.getAttribute("data-source-filter") === current);
+    });
+  }
+
+  archetypeButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      archetypeButtons.forEach((candidate) => {
+        candidate.classList.toggle("is-active", candidate === button);
+      });
+      updateResults();
+    });
+  });
+
+  sourceButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      sourceButtons.forEach((candidate) => {
+        candidate.classList.toggle("is-active", candidate === button);
+      });
+      updateResults();
+    });
+  });
+
+  if (extendedToggle instanceof HTMLButtonElement) {
+    extendedToggle.addEventListener("click", () => {
+      showExtendedStates = !showExtendedStates;
+      updateResults();
+    });
+  }
+
+  syncFloatingRailDock();
+  updateFloatingRailPosition();
+  updateResults();
+
+  if (params.get("debug-scroll") === "dock" && sourceFloatingRailDock instanceof HTMLElement) {
+    window.setTimeout(() => {
+      const rootFontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      const topOffset = rootFontSize * 0.9;
+      const targetTop = window.scrollY + sourceFloatingRailDock.getBoundingClientRect().top - topOffset;
+
+      window.scrollTo({ top: targetTop, behavior: "instant" });
+      updateFloatingRailPosition();
+    }, 180);
+  }
+</script>
+
+<script type="module" is:inline>
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.esm.min.mjs";
+
+  mermaid.initialize({
+    startOnLoad: true,
+    securityLevel: "loose",
+    theme: "base",
+    themeVariables: {
+      background: "#ffffff",
+      primaryTextColor: "#162028",
+      primaryBorderColor: "#cfd7de",
+      lineColor: "#57636e",
+      tertiaryColor: "#f7f7f7",
+      fontFamily: "Cascadia Code, Fira Code, monospace",
+      fontSize: "16px",
+    },
+  });
+</script>

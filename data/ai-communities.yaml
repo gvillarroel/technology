@@ -1,0 +1,41 @@
+communities:
+  - slug: platform-ai-council
+    name: Platform AI Council
+    scope: Governance and enablement for internal AI delivery
+    cadence: Biweekly
+    participants:
+      - Platform Engineering
+      - Security
+      - Decision Intelligence
+      - Legal
+    outputs:
+      - Guardrails updates
+      - Model approval reviews
+      - Evaluation standards
+
+  - slug: applied-ai-practice
+    name: Applied AI Practice
+    scope: Working group for hands-on delivery patterns, prompts, and evaluations
+    cadence: Weekly
+    participants:
+      - Product Engineering
+      - Analytics
+      - Operations
+    outputs:
+      - Reusable implementation patterns
+      - Pilot reviews
+      - Demo sessions
+
+  - slug: dashboard-stewards
+    name: Dashboard Stewards
+    scope: Metrics definitions and dashboard quality across business units
+    cadence: Monthly
+    participants:
+      - Data Platform
+      - Finance
+      - Product Operations
+      - Decision Intelligence
+    outputs:
+      - Certified KPI definitions
+      - Dashboard retirement decisions
+      - Source-of-truth mappings
