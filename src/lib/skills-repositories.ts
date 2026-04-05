@@ -74,7 +74,23 @@ function parseSkillDocument(markdown: string, skillDirName: string) {
 }
 
 async function findSkillFiles(rootPath: string): Promise<string[]> {
-  const entries = await readdir(rootPath, { withFileTypes: true });
+  let entries;
+
+  try {
+    entries = await readdir(rootPath, { withFileTypes: true });
+  } catch (error) {
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      (error.code === "ENOENT" || error.code === "ENOTDIR" || error.code === "EACCES")
+    ) {
+      return [];
+    }
+
+    throw error;
+  }
+
   const matches: string[] = [];
 
   for (const entry of entries) {
