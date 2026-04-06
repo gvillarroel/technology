@@ -1,3 +1,4 @@
+import { createMarkdownDocument, markdownLink, markdownResponse } from "../../lib/markdown";
 import { withBasePath } from "../../lib/site-url";
 
 const alternatives = [
@@ -46,39 +47,30 @@ const alternatives = [
 ];
 
 export function GET() {
-  const lines = [
-    "---",
-    "title: Format Architecture Spike",
-    "description: Markdown companion for the HTML and Markdown route architecture spike.",
-    `canonical_html: ${withBasePath("/spikes/format-architecture/")}`,
-    "---",
-    "",
-    "# HTML + Markdown Page Strategy",
-    "",
-    "Goal: one repeatable pattern for all pages, regardless of whether the content starts in Markdown, JSON, CSV, or a remote collector.",
-    "",
-    "Recommendation: keep HTML as the canonical route, expose Markdown as the same route with a .md suffix, and normalize every source into a shared page model.",
-    "",
-    "## Alternatives",
-    "",
-  ];
+  const doc = createMarkdownDocument({
+    title: "Format Architecture Spike",
+    description: "Markdown companion for the HTML and Markdown route architecture spike.",
+    canonicalHtml: withBasePath("/spikes/format-architecture/"),
+  });
+
+  doc.heading("HTML + Markdown Page Strategy");
+  doc.paragraph("Goal: one repeatable pattern for all pages, regardless of whether the content starts in Markdown, JSON, CSV, or a remote collector.");
+  doc.paragraph("Recommendation: keep HTML as the canonical route, expose Markdown as the same route with a .md suffix, and normalize every source into a shared page model.");
+  doc.section("Alternatives");
 
   for (const alternative of alternatives) {
-    lines.push(`### ${alternative.name}`);
-    lines.push("");
-    lines.push(`- Verdict: ${alternative.verdict}`);
-    lines.push(`- Summary: ${alternative.summary}`);
-    if (alternative.markdownHref) {
-      lines.push(`- Example: [Open Markdown route](${alternative.markdownHref})`);
-    } else {
-      lines.push("- Example: Documented in `.specs/spikes/*/README.md`.");
-    }
-    lines.push("");
+    doc.subheading(alternative.name, 3);
+    doc.keyValueList([
+      { label: "Verdict", value: alternative.verdict },
+      { label: "Summary", value: alternative.summary },
+      {
+        label: "Example",
+        value: alternative.markdownHref
+          ? markdownLink("Open Markdown route", alternative.markdownHref)
+          : "Documented in `.specs/spikes/*/README.md`.",
+      },
+    ]);
   }
 
-  return new Response(`${lines.join("\n")}\n`, {
-    headers: {
-      "Content-Type": "text/markdown; charset=utf-8",
-    },
-  });
+  return markdownResponse(doc.finish());
 }

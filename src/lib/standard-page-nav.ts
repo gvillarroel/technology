@@ -1,12 +1,27 @@
 import { withBasePath } from "./site-url";
 
-export type StandardPageKey = "home" | "tech-radar" | "cloud-enablement" | "ai-sdlc" | "communities";
+export type StandardPageKey =
+  | "home"
+  | "tech-radar"
+  | "cloud-enablement"
+  | "ai-sdlc"
+  | "adrs"
+  | "communities"
+  | "documents";
 
 export interface StandardNavItem {
   href: string;
   label: string;
   compactLabel?: string;
   current?: boolean;
+}
+
+export interface StandardNavGroup {
+  id: "platform" | "practice" | "documentation";
+  label: string;
+  compactLabel?: string;
+  current?: boolean;
+  items: StandardNavItem[];
 }
 
 const standardPageNavConfig: Record<StandardPageKey, Omit<StandardNavItem, "current">> = {
@@ -21,13 +36,52 @@ const standardPageNavConfig: Record<StandardPageKey, Omit<StandardNavItem, "curr
     href: withBasePath("/ai-sdlc/"),
     label: "AI SDLC",
   },
+  adrs: {
+    href: withBasePath("/adrs/"),
+    label: "ADRs",
+  },
   communities: { href: withBasePath("/communities/"), label: "Communities" },
+  documents: { href: withBasePath("/documents/"), label: "Documentation", compactLabel: "Docs" },
 };
 
-export function getStandardPageNavItems(currentPage?: StandardPageKey) {
-  return (Object.entries(standardPageNavConfig) as Array<[StandardPageKey, Omit<StandardNavItem, "current">]>)
-    .map(([key, item]) => ({
-      ...item,
-      current: key === currentPage,
-    }));
+function getStandardPageNavItem(key: StandardPageKey, currentPage?: StandardPageKey): StandardNavItem {
+  return {
+    ...standardPageNavConfig[key],
+    current: key === currentPage,
+  };
+}
+
+export function getStandardPageNavGroups(currentPage?: StandardPageKey): StandardNavGroup[] {
+  const groups: Array<Omit<StandardNavGroup, "current" | "items"> & { pageKeys: StandardPageKey[] }> = [
+    {
+      id: "platform",
+      label: "Platform",
+      compactLabel: "Platform",
+      pageKeys: ["tech-radar", "cloud-enablement"],
+    },
+    {
+      id: "practice",
+      label: "Practice",
+      compactLabel: "Practice",
+      pageKeys: ["ai-sdlc", "adrs", "communities"],
+    },
+    {
+      id: "documentation",
+      label: "Documentation",
+      compactLabel: "Docs",
+      pageKeys: ["documents"],
+    },
+  ];
+
+  return groups.map((group) => {
+    const items = group.pageKeys.map((key) => getStandardPageNavItem(key, currentPage));
+
+    return {
+      id: group.id,
+      label: group.label,
+      compactLabel: group.compactLabel,
+      current: items.some((item) => item.current),
+      items,
+    };
+  });
 }

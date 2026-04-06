@@ -4,6 +4,18 @@ import StandardPageHeader from "../components/StandardPageHeader.astro";
 import { getAiSdlcData, getAiSdlcDetailHtmlUrl } from "../lib/ai-sdlc";
 
 const { overview, topics } = await getAiSdlcData();
+const aiSdlcSectionNavItems = [
+  {
+    href: "/ai-sdlc/",
+    label: "Overview",
+    current: true,
+  },
+  ...topics.map((topic) => ({
+    href: getAiSdlcDetailHtmlUrl(topic.slug),
+    label: topic.name,
+    current: false,
+  })),
+];
 ---
 
 <BaseLayout
@@ -15,6 +27,8 @@ const { overview, topics } = await getAiSdlcData();
       currentPage="ai-sdlc"
       searchAction="/ai-sdlc/"
       searchPlaceholder={overview.copy.searchPlaceholder}
+      sectionNavItems={aiSdlcSectionNavItems}
+      sectionNavLabel="AI SDLC sections"
     />
 
     <section class="standard-page-intro">

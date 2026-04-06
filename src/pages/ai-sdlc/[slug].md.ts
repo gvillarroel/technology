@@ -1,5 +1,7 @@
 import {
   getAiSdlcData,
+  getAiSdlcHarnessToolsMarkdown,
+  getAiSdlcResolvedToolGroups,
   getAiSdlcSkillsMarkdown,
   getAiSdlcTopicMarkdown,
   getAiSdlcTopics,
@@ -26,6 +28,8 @@ export async function GET({
   const markdown =
     props.topic.slug === "skills"
       ? getAiSdlcSkillsMarkdown(props.topic, overview, await getSkillsCatalogData())
+      : props.topic.slug === "harness-tools"
+        ? getAiSdlcHarnessToolsMarkdown(props.topic, overview, await getAiSdlcResolvedToolGroups(props.topic))
       : getAiSdlcTopicMarkdown(props.topic, overview);
 
   return new Response(markdown, {

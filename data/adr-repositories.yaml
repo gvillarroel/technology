@@ -1,0 +1,10 @@
+repositories:
+  - slug: gvillarroel-repositories
+    name: All gvillarroel repositories
+    account: gvillarroel
+    owner: Platform Architecture
+    domains:
+      - .specs/adr
+    include:
+      - .specs/adr/**/*.md
+    exclude: []

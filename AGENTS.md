@@ -23,6 +23,9 @@ Read the following documents when they are relevant to the task:
 ## Workflow
 
 - Work locally first and keep the online version updated through pushes.
+- Use a single shared local web session for this repository whenever a live service is needed. Prefer reusing the existing session instead of starting another one on a different port.
+- The default shared development server command is `npm run dev -- --host 0.0.0.0 --port 4321`. Check whether `http://localhost:4321/` is already responding before starting a new instance.
+- If a shared session is already running, use that URL for review, Playwright checks, and screenshots instead of launching an additional server.
 - Keep Markdown route parity for every page under `src/pages`: each `.astro` page must have a matching `.md.ts` route, and commits should pass `npm run check:markdown-pages`.
 - After every visual or UI-related modification, run Playwright-based verification when feasible.
 - After each relevant change, capture one focused screenshot of the most relevant or changed section rather than the entire page, and share it in the chat so visual feedback can be reviewed iteratively.

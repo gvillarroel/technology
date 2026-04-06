@@ -1,0 +1,283 @@
+---
+import BaseLayout from "../../../../layouts/BaseLayout.astro";
+import StandardPageHeader from "../../../../components/StandardPageHeader.astro";
+import { getAiSdlcData, getAiSdlcDetailHtmlUrl, getAiSdlcTopicBySlug, getAiSdlcTopics } from "../../../../lib/ai-sdlc";
+import { withBasePath } from "../../../../lib/site-url";
+import { formatSkillPassRatio, formatSkillSuccessRatio } from "../../../../lib/skills-page";
+import { getApprovedSkillByRepoAndSlug, getApprovedSkills } from "../../../../lib/skills-repositories";
+
+export async function getStaticPaths() {
+  const skills = await getApprovedSkills();
+
+  return skills.map((skill) => ({
+    params: {
+      repository: skill.repositorySlug,
+      skill: skill.slug,
+    },
+  }));
+}
+
+const { repository, skill: skillSlug } = Astro.params;
+const { overview } = await getAiSdlcData();
+const topics = await getAiSdlcTopics();
+const skillsTopic = await getAiSdlcTopicBySlug("skills");
+const detailCopy = skillsTopic?.skillDetail;
+const skill = repository && skillSlug ? await getApprovedSkillByRepoAndSlug(repository, skillSlug) : undefined;
+
+if (!skill || !detailCopy) {
+  return Astro.redirect("/ai-sdlc/skills/");
+}
+
+const aiSdlcSectionNavItems = [
+  {
+    href: withBasePath("/ai-sdlc/"),
+    label: "Overview",
+    current: false,
+  },
+  ...topics.map((entry) => ({
+    href: getAiSdlcDetailHtmlUrl(entry.slug),
+    label: entry.name,
+    current: entry.slug === "skills",
+  })),
+];
+
+const aiSdlcTrailItems = [
+  {
+    href: getAiSdlcDetailHtmlUrl("skills"),
+    label: "Skills",
+    current: false,
+  },
+  {
+    label: skill.repositoryName,
+    current: false,
+  },
+  {
+    label: skill.name,
+    current: true,
+  },
+];
+
+function toPercentLabel(value: number) {
+  return `${Math.round(value * 100)}%`;
+}
+
+function toDeltaLabel(value: number, positivePrefix: string) {
+  if (!Number.isFinite(value)) {
+    return "";
+  }
+
+  const rounded = Math.round(value * 100);
+
+  if (rounded > 0) {
+    return `${positivePrefix}${rounded} pts`;
+  }
+
+  if (rounded < 0) {
+    return `${rounded} pts`;
+  }
+
+  return "0 pts";
+}
+
+function getEvaluationMatrix(evaluation: NonNullable<typeof skill>["evaluations"][number]) {
+  const cellByKey = new Map(
+    evaluation.results.cells.map((cell) => [`${cell.promptId}:${cell.variantId}:${cell.profileId}`, cell] as const),
+  );
+  const rows = evaluation.task.prompts.flatMap((prompt) =>
+    evaluation.comparison.variants.map((variant) => {
+      const cells = evaluation.comparison.profiles.map((profile) => ({
+        profile,
+        cell: cellByKey.get(`${prompt.id}:${variant.id}:${profile.id}`),
+      }));
+      const baseline = cellByKey.get(`${prompt.id}:${variant.id}:no-skill`);
+      const withSkill = cellByKey.get(`${prompt.id}:${variant.id}:skill`);
+      const delta =
+        baseline && withSkill
+          ? withSkill.successRatio - baseline.successRatio
+          : undefined;
+
+      return {
+        prompt,
+        variant,
+        cells,
+        delta,
+      };
+    }),
+  );
+
+  return {
+    rows,
+  };
+}
+---
+
+<BaseLayout
+  title={`${skill.name} | Skills | ${overview.title} | e*f(x) Technology`}
+  description={skill.description}
+>
+  <main class="shell shell-narrow standard-page">
+    <StandardPageHeader
+      currentPage="ai-sdlc"
+      searchAction="/ai-sdlc/skills/"
+      searchPlaceholder={detailCopy.searchPlaceholder}
+      searchQuery={skill.name}
+      sectionNavItems={aiSdlcSectionNavItems}
+      sectionNavLabel="AI SDLC sections"
+      sectionTrailItems={aiSdlcTrailItems}
+      sectionTrailLabel="AI SDLC skill path"
+    />
+
+    <section class="standard-page-intro standard-page-intro-detail">
+      <div>
+        <p class="eyebrow">{detailCopy.breadcrumbPrefix} / {skill.repositoryName}</p>
+        <h1 class="standard-page-title">{skill.name}</h1>
+        <p class="copy standard-copy-wide">{skill.description}</p>
+      </div>
+    </section>
+
+    <section class="bat-list">
+      <article class="bat-card bat-card-wide">
+        <div class="bat-card-bar">
+          <span class="bat-card-file">{skill.relativePath}/SKILL.md</span>
+          <span class="skills-repository-pill">{skill.repositoryName}</span>
+        </div>
+
+        <div class="bat-card-body bat-card-body-stack">
+          <div class="bat-line">
+            <span class="bat-gutter">1</span>
+            <div class="bat-code bat-meta-row">
+              <span class={`skills-evaluation-pill ${skill.evaluationSummary.evaluated ? "is-evaluated" : "is-not-evaluated"}`}>
+                {skill.evaluationSummary.evaluated ? detailCopy.statusEvaluated : detailCopy.statusNotEvaluated}
+              </span>
+              {skill.evaluationSummary.evaluated ? <span>{formatSkillPassRatio(skill.evaluationSummary.averageSuccessRatio)}</span> : null}
+            </div>
+          </div>
+          <div class="bat-line">
+            <span class="bat-gutter">2</span>
+            <div class="bat-code">
+              <p class="bat-heading bat-heading-inline">{detailCopy.installHeading}</p>
+              <pre class="skills-install-code"><code>{skill.installAvailable ? skill.installSnippet : detailCopy.installUnavailableSnippet}</code></pre>
+            </div>
+          </div>
+          {(skill.tags.length > 0 || skill.metadataPairs.length > 0) && (
+            <div class="bat-line">
+              <span class="bat-gutter">3</span>
+              <div class="bat-code">
+                <p class="bat-heading bat-heading-inline">{detailCopy.metadataHeading}</p>
+                <div class="skills-metadata-list">
+                  {skill.tags.map((tag) => (
+                    <span class="skills-tag-pill">{tag}</span>
+                  ))}
+                  {skill.metadataPairs.map((item) => (
+                    <span class="skills-metadata-pill">{item.key}: {item.value}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </article>
+    </section>
+
+    {skill.evaluations.length > 0 ? (
+      <section class="bat-list">
+        {skill.evaluations.map((evaluation, index) => (
+          <article class="bat-card">
+            <div class="bat-card-bar">
+              <span class="bat-card-file">{evaluation.benchmark.id}{detailCopy.benchmarkFileSuffix}</span>
+              <span class="bat-card-lang">yaml</span>
+            </div>
+
+            <div class="bat-card-body bat-card-body-stack">
+              <div class="bat-line">
+                <span class="bat-gutter">{index * 5 + 1}</span>
+                <div class="bat-code">
+                  <p class="bat-heading">{evaluation.benchmark.id}</p>
+                  <p class="bat-copy">{evaluation.benchmark.description}</p>
+                </div>
+              </div>
+              <div class="bat-line">
+                <span class="bat-gutter">{index * 5 + 2}</span>
+                <div class="bat-code">
+                  <div class="skills-benchmark-summary">
+                    <span class="skills-metadata-pill">{detailCopy.benchmarkSuccessRatioLabel}: {formatSkillSuccessRatio(evaluation.results.averageSuccessRatio)}</span>
+                    <span class="skills-metadata-pill">{detailCopy.benchmarkRunsLabel}: {evaluation.results.passCount}/{evaluation.results.totalRuns}</span>
+                    <span class="skills-metadata-pill">{detailCopy.benchmarkRequestsLabel}: {evaluation.evaluation.requests}</span>
+                    <span class="skills-metadata-pill">{detailCopy.benchmarkTimeoutLabel}: {evaluation.evaluation.timeoutMs}ms</span>
+                  </div>
+                </div>
+              </div>
+              <div class="bat-line">
+                <span class="bat-gutter">{index * 5 + 3}</span>
+                <div class="bat-code">
+                  <p class="bat-heading bat-heading-inline">{detailCopy.benchmarkTableHeading}</p>
+                  {(() => {
+                    const matrix = getEvaluationMatrix(evaluation);
+
+                    return (
+                      <div class="skills-comparison-table-wrap">
+                        <table class="skills-comparison-table">
+                          <thead>
+                            <tr>
+                              <th>{detailCopy.benchmarkPromptColumnLabel}</th>
+                              <th>{detailCopy.benchmarkScenarioColumnLabel}</th>
+                              {evaluation.comparison.profiles.map((profile) => (
+                                <th>{profile.id}</th>
+                              ))}
+                              <th>{detailCopy.benchmarkDeltaColumnLabel}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {matrix.rows.map((row) => (
+                              <tr>
+                                <th scope="row">
+                                  <span class="skills-table-primary">{row.prompt.id}</span>
+                                  <span class="skills-table-secondary">{row.prompt.description}</span>
+                                </th>
+                                <td>
+                                  <span class="skills-table-primary">{row.variant.variantDisplayName}</span>
+                                  <span class="skills-table-secondary">{detailCopy.benchmarkVariantModelLabel}: {row.variant.model}</span>
+                                </td>
+                                {row.cells.map(({ cell }) => (
+                                  <td>
+                                    {cell ? (
+                                      <div class="skills-table-metric">
+                                        <span class="skills-table-primary">{toPercentLabel(cell.successRatio)}</span>
+                                        <span class="skills-table-secondary">{cell.passCount}/{cell.completedRuns}</span>
+                                      </div>
+                                    ) : (
+                                      <span class="skills-table-empty">{detailCopy.benchmarkMissingCellLabel}</span>
+                                    )}
+                                  </td>
+                                ))}
+                                <td>
+                                  {typeof row.delta === "number" ? (
+                                    <span class={`skills-delta-pill ${row.delta > 0 ? "is-positive" : row.delta < 0 ? "is-negative" : "is-neutral"}`}>
+                                      {toDeltaLabel(row.delta, detailCopy.benchmarkDeltaPositivePrefix)}
+                                    </span>
+                                  ) : (
+                                    <span class="skills-table-empty">{detailCopy.benchmarkMissingCellLabel}</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+          </article>
+        ))}
+      </section>
+    ) : (
+      <p class="standard-empty-state">{detailCopy.noEvaluationsEmpty}</p>
+    )}
+
+    <section class="standard-footer-actions">
+      <a class="button button-secondary" href="/ai-sdlc/skills/">{detailCopy.backLabel}</a>
+    </section>
+  </main>
+</BaseLayout>

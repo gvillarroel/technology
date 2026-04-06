@@ -1,3 +1,4 @@
+import { createMarkdownDocument, markdownLink, markdownResponse } from "../../lib/markdown";
 import { withBasePath } from "../../lib/site-url";
 
 const variants = [
@@ -19,37 +20,27 @@ const variants = [
 ];
 
 export function GET() {
-  const lines = [
-    "---",
-    "title: Terminal Color Spike",
-    "description: Markdown companion for the landing-page terminal color exploration.",
-    `canonical_html: ${withBasePath("/spikes/terminal-colors/")}`,
-    "---",
-    "",
-    "# Terminal Palette Variations",
-    "",
-    "Color exploration spike for the e*f(x) terminal landing page.",
-    "",
-    "## Related Navigation",
-    "",
-    `- [Tech Radar](${withBasePath("/tech-radar.md")})`,
-    `- [Technology sections](${withBasePath("/index.md#technology-sections")})`,
-    `- [Page system](${withBasePath("/index.md#page-system")})`,
-    "",
-    "## Variants",
-    "",
-  ];
+  const doc = createMarkdownDocument({
+    title: "Terminal Color Spike",
+    description: "Markdown companion for the landing-page terminal color exploration.",
+    canonicalHtml: withBasePath("/spikes/terminal-colors/"),
+  });
+
+  doc.heading("Terminal Palette Variations");
+  doc.paragraph("Color exploration spike for the e*f(x) terminal landing page.");
+  doc.section("Related Navigation", () => {
+    doc.bullets([
+      markdownLink("Tech Radar", withBasePath("/tech-radar.md")),
+      markdownLink("Technology sections", withBasePath("/index.md#technology-sections")),
+      markdownLink("Page system", withBasePath("/index.md#page-system")),
+    ]);
+  });
+  doc.section("Variants");
 
   for (const variant of variants) {
-    lines.push(`### ${variant.name}: ${variant.title}`);
-    lines.push("");
-    lines.push(variant.description);
-    lines.push("");
+    doc.subheading(`${variant.name}: ${variant.title}`, 3);
+    doc.paragraph(variant.description);
   }
 
-  return new Response(`${lines.join("\n")}\n`, {
-    headers: {
-      "Content-Type": "text/markdown; charset=utf-8",
-    },
-  });
+  return markdownResponse(doc.finish());
 }

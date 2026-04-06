@@ -1,0 +1,18 @@
+repositories:
+  - slug: gvillarroel-docs
+    name: gvillarroel docs folders
+    account: gvillarroel
+    owner: Knowledge Systems
+    include_repositories:
+      - "*"
+    exclude_repositories:
+      - "*.github.io"
+    documents:
+      - slug: docs
+        name: Docs
+        domains:
+          - docs
+        include:
+          - docs/*.md
+          - docs/**/*.md
+        exclude: []

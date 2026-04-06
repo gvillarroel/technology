@@ -1,8 +1,13 @@
+import { createMarkdownDocument, markdownResponse } from "../lib/markdown";
+import { withBasePath } from "../lib/site-url";
+
 const landingCommands = [
   "/help",
   "/home",
   "/tech-radar",
+  "/documents",
   "/ai-sdlc",
+  "/adrs",
   "/communities",
 ];
 
@@ -10,7 +15,9 @@ const landingDomains = [
   "Core Platforms",
   "Delivery Systems",
   "Decision Intelligence",
+  "Documentation",
   "AI SDLC",
+  "ADRs",
 ];
 
 const rights = [
@@ -21,41 +28,24 @@ const rights = [
 ];
 
 export function GET() {
-  const lines = [
-    "---",
-    "title: e*f(x) Technology",
-    "description: Markdown companion for the landing page terminal.",
-    `canonical_html: ${withBasePath("/")}`,
-    "---",
-    "",
-    "# e*f(x) Technology",
-    "",
-    "Landing page terminal for technology standards, decision support, and engineering direction.",
-    "",
-    "## Available Commands",
-    "",
-    ...landingCommands.map((command) => `- ${command}`),
-    "",
-    "## Primary Routes",
-    "",
-    ...landingDomains.map((domain) => `- ${domain}`),
-    "",
-    "## Team Rights",
-    "",
-    ...rights.map((item) => `- ${item}`),
-    "",
-    "## Usage",
-    "",
-    "- Type a command in the terminal input.",
-    "- Use `/help` to list the configured commands.",
-    "- Use `/tech-radar`, `/ai-sdlc`, or `/communities` to read the Markdown companion for those pages.",
-    "",
-  ];
-
-  return new Response(`${lines.join("\n")}\n`, {
-    headers: {
-      "Content-Type": "text/markdown; charset=utf-8",
-    },
+  const doc = createMarkdownDocument({
+    title: "e*f(x) Technology",
+    description: "Markdown companion for the landing page terminal.",
+    canonicalHtml: withBasePath("/"),
   });
+
+  doc.heading("e*f(x) Technology");
+  doc.paragraph("Landing page terminal for technology standards, decision support, and engineering direction.");
+  doc.section("Available Commands", () => doc.bullets(landingCommands));
+  doc.section("Primary Routes", () => doc.bullets(landingDomains));
+  doc.section("Team Rights", () => doc.bullets(rights));
+  doc.section("Usage", () => {
+    doc.bullets([
+      "Type a command in the terminal input.",
+      "Use `/help` to list the configured commands.",
+      "Use `/tech-radar`, `/documents`, `/ai-sdlc`, `/adrs`, or `/communities` to read the Markdown companion for those pages.",
+    ]);
+  });
+
+  return markdownResponse(doc.finish());
 }
-import { withBasePath } from "../lib/site-url";

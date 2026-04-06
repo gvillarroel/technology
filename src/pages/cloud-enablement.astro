@@ -40,8 +40,8 @@ const entries = providers.flatMap((provider) =>
     </section>
 
     <section class="tech-radar-top" id="cloud-enablement-top">
-      <div class="radar-floating-rail-anchor">
-        <aside class="standard-floating-rail is-inline-top" aria-label="Cloud enablement filters">
+      <div class="radar-floating-rail-anchor" id="cloud-floating-rail-anchor">
+        <aside class="standard-floating-rail is-inline-top has-readable-surface" id="cloud-floating-rail" aria-label="Cloud enablement filters">
           <div class="standard-floating-rail-inner">
             <div class="radar-top-filters">
               <div class="radar-control">
@@ -76,6 +76,8 @@ const entries = providers.flatMap((provider) =>
           </div>
         </aside>
       </div>
+
+      <div class="radar-floating-rail-dock" id="cloud-floating-rail-dock" aria-hidden="true"></div>
     </section>
 
     <section class="standard-toolbar radar-entry-toolbar" aria-label="Cloud enablement entry filters">
@@ -284,4 +286,14 @@ const entries = providers.flatMap((provider) =>
     updateResults();
   });
   updateResults();
+</script>
+
+<script>
+  import { initFloatingRail } from "../scripts/floating-rail.ts";
+
+  initFloatingRail({
+    rail: "#cloud-floating-rail",
+    anchor: "#cloud-floating-rail-anchor",
+    dock: "#cloud-floating-rail-dock",
+  });
 </script>

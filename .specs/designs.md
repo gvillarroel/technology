@@ -63,6 +63,36 @@ sequenced, and reduced into scan-friendly blocks.
 - Preserve scanability under constrained widths by allowing controls to relocate without changing their meaning or state.
 - Keep visible feedback close to the interaction: selected item, visible result count, and active filter effects should update immediately.
 
+### Shared Filter Rails
+
+- Reuse the shared floating rail pattern for top-level operational filters that need to stay available while the user scrolls through long analytical pages.
+- A floating rail should keep following the viewport once it enters the floating state. Do not dock it back into the document while the user continues scrolling through the page.
+- The floating state should preserve nearly the same geometry as the resting state. Do not add extra padding, card framing, or other structural shifts that make the rail look like a different component after it becomes sticky.
+- When content scrolls behind the rail, use a readable surface treatment instead of a hard opaque block. The preferred treatment is a subtle glass-like layer with blur, light transparency, a soft divider, and restrained shadow.
+- The readable surface exists to protect legibility, not to introduce a second card on top of the page. Background separation should feel continuous with the page rather than abrupt.
+- Dense filter dimensions such as team selection should use a searchable multi-select dropdown instead of a long strip of visible chips or buttons.
+- Searchable multi-select dropdowns should stay closed by default, open only from an explicit trigger, and close when the user presses `Escape` or interacts outside the raised panel.
+- Shared filter rails should use the same state model as the charts, summaries, and lists they control. Totals, ratios, visible counts, and selection labels must remain synchronized.
+- Reusable rail behavior and surface styling should be expressed as shared classes and modifiers, not reimplemented page by page.
+
+### Diagram And Chart Surfaces
+
+- Diagram and chart surfaces should use straight edges, not rounded corners.
+- Keep cards and general content containers free to use rounded corners when appropriate, but charts, mermaid blocks, and radar-style visual frames should stay rectangular.
+- If a chart needs separation from surrounding content, prefer border, contrast, spacing, or shadow over corner rounding.
+- Diagram and chart surfaces should avoid excessive vertical whitespace. Prefer compact frames and tuned chart spacing over tall canvases with obvious dead space.
+- Categorical bar charts should use tighter category spacing when readability allows it, especially on long operational pages where multiple charts stack vertically.
+- Bar charts should be ordered from highest value to lowest value by default so the visual reads as a descending progression.
+- Mermaid blocks and radar-style visual frames should use restrained padding so the content reads as dense operational information rather than presentation slides.
+- Do not use pie charts on operational pages. Prefer bar charts because they make filtered comparisons, ordering, and relative differences easier to read.
+
+## Background Consistency
+
+- Standard pages should keep a stable background regardless of content height, expanded states, or filter results.
+- Decorative gradients should be attached to a fixed viewport layer, not to a scrolling document-height container.
+- A page becoming shorter or longer must not shift the perceived base color of the experience.
+- Page-specific decorative surfaces are allowed inside local cards or hero sections, but the global page wash should remain visually constant across the site.
+
 ## Typography
 
 - Primary font family: `Open Sans`, Arial, sans-serif.

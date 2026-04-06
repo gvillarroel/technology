@@ -1,0 +1,106 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import StandardPageHeader from "../../components/StandardPageHeader.astro";
+import { getAdrPageBySlug, getAdrStaticPaths } from "../../lib/adrs";
+import { withBasePath } from "../../lib/site-url";
+
+export async function getStaticPaths() {
+  return getAdrStaticPaths();
+}
+
+const slugSegments = Astro.params.slug?.split("/").filter(Boolean) ?? [];
+const page = await getAdrPageBySlug(slugSegments);
+
+if (!page) {
+  return Astro.redirect(withBasePath("/adrs/"));
+}
+---
+
+<BaseLayout
+  title={`${page.adrNumber ? `ADR ${page.adrNumber}: ` : ""}${page.title} | ADRs | e*f(x) Technology`}
+  description={page.summary}
+>
+  <main class="shell shell-narrow standard-page">
+    <StandardPageHeader
+      currentPage="adrs"
+      searchAction={withBasePath("/adrs/")}
+      searchPlaceholder="Search ADRs, products, or tags"
+      searchQuery={page.title}
+    />
+
+    <section class="standard-page-intro standard-page-intro-detail">
+      <div>
+        <p class="eyebrow">{page.product} / {page.status}</p>
+        <h1 class="standard-page-title">{page.adrNumber ? `ADR ${page.adrNumber}: ` : ""}{page.title}</h1>
+        <p class="copy standard-copy-wide">{page.summary}</p>
+      </div>
+    </section>
+
+    <article class="docs-article">
+      <div class="docs-article-bar">
+        <div class="adr-detail-links">
+          <a href={page.sourceUrl} target="_blank" rel="noreferrer">View source</a>
+          <a href={page.rawUrl} target="_blank" rel="noreferrer">View raw</a>
+        </div>
+      </div>
+      <div class="docs-markdown" set:html={page.bodyHtml} />
+    </article>
+
+    <section class="bat-grid bat-grid-detail">
+      <article class="bat-card bat-card-wide">
+        <div class="bat-card-bar">
+          <span class="bat-card-file">metadata.json</span>
+          <span class="bat-card-lang">json</span>
+        </div>
+        <div class="bat-card-body bat-card-body-stack">
+          <div class="bat-line">
+            <span class="bat-gutter">1</span>
+            <div class="bat-code bat-meta-row">
+              <span>product: {page.product}</span>
+              <span>status: {page.status}</span>
+              <span>date: {page.date || "Not set"}</span>
+              <span>area: {page.area}</span>
+            </div>
+          </div>
+          <div class="bat-line">
+            <span class="bat-gutter">2</span>
+            <div class="bat-code">
+              <dl class="bat-definition-list">
+                <div>
+                  <dt>ADR</dt>
+                  <dd>{page.adrNumber || "Not set"}</dd>
+                </div>
+                <div>
+                  <dt>Owner</dt>
+                  <dd>{page.owner}</dd>
+                </div>
+                <div>
+                  <dt>Area</dt>
+                  <dd>{page.area}</dd>
+                </div>
+                <div>
+                  <dt>Tags</dt>
+                  <dd>{page.tags.join(", ") || "None"}</dd>
+                </div>
+                <div>
+                  <dt>Repository</dt>
+                  <dd>{page.repository}</dd>
+                </div>
+                <div>
+                  <dt>Source file</dt>
+                  <dd>{page.relativePath}</dd>
+                </div>
+              </dl>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="standard-footer-actions">
+      <a class="button button-secondary" href={withBasePath("/adrs/")}>
+        Back to ADRs
+      </a>
+    </section>
+  </main>
+</BaseLayout>

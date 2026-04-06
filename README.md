@@ -11,6 +11,14 @@ Initial Astro `6.1.1` base for generating a static site and publishing it to Git
 - `npm run build`
 - `npm run preview`
 
+## Shared Local Server
+
+When a live local service is needed, prefer one shared development session for the whole repository instead of multiple parallel instances on different ports.
+
+- Shared command: `npm run dev -- --host 0.0.0.0 --port 4321`
+- Shared URL: `http://localhost:4321/`
+- Before starting a new local server, first check whether the shared URL is already responding and reuse it if available.
+
 `npm install` also runs `prepare`, which configures `git` to use the repository-local hooks under `.githooks/`.
 The `pre-commit` hook runs `npm run check:markdown-pages` so a new `.astro` page cannot be committed without its matching `.md.ts` route.
 

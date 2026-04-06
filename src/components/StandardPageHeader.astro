@@ -1,16 +1,26 @@
 ---
 import StandardHeader from "./StandardHeader.astro";
 import {
-  getStandardPageNavItems,
+  getStandardPageNavGroups,
   type StandardPageKey,
 } from "../lib/standard-page-nav";
 import { withBasePath } from "../lib/site-url";
+
+export interface HeaderNavItem {
+  href?: string;
+  label: string;
+  current?: boolean;
+}
 
 export interface Props {
   currentPage?: StandardPageKey;
   searchAction?: string;
   searchPlaceholder?: string;
   searchQuery?: string;
+  sectionNavItems?: HeaderNavItem[];
+  sectionNavLabel?: string;
+  sectionTrailItems?: HeaderNavItem[];
+  sectionTrailLabel?: string;
 }
 
 const {
@@ -18,12 +28,20 @@ const {
   searchAction = withBasePath("/tech-radar/"),
   searchPlaceholder = "Search",
   searchQuery = "",
+  sectionNavItems = [],
+  sectionNavLabel = "Section",
+  sectionTrailItems = [],
+  sectionTrailLabel = "Path",
 } = Astro.props;
 ---
 
 <StandardHeader
-  navItems={getStandardPageNavItems(currentPage)}
+  navGroups={getStandardPageNavGroups(currentPage)}
   searchAction={searchAction}
   searchPlaceholder={searchPlaceholder}
   searchQuery={searchQuery}
+  sectionNavItems={sectionNavItems}
+  sectionNavLabel={sectionNavLabel}
+  sectionTrailItems={sectionTrailItems}
+  sectionTrailLabel={sectionTrailLabel}
 />

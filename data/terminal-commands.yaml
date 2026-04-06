@@ -2,6 +2,9 @@ commands:
   - command: /help
     description: Show the available terminal commands.
     kind: builtin
+  - command: /search
+    description: Search across pages with `/search <terms>`.
+    kind: builtin
   - command: /home
     description: Open the landing page Markdown companion.
     html_url: /
@@ -17,6 +20,11 @@ commands:
     html_url: /cloud-enablement/
     markdown_url: /cloud-enablement.md
     file_name: cloud-enablement.md
+  - command: /documents
+    description: Open the documentation Markdown index.
+    html_url: /documents/
+    markdown_url: /documents.md
+    file_name: documents.md
   - command: /ai-sdlc
     description: Open the AI SDLC Markdown index.
     html_url: /ai-sdlc/
@@ -27,3 +35,27 @@ commands:
     html_url: /communities/
     markdown_url: /communities.md
     file_name: communities.md
+  - command: /skills
+    description: Open the AI SDLC skills Markdown index.
+    html_url: /ai-sdlc/skills/
+    markdown_url: /ai-sdlc/skills.md
+    file_name: ai-sdlc/skills.md
+  - command: /skills list
+    description: List approved skills in the terminal.
+    kind: builtin
+  - command: /api
+    description: Open the AI SDLC metrics Markdown page with API data sources.
+    html_url: /ai-sdlc/metrics/
+    markdown_url: /ai-sdlc/metrics.md
+    file_name: ai-sdlc/metrics.md
+  - command: /api list
+    description: List tracked API data sources in the terminal.
+    kind: builtin
+  - command: /apis
+    description: Open the AI SDLC metrics Markdown page with API data sources.
+    html_url: /ai-sdlc/metrics/
+    markdown_url: /ai-sdlc/metrics.md
+    file_name: ai-sdlc/metrics.md
+  - command: /apis list
+    description: List tracked API data sources in the terminal.
+    kind: builtin

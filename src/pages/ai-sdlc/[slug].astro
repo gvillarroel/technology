@@ -1,8 +1,16 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import StandardPageHeader from "../../components/StandardPageHeader.astro";
-import { getAiSdlcData, getAiSdlcTopicBySlug, getAiSdlcTopics } from "../../lib/ai-sdlc";
-import { getSkillsCatalogData } from "../../lib/skills-repositories";
+import { getAiMetricsDemoDataset } from "../../lib/ai-metrics-demo";
+import {
+  getAiSdlcData,
+  getAiSdlcDetailHtmlUrl,
+  getAiSdlcResolvedToolGroups,
+  getAiSdlcTopicBySlug,
+  getAiSdlcTopics,
+} from "../../lib/ai-sdlc";
+import { formatSkillPassRatio } from "../../lib/skills-page";
+import { getSkillDetailHtmlUrl, getSkillsCatalogData } from "../../lib/skills-repositories";
 import { withBasePath } from "../../lib/site-url";
 
 export async function getStaticPaths() {
@@ -18,11 +26,54 @@ export async function getStaticPaths() {
 const { slug } = Astro.params;
 const { overview } = await getAiSdlcData();
 const topic = slug ? await getAiSdlcTopicBySlug(slug) : undefined;
+const topics = await getAiSdlcTopics();
 const skillsCatalog = topic?.slug === "skills" ? await getSkillsCatalogData() : undefined;
+const metricsDataset = topic?.slug === "metrics" ? await getAiMetricsDemoDataset() : undefined;
+const skillsPageCopy = topic?.skillsPage;
+const harnessToolGroups = topic?.slug === "harness-tools" ? await getAiSdlcResolvedToolGroups(topic) : undefined;
+const harnessTools = harnessToolGroups?.flatMap((group) => group.tools) ?? [];
+const harnessCycleMermaid = `
+flowchart LR
+  A["Generate Code"] --> B["Validate Changes"]
+  B --> C["Release And Rollout"]
+  C --> D["Verify In Production"]
+  D --> A
+`;
+
+function getPrimarySkillLink(skill: NonNullable<typeof skillsCatalog>["skills"][number]) {
+  if (skill.sourceUrl) {
+    return {
+      href: skill.sourceUrl,
+      label: skillsPageCopy?.sourceLinkLabel,
+    };
+  }
+
+  if (skill.repositoryUrl) {
+    return {
+      href: skill.repositoryUrl,
+      label: skillsPageCopy?.repositoryLinkLabel,
+    };
+  }
+
+  return null;
+}
 
 if (!topic) {
   return Astro.redirect(withBasePath("/ai-sdlc/"));
 }
+
+const aiSdlcSectionNavItems = [
+  {
+    href: withBasePath("/ai-sdlc/"),
+    label: "Overview",
+    current: false,
+  },
+  ...topics.map((entry) => ({
+    href: getAiSdlcDetailHtmlUrl(entry.slug),
+    label: entry.name,
+    current: entry.slug === topic.slug,
+  })),
+];
 ---
 
 <BaseLayout
@@ -35,6 +86,8 @@ if (!topic) {
       searchAction={withBasePath("/ai-sdlc/")}
       searchPlaceholder={overview.copy.searchPlaceholder}
       searchQuery={topic.name}
+      sectionNavItems={aiSdlcSectionNavItems}
+      sectionNavLabel="AI SDLC sections"
     />
 
     <section class="standard-page-intro standard-page-intro-detail">
@@ -47,39 +100,281 @@ if (!topic) {
 
     {topic.slug === "skills" && skillsCatalog ? (
       <>
-        <section class="bat-grid bat-grid-detail">
-          <article class="bat-card bat-card-wide">
+        <section class="standard-toolbar skills-toolbar" aria-label="Skills filters">
+          <div class="radar-control">
+            <label class="standard-label" for="skills-search">{skillsPageCopy?.filterSearchLabel}</label>
+            <input
+              id="skills-search"
+              class="standard-select"
+              type="search"
+              placeholder={skillsPageCopy?.filterSearchPlaceholder}
+            />
+          </div>
+          <label class="skills-toggle" for="skills-evaluated-only">
+            <span class="skills-toggle-copy">
+              <span class="standard-label">{skillsPageCopy?.filterToggleLabel}</span>
+              <span class="skills-toggle-hint">{skillsPageCopy?.filterToggleHint}</span>
+            </span>
+            <span class="skills-toggle-control">
+              <input id="skills-evaluated-only" type="checkbox" />
+              <span class="skills-toggle-track" aria-hidden="true"></span>
+            </span>
+          </label>
+        </section>
+
+        <section class="standard-section-heading">
+          <div>
+            <p class="eyebrow">{skillsPageCopy?.catalogEyebrow}</p>
+            <h2>{skillsPageCopy?.catalogHeading}</h2>
+          </div>
+          <p
+            class="standard-section-meta"
+            id="skills-results-count"
+            data-results-count-suffix={skillsPageCopy?.resultsCountSuffix}
+          >
+            {skillsCatalog.skills.length} {skillsPageCopy?.resultsCountSuffix}
+          </p>
+        </section>
+
+        <section class="bat-list" id="skills-list">
+          {skillsCatalog.skills.map((skill, index) => {
+            const primarySkillLink = getPrimarySkillLink(skill);
+
+            return (
+              <article
+                class="bat-card bat-entry skills-entry"
+                data-repository={skill.repositorySlug}
+                data-tags={skill.tags.join("|")}
+                data-search={skill.searchText}
+                data-evaluated={skill.evaluationSummary.evaluated ? "true" : "false"}
+              >
+              <div class="bat-card-bar">
+                <a class="skills-card-file-link" href={getSkillDetailHtmlUrl(skill.repositorySlug, skill.slug)}>
+                  <span class="bat-card-file" data-highlight-text>{skill.relativePath}/SKILL.md</span>
+                </a>
+                <span class="skills-repository-pill" data-highlight-text>{skill.repositoryName}</span>
+              </div>
+
+              <div class="bat-card-body bat-card-body-stack">
+                <div class="bat-line">
+                  <span class="bat-gutter">{index * 3 + 1}</span>
+                  <div class="bat-code">
+                    <p class="bat-copy" data-highlight-text>{skill.description}</p>
+                  </div>
+                </div>
+                <div class="bat-line">
+                  <span class="bat-gutter">{index * 3 + 2}</span>
+                  <div class="bat-code bat-meta-row">
+                    <span class={`skills-evaluation-pill ${skill.evaluationSummary.evaluated ? "is-evaluated" : "is-not-evaluated"}`}>
+                      {skill.evaluationSummary.evaluated ? skillsPageCopy?.statusEvaluated : skillsPageCopy?.statusNotEvaluated}
+                    </span>
+                    {skill.evaluationSummary.evaluated ? <span>{formatSkillPassRatio(skill.evaluationSummary.averageSuccessRatio)}</span> : null}
+                    <a href={getSkillDetailHtmlUrl(skill.repositorySlug, skill.slug)}>{skillsPageCopy?.detailLinkLabel}</a>
+                  </div>
+                </div>
+                <div class="bat-line">
+                  <span class="bat-gutter">{index * 3 + 3}</span>
+                  <div class="bat-code">
+                    <p class="bat-heading bat-heading-inline">{skillsPageCopy?.installHeading}</p>
+                    <pre class="skills-install-code"><code data-highlight-text>{skill.installAvailable ? skill.installSnippet : skillsPageCopy?.installUnavailableSnippet}</code></pre>
+                    {primarySkillLink ? (
+                      <div class="bat-link-row">
+                        <a href={primarySkillLink.href}>{primarySkillLink.label}</a>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+              </article>
+            );
+          })}
+        </section>
+
+        <p class="standard-empty-state" id="skills-empty-state" hidden>
+          {skillsPageCopy?.emptyState}
+        </p>
+      </>
+    ) : topic.slug === "harness-tools" && harnessToolGroups ? (
+      <>
+        <section class="harness-cycle-grid">
+          <article class="bat-card harness-cycle-card harness-cycle-card-full">
             <div class="bat-card-bar">
-              <span class="bat-card-file">data/skills-repositories.yaml</span>
-              <span class="bat-card-lang">yaml</span>
+              <span class="bat-card-file">ai-sdlc-cycle.mmd</span>
+              <span class="bat-card-lang">mmd</span>
             </div>
 
             <div class="bat-card-body bat-card-body-stack">
               <div class="bat-line">
                 <span class="bat-gutter">1</span>
                 <div class="bat-code">
-                  <p class="bat-heading">Approved skill sources</p>
+                  <p class="bat-heading">Software delivery cycle</p>
                   <p class="bat-copy">
-                    The catalog is built from trusted repositories only. Build-time scanning finds
-                    every `SKILL.md`, extracts the skill metadata, derives pack tags from the folder
-                    structure, and generates the install command from repository metadata.
+                    Read this page from left to right: generate code, validate the change, release
+                    it through controlled delivery, and confirm behavior in production before the
+                    next iteration.
                   </p>
-                </div>
-              </div>
-              <div class="bat-line">
-                <span class="bat-gutter">2</span>
-                <div class="bat-code bat-meta-row">
-                  <span>repositories: {skillsCatalog.repositories.length}</span>
-                  <span>skills: {skillsCatalog.skills.length}</span>
-                  <span>owner: {topic.owner}</span>
+                  <pre class="bat-mermaid-diagram mermaid" aria-label="AI SDLC harness tools cycle">
+{harnessCycleMermaid}
+                  </pre>
                 </div>
               </div>
             </div>
           </article>
+        </section>
 
-          <article class="bat-card">
+        <section class="standard-section-heading">
+          <div>
+            <p class="eyebrow">Tools By Stage</p>
+            <h2>Harness tools across the SDLC cycle</h2>
+          </div>
+          <p class="standard-section-meta">{harnessTools.length} radar-backed tools</p>
+        </section>
+
+        <section class="harness-tools-groups" id="harness-tools-groups">
+          {harnessToolGroups.map((group) => (
+            <article class="harness-tools-group" data-group-title={group.title.toLowerCase()}>
+              <div class="harness-tools-group-header">
+                <div>
+                  <p class="eyebrow">{group.title}</p>
+                  <h3>{group.summary}</h3>
+                </div>
+                <p class="standard-section-meta harness-tools-group-count">
+                  {group.tools.length} tools in this stage
+                </p>
+              </div>
+
+              <div class="harness-tools-grid">
+                {group.tools.map((tool) => (
+                  <article class="harness-tool-box">
+                    <div class="harness-tool-box-topline">
+                      <a class="skills-card-file-link" href={withBasePath(`/tech-radar/${tool.entry.slug}/`)}>
+                        <span class="bat-card-file">{tool.entry.name}</span>
+                      </a>
+                      <span class={`harness-ring-pill harness-ring-pill-${tool.entry.ring.toLowerCase().replace(/\s+/g, "-")}`}>
+                        {tool.entry.ring}
+                      </span>
+                    </div>
+
+                    <div class="harness-tool-box-body">
+                      <p class="ai-sdlc-card-copy">{tool.entry.summary}</p>
+                      <div class="skills-metadata-list">
+                        <span class="skills-metadata-pill">scope: {tool.entry.primaryScope}</span>
+                        <span class="skills-metadata-pill">owner: {tool.entry.owner}</span>
+                        <span class="skills-tag-pill is-muted">status: {tool.entry.status}</span>
+                      </div>
+                      <p class="bat-heading bat-heading-inline">Role in this stage</p>
+                      <p class="ai-sdlc-card-copy">{tool.role}</p>
+                      <div class="skills-metadata-list">
+                        <span class="skills-metadata-pill">focus: {tool.focus}</span>
+                        <span class="skills-tag-pill is-muted">updated: {tool.entry.updated}</span>
+                      </div>
+                      <p class="bat-heading bat-heading-inline">Production signal</p>
+                      <p class="ai-sdlc-card-copy">{tool.productionSignal}</p>
+                      <div class="bat-link-row">
+                        <a href={withBasePath(`/tech-radar/${tool.entry.slug}/`)}>open tech radar detail</a>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </article>
+          ))}
+        </section>
+      </>
+    ) : topic.slug === "metrics" && metricsDataset ? (
+      <>
+        <section class="metrics-demo-top" id="metrics-demo-top">
+          <div class="radar-floating-rail-anchor" id="metrics-team-rail-anchor">
+            <aside class="standard-floating-rail is-inline-top has-readable-surface" id="metrics-team-rail" aria-label="Metrics team filters">
+              <div class="standard-floating-rail-inner">
+                <div class="radar-top-filters">
+                  <div class="radar-control metrics-team-control">
+                    <span class="standard-label">Teams</span>
+                    <div class="metrics-team-multiselect" id="metrics-team-filter">
+                      <button
+                        class="standard-select metrics-team-trigger"
+                        id="metrics-team-trigger"
+                        type="button"
+                        aria-expanded="false"
+                        aria-controls="metrics-team-panel"
+                      >
+                        <span class="metrics-team-trigger-text">
+                          <span class="metrics-team-trigger-value" id="metrics-team-filter-label">All teams</span>
+                          <span class="metrics-team-trigger-hint">10 teams available</span>
+                        </span>
+                        <span class="metrics-team-trigger-icon" aria-hidden="true">▾</span>
+                      </button>
+
+                      <div class="metrics-team-panel" id="metrics-team-panel" hidden>
+                        <div class="metrics-team-panel-topline">
+                          <input
+                            id="metrics-team-search"
+                            class="standard-select metrics-team-search"
+                            type="search"
+                            placeholder="Search teams"
+                            autocomplete="off"
+                          />
+                          <button class="standard-toggle-button metrics-team-reset" type="button" data-team-filter="all">
+                            All teams
+                          </button>
+                        </div>
+
+                        <div class="metrics-team-options" id="metrics-team-options">
+                          {metricsDataset.teams.map((team) => (
+                            <label class="metrics-team-option" data-team-option={team.slug} data-search={team.name.toLowerCase()}>
+                              <input class="metrics-team-checkbox" type="checkbox" value={team.slug} />
+                              <span class="metrics-team-option-swatch" style={`background:${team.color};`}></span>
+                              <span class="metrics-team-option-name">{team.name}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="radar-control">
+                    <label class="standard-label" for="metrics-start-date">Start date</label>
+                    <input id="metrics-start-date" class="standard-select metrics-date-input" type="date" />
+                  </div>
+
+                  <div class="radar-control">
+                    <label class="standard-label" for="metrics-end-date">End date</label>
+                    <input id="metrics-end-date" class="standard-select metrics-date-input" type="date" />
+                  </div>
+
+                  <div class="radar-control">
+                    <span class="standard-label">Scale</span>
+                    <div class="standard-toggle-group standard-toggle-group-vertical" id="metrics-value-mode">
+                      <button class="standard-toggle-button is-active" type="button" data-value-mode="total">
+                        Total
+                      </button>
+                      <button class="standard-toggle-button" type="button" data-value-mode="ratio">
+                        Ratio
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </aside>
+          </div>
+
+          <div class="metrics-demo-top-content">
+            <div class="radar-floating-rail-dock" id="metrics-team-rail-dock" aria-hidden="true"></div>
+          </div>
+        </section>
+
+        <section class="standard-section-heading">
+          <div>
+            <p class="eyebrow">Usage Distribution</p>
+            <h2>Users by coding assistant</h2>
+          </div>
+          <p class="standard-section-meta" id="metrics-selection-meta">All 10 teams in view</p>
+        </section>
+
+        <section class="bat-grid bat-grid-detail metrics-hero-grid">
+          <article class="bat-card bat-card-wide">
             <div class="bat-card-bar">
-              <span class="bat-card-file">{overview.copy.metadataFile}</span>
+              <span class="bat-card-file">platform-users.json</span>
               <span class="bat-card-lang">json</span>
             </div>
 
@@ -87,158 +382,139 @@ if (!topic) {
               <div class="bat-line">
                 <span class="bat-gutter">1</span>
                 <div class="bat-code">
-                  <dl class="bat-definition-list">
+                  <p class="bat-heading">Platform usage distribution</p>
+                  <p class="bat-copy">
+                    First view: stacked users for GitHub Copilot, Claude Code, and OpenAI Codex across the selected teams, with each team preserved as a distinct color and switchable between totals and normalized ratios.
+                  </p>
+                </div>
+              </div>
+              <div class="bat-line">
+                <span class="bat-gutter">2</span>
+                <div class="bat-code">
+                  <div class="metrics-platform-chart" id="metrics-platform-chart"></div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="bat-card">
+            <div class="bat-card-bar">
+              <span class="bat-card-file">selection-summary.json</span>
+              <span class="bat-card-lang">json</span>
+            </div>
+
+            <div class="bat-card-body bat-card-body-stack">
+              <div class="bat-line">
+                <span class="bat-gutter">1</span>
+                <div class="bat-code">
+                  <dl class="bat-definition-list metrics-summary-list">
                     <div>
-                      <dt>{overview.copy.metadataStatusLabel}</dt>
-                      <dd>{topic.status}</dd>
+                      <dt>teams</dt>
+                      <dd id="metrics-summary-teams">{metricsDataset.teams.length}</dd>
                     </div>
                     <div>
-                      <dt>{overview.copy.metadataOwnerLabel}</dt>
-                      <dd>{topic.owner}</dd>
+                      <dt>repositories</dt>
+                      <dd id="metrics-summary-repositories">
+                        {metricsDataset.teams.reduce((total, team) => total + team.repositories.length, 0)}
+                      </dd>
                     </div>
                     <div>
-                      <dt>{overview.copy.metadataOutcomeLabel}</dt>
-                      <dd>{topic.outcome}</dd>
+                      <dt>monthly sessions</dt>
+                      <dd id="metrics-summary-sessions">
+                        {metricsDataset.teams.reduce((total, team) => total + team.metrics.monthlySessions, 0)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>estimated spend</dt>
+                      <dd id="metrics-summary-spend">
+                        ${metricsDataset.teams.reduce((total, team) => total + team.metrics.estimatedMonthlySpendUsd, 0)}
+                      </dd>
                     </div>
                   </dl>
                 </div>
               </div>
             </div>
           </article>
-        </section>
+          </section>
 
-        <section class="standard-section-heading">
-          <div>
-            <p class="eyebrow">Repositories</p>
-            <h2>Trusted skill sources</h2>
-          </div>
-          <p class="standard-section-meta">{skillsCatalog.repositories.length} repositories configured</p>
-        </section>
-
-        <section class="skills-repository-grid">
-          {skillsCatalog.repositories.map((repository) => (
-            <article class="skills-repository-card">
-              <div class="skills-repository-topline">
-                <p class="skills-repository-title">{repository.name}</p>
-                <span class="community-card-index">{String(repository.skillCount).padStart(2, "0")} skills</span>
-              </div>
-              <p class="skills-repository-copy">{repository.purpose}</p>
-              <div class="skills-repository-meta">
-                <span>source: {repository.source}</span>
-                <span>ref: {repository.ref}</span>
-              </div>
-              <div class="skills-repository-links">
-                {repository.repository ? (
-                  <a href={`https://github.com/${repository.repository}`}>{repository.repository}</a>
-                ) : (
-                  <span>{repository.location}</span>
-                )}
-              </div>
-            </article>
-          ))}
-        </section>
-
-        <section class="standard-toolbar skills-toolbar" aria-label="Skills filters">
-          <div class="radar-control">
-            <label class="standard-label" for="skills-search">Search skills</label>
-            <input
-              id="skills-search"
-              class="standard-select"
-              type="search"
-              placeholder="Filter by name, description, tag, or repository"
-            />
-          </div>
-
-          <div class="radar-control">
-            <span class="standard-label">Repository</span>
-            <div class="standard-toggle-group standard-toggle-group-vertical skills-filter-group" id="skills-repository-filter">
-              <button class="standard-toggle-button is-active" type="button" data-repository-filter="">
-                All
-              </button>
-              {skillsCatalog.repositories.map((repository) => (
-                <button class="standard-toggle-button" type="button" data-repository-filter={repository.slug}>
-                  {repository.name}
-                </button>
-              ))}
+          <section class="standard-section-heading">
+            <div>
+              <p class="eyebrow">Repository Distribution</p>
+              <h2>Repositories by team</h2>
             </div>
-          </div>
-        </section>
+            <p class="standard-section-meta">Same selection, shown as totals or share of visible repositories</p>
+          </section>
 
-        <section class="standard-section-heading">
-          <div>
-            <p class="eyebrow">Catalog</p>
-            <h2>Approved skills</h2>
-          </div>
-          <p class="standard-section-meta" id="skills-results-count">{skillsCatalog.skills.length} skills visible</p>
-        </section>
-
-        <section class="bat-list" id="skills-list">
-          {skillsCatalog.skills.map((skill, index) => (
-            <article
-              class="bat-card bat-entry skills-entry"
-              data-repository={skill.repositorySlug}
-              data-tags={skill.tags.join("|")}
-              data-search={`${skill.name} ${skill.description} ${skill.tags.join(" ")} ${skill.repositoryLabel} ${skill.installPath}`.toLowerCase()}
-            >
+          <section class="bat-grid bat-grid-detail metrics-full-width-chart-grid">
+            <article class="bat-card bat-card-wide">
               <div class="bat-card-bar">
-                <span class="bat-card-file">{skill.relativePath}/SKILL.md</span>
-                <span class="skills-repository-pill">{skill.repositoryName}</span>
+                <span class="bat-card-file">team-repositories.json</span>
+                <span class="bat-card-lang">json</span>
               </div>
 
               <div class="bat-card-body bat-card-body-stack">
                 <div class="bat-line">
-                  <span class="bat-gutter">{index * 5 + 1}</span>
-                  <div class="bat-code bat-entry-heading">
-                    <h3 class="bat-entry-title">{skill.name}</h3>
-                    <span class="bat-meta">{skill.slug}</span>
-                  </div>
-                </div>
-                <div class="bat-line">
-                  <span class="bat-gutter">{index * 5 + 2}</span>
+                  <span class="bat-gutter">1</span>
                   <div class="bat-code">
-                    <p class="bat-copy">{skill.description}</p>
+                    <p class="bat-heading">Repository distribution by team</p>
+                    <p class="bat-copy">
+                      Second view: repository counts for the currently selected teams, using the
+                      same team color mapping as the platform chart. Ratio mode normalizes against
+                      the total repositories in the visible selection.
+                    </p>
                   </div>
                 </div>
                 <div class="bat-line">
-                  <span class="bat-gutter">{index * 5 + 3}</span>
+                  <span class="bat-gutter">2</span>
                   <div class="bat-code">
-                    <div class="skills-tag-list">
-                      {skill.tags.length > 0 ? (
-                        skill.tags.map((tag) => <span class="skills-tag-pill">{tag}</span>)
-                      ) : (
-                        <span class="skills-tag-pill is-muted">root</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div class="bat-line">
-                  <span class="bat-gutter">{index * 5 + 4}</span>
-                  <div class="bat-code bat-meta-row">
-                    <span>repo: {skill.repositoryLabel}</span>
-                    <span>path: {skill.installPath}</span>
-                    <span>source: {skill.repositorySource}</span>
-                  </div>
-                </div>
-                <div class="bat-line">
-                  <span class="bat-gutter">{index * 5 + 5}</span>
-                  <div class="bat-code">
-                    <p class="bat-heading bat-heading-inline">Install</p>
-                    <pre class="skills-install-code"><code>{skill.installAvailable ? skill.installCommand : `# Local-only trusted source\n# Publish remote install metadata to enable npx skills add`}</code></pre>
-                    <div class="bat-link-row">
-                      {skill.repositoryUrl ? <a href={skill.repositoryUrl}>open repository</a> : null}
-                    </div>
+                    <div class="metrics-platform-chart metrics-repository-chart" id="metrics-repository-chart"></div>
                   </div>
                 </div>
               </div>
-            </article>
-          ))}
-        </section>
+              </article>
+            </section>
 
-        <p class="standard-empty-state" id="skills-empty-state" hidden>
-          No skills match the current filters.
-        </p>
-      </>
-    ) : (
+            <section class="standard-section-heading">
+              <div>
+                <p class="eyebrow">Model Distribution</p>
+                <h2>Models used by team</h2>
+              </div>
+              <p class="standard-section-meta">Simulated distribution from current model families tracked in models.dev</p>
+            </section>
+
+            <section class="bat-grid bat-grid-detail metrics-full-width-chart-grid">
+              <article class="bat-card bat-card-wide">
+                <div class="bat-card-bar">
+                  <span class="bat-card-file">team-models.json</span>
+                  <span class="bat-card-lang">json</span>
+                </div>
+
+                <div class="bat-card-body bat-card-body-stack">
+                  <div class="bat-line">
+                    <span class="bat-gutter">1</span>
+                    <div class="bat-code">
+                      <p class="bat-heading">Model distribution by team</p>
+                      <p class="bat-copy">
+                        Third view: modeled usage across GPT-5, GPT-5 Mini, Claude Sonnet 4, Claude
+                        Opus 4, and Claude Haiku 3.5. The model set was chosen from model families
+                        currently listed on models.dev and distributed across teams as an
+                        organizational demo. Hover a segment to inspect users, sessions, and
+                        simulated monthly tokens for each team.
+                      </p>
+                    </div>
+                  </div>
+                  <div class="bat-line">
+                    <span class="bat-gutter">2</span>
+                    <div class="bat-code">
+                      <div class="metrics-platform-chart metrics-model-chart" id="metrics-model-chart"></div>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            </section>
+
+        </>
+      ) : (
       <>
         <section class="bat-grid bat-grid-detail">
           <article class="bat-card bat-card-wide">
@@ -330,7 +606,113 @@ if (!topic) {
               </div>
             </div>
           </article>
+        </section>
 
+        {topic.measurementLayers.length > 0 ? (
+          <>
+            <section class="standard-section-heading" id="measurement-layers">
+              <div>
+                <p class="eyebrow">Measurement Layers</p>
+                <h2>Metrics that can actually be operated</h2>
+              </div>
+              <p class="standard-section-meta">{topic.measurementLayers.length} layers</p>
+            </section>
+
+            <section class="bat-grid bat-grid-detail">
+              {topic.measurementLayers.map((layer, index) => (
+                <article class="bat-card">
+                  <div class="bat-card-bar">
+                    <span class="bat-card-file">measurement-layer-{index + 1}.md</span>
+                    <span class="bat-card-lang">md</span>
+                  </div>
+
+                  <div class="bat-card-body bat-card-body-stack">
+                    <div class="bat-line">
+                      <span class="bat-gutter">1</span>
+                      <div class="bat-code">
+                        <p class="bat-heading">{layer.title}</p>
+                        <p class="bat-copy">{layer.summary}</p>
+                      </div>
+                    </div>
+                    <div class="bat-line">
+                      <span class="bat-gutter">2</span>
+                      <div class="bat-code">
+                        <ul class="bat-list-block">
+                          {layer.signals.map((signal) => <li>{signal}</li>)}
+                        </ul>
+                      </div>
+                    </div>
+                    <div class="bat-line">
+                      <span class="bat-gutter">3</span>
+                      <div class="bat-code">
+                        <p class="bat-heading bat-heading-inline">Recommended chart</p>
+                        <p class="bat-copy">{layer.chart}</p>
+                        <p class="bat-heading bat-heading-inline">Source hint</p>
+                        <p class="bat-copy">{layer.sourceHint}</p>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </section>
+          </>
+        ) : null}
+
+        {topic.dataSources.length > 0 ? (
+          <>
+            <section class="standard-section-heading" id="organization-sources">
+              <div>
+                <p class="eyebrow">Organization Sources</p>
+                <h2>Where the metrics come from</h2>
+              </div>
+              <p class="standard-section-meta">{topic.dataSources.length} sources</p>
+            </section>
+
+            <section class="bat-grid bat-grid-detail">
+              {topic.dataSources.map((source, index) => (
+                <article class="bat-card bat-card-wide">
+                  <div class="bat-card-bar">
+                    <span class="bat-card-file">source-{index + 1}.json</span>
+                    <span class="bat-card-lang">json</span>
+                  </div>
+
+                  <div class="bat-card-body bat-card-body-stack">
+                    <div class="bat-line">
+                      <span class="bat-gutter">1</span>
+                      <div class="bat-code">
+                        <p class="bat-heading">{source.name}</p>
+                        <div class="bat-meta-row">
+                          <span>scope: {source.scope}</span>
+                          <span>availability: {source.availability}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="bat-line">
+                      <span class="bat-gutter">2</span>
+                      <div class="bat-code">
+                        <p class="bat-heading bat-heading-inline">Realistic metrics</p>
+                        <ul class="bat-list-block">
+                          {source.metrics.map((metric) => <li>{metric}</li>)}
+                        </ul>
+                      </div>
+                    </div>
+                    <div class="bat-line">
+                      <span class="bat-gutter">3</span>
+                      <div class="bat-code">
+                        <p class="bat-heading bat-heading-inline">Caveats</p>
+                        <ul class="bat-list-block">
+                          {source.caveats.map((caveat) => <li>{caveat}</li>)}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </section>
+          </>
+        ) : null}
+
+        <section class="bat-grid bat-grid-detail">
           <article class="bat-card">
             <div class="bat-card-bar">
               <span class="bat-card-file">{overview.copy.linksFile}</span>
@@ -365,19 +747,46 @@ if (!topic) {
     const skillsList = document.querySelector("#skills-list");
     const skillEntries = skillsList ? [...skillsList.querySelectorAll(".skills-entry")] : [];
     const skillsSearch = document.querySelector("#skills-search");
+    const skillsEvaluatedOnly = document.querySelector("#skills-evaluated-only");
     const skillsResultsCount = document.querySelector("#skills-results-count");
     const skillsEmptyState = document.querySelector("#skills-empty-state");
-    const skillsRepositoryFilter = document.querySelector("#skills-repository-filter");
-    const repositoryButtons = skillsRepositoryFilter
-      ? [...skillsRepositoryFilter.querySelectorAll("[data-repository-filter]")]
-      : [];
 
     const normalize = (value) => value.trim().toLowerCase();
+    const highlightTargets = skillEntries.flatMap((entry) => [...entry.querySelectorAll("[data-highlight-text]")]);
+
+    const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+    const renderHighlightedText = (element, query) => {
+      const originalText = element.dataset.originalText ?? element.textContent ?? "";
+      element.dataset.originalText = originalText;
+
+      if (!query) {
+        element.textContent = originalText;
+        return;
+      }
+
+      const matcher = new RegExp(`(${escapeRegExp(query)})`, "ig");
+      const fragments = originalText.split(matcher);
+
+      element.replaceChildren(
+        ...fragments
+          .filter((fragment) => fragment.length > 0)
+          .map((fragment) => {
+            if (fragment.toLowerCase() === query) {
+              const mark = document.createElement("mark");
+              mark.className = "skills-search-highlight";
+              mark.textContent = fragment;
+              return mark;
+            }
+
+            return document.createTextNode(fragment);
+          })
+      );
+    };
 
     const getFilters = () => ({
       search: skillsSearch instanceof HTMLInputElement ? normalize(skillsSearch.value) : "",
-      repository:
-        repositoryButtons.find((button) => button.classList.contains("is-active"))?.getAttribute("data-repository-filter") ?? "",
+      evaluatedOnly: skillsEvaluatedOnly instanceof HTMLInputElement ? skillsEvaluatedOnly.checked : false,
     });
 
     const updateSkillResults = () => {
@@ -386,8 +795,8 @@ if (!topic) {
 
       skillEntries.forEach((entry) => {
         const matchesSearch = !filters.search || entry.dataset.search?.includes(filters.search);
-        const matchesRepository = !filters.repository || entry.dataset.repository === filters.repository;
-        const shouldShow = Boolean(matchesSearch && matchesRepository);
+        const matchesEvaluated = !filters.evaluatedOnly || entry.dataset.evaluated === "true";
+        const shouldShow = Boolean(matchesSearch && matchesEvaluated);
 
         entry.toggleAttribute("hidden", !shouldShow);
 
@@ -397,28 +806,831 @@ if (!topic) {
       });
 
       if (skillsResultsCount) {
-        skillsResultsCount.textContent = `${visibleCount} skills visible`;
+        const suffix = skillsResultsCount.dataset.resultsCountSuffix || "skills visible";
+        skillsResultsCount.textContent = `${visibleCount} ${suffix}`;
       }
 
       if (skillsEmptyState instanceof HTMLElement) {
         skillsEmptyState.hidden = visibleCount > 0;
       }
+
+      highlightTargets.forEach((element) => {
+        renderHighlightedText(element, filters.search);
+      });
     };
 
-    [skillsSearch].forEach((control) => {
+    [skillsSearch, skillsEvaluatedOnly].forEach((control) => {
       control?.addEventListener("input", updateSkillResults);
       control?.addEventListener("change", updateSkillResults);
     });
 
-    repositoryButtons.forEach((button) => {
-      button.addEventListener("click", () => {
-        repositoryButtons.forEach((candidate) => {
-          candidate.classList.toggle("is-active", candidate === button);
+    updateSkillResults();
+  </script>
+) : topic.slug === "harness-tools" ? (
+  <script type="module" is:inline>
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.esm.min.mjs";
+
+    mermaid.initialize({
+      startOnLoad: true,
+      securityLevel: "loose",
+      theme: "base",
+      themeVariables: {
+        background: "#ffffff",
+        primaryTextColor: "#162028",
+        primaryBorderColor: "#cfd7de",
+        lineColor: "#57636e",
+        tertiaryColor: "#f7f7f7",
+        fontFamily: "Cascadia Code, Fira Code, monospace",
+        fontSize: "16px",
+      },
+    });
+  </script>
+) : topic.slug === "metrics" && metricsDataset ? (
+  <script id="metrics-dataset" is:inline type="application/json" set:html={JSON.stringify(metricsDataset)}></script>
+  <script>
+    import * as echarts from "echarts/core";
+    import { BarChart } from "echarts/charts";
+    import type { EChartsType } from "echarts/core";
+    import { CanvasRenderer } from "echarts/renderers";
+    import { GridComponent, LegendComponent, TooltipComponent } from "echarts/components";
+      import type {
+        AiMetricsDemoDataset,
+        AiMetricsModelUsage,
+        AiMetricsPlatformUsage,
+        AiMetricsTeam,
+      } from "../../lib/ai-metrics-demo";
+
+    echarts.use([BarChart, CanvasRenderer, GridComponent, LegendComponent, TooltipComponent]);
+
+    const metricsDatasetNode = document.querySelector("#metrics-dataset");
+    const metricsDataset: AiMetricsDemoDataset = metricsDatasetNode
+      ? (JSON.parse(metricsDatasetNode.textContent ?? '{"overview":{"title":"","sourceNote":""},"teams":[]}') as AiMetricsDemoDataset)
+      : { overview: { title: "", sourceNote: "" }, teams: [] };
+      const metricsTeams = metricsDataset.teams;
+    const teamFilter = document.querySelector("#metrics-team-filter");
+    const teamTrigger = document.querySelector("#metrics-team-trigger");
+    const teamFilterLabel = document.querySelector("#metrics-team-filter-label");
+    const teamPanel = document.querySelector("#metrics-team-panel");
+    const teamSearchInput = document.querySelector("#metrics-team-search");
+    const teamResetButton = teamFilter ? teamFilter.querySelector('[data-team-filter="all"]') : null;
+    const teamCheckboxes = teamFilter ? [...teamFilter.querySelectorAll(".metrics-team-checkbox")] : [];
+    const teamOptions = teamFilter ? [...teamFilter.querySelectorAll("[data-team-option]")] : [];
+    const valueModeFilter = document.querySelector("#metrics-value-mode");
+    const valueModeButtons = valueModeFilter ? [...valueModeFilter.querySelectorAll("[data-value-mode]")] : [];
+      const startDateInput = document.querySelector("#metrics-start-date");
+      const endDateInput = document.querySelector("#metrics-end-date");
+      const platformChart = document.querySelector("#metrics-platform-chart");
+      const repositoryChart = document.querySelector("#metrics-repository-chart");
+      const modelChart = document.querySelector("#metrics-model-chart");
+      const selectionMeta = document.querySelector("#metrics-selection-meta");
+      const summaryTeams = document.querySelector("#metrics-summary-teams");
+      const summaryRepositories = document.querySelector("#metrics-summary-repositories");
+      const summarySessions = document.querySelector("#metrics-summary-sessions");
+      const summarySpend = document.querySelector("#metrics-summary-spend");
+        const params = new URLSearchParams(window.location.search);
+        const platformOrder = ["GitHub Copilot", "Claude Code", "OpenAI Codex"];
+        const modelOrder = ["GPT-5", "GPT-5 Mini", "Claude Sonnet 4", "Claude Opus 4", "Claude Haiku 3.5"];
+        let platformChartInstance: EChartsType | null = null;
+        let repositoryChartInstance: EChartsType | null = null;
+        let modelChartInstance: EChartsType | null = null;
+      type MetricsTooltipPoint = {
+        axisValueLabel: string;
+        marker: string;
+        seriesName: string;
+        data: { rawUsers: number; value: number; platformTotal: number };
+      };
+        type MetricsRepositoryPoint = {
+          axisValueLabel: string;
+          marker: string;
+          seriesName: string;
+          data: { rawRepositories: number; value: number; totalRepositories: number };
+        };
+        type MetricsModelPoint = {
+          axisValueLabel: string;
+          marker: string;
+          seriesName: string;
+          data: { rawUsers: number; rawSessions: number; rawTokens: number; value: number; modelTotal: number; totalTokens: number };
+        };
+        const sortByTotalDescending = <T extends string>(values: T[], totals: Map<T, number>) =>
+          [...values].sort((left, right) => (totals.get(right) ?? 0) - (totals.get(left) ?? 0));
+
+    const formatInt = (value: number) => new Intl.NumberFormat("en-US").format(value || 0);
+    const formatCurrency = (value: number) =>
+      new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value || 0);
+    const formatPercent = (value: number) =>
+      new Intl.NumberFormat("en-US", { style: "percent", maximumFractionDigits: 1 }).format(value || 0);
+    const formatCompactInt = (value: number) =>
+      new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(value || 0);
+    const isIsoDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
+    const formatIsoDate = (value: Date) =>
+      `${value.getFullYear()}-${`${value.getMonth() + 1}`.padStart(2, "0")}-${`${value.getDate()}`.padStart(2, "0")}`;
+    const parseIsoDate = (value: string) => {
+      const [year, month, day] = value.split("-").map((segment: string) => Number.parseInt(segment, 10));
+      return new Date(year, month - 1, day);
+    };
+    const formatShortDate = (value: string) =>
+      new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(parseIsoDate(value));
+    const today = new Date();
+    const yesterdayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+    const defaultStartDateValue = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 30);
+    const defaultEndDate = formatIsoDate(yesterdayDate);
+    const defaultStartDate = formatIsoDate(defaultStartDateValue);
+
+    const selectedTeams = new Set(
+      (params.get("teams") ?? "")
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean)
+    );
+    let valueMode = params.get("mode") === "ratio" ? "ratio" : "total";
+    let startDate = isIsoDate(params.get("start") ?? "") ? (params.get("start") ?? defaultStartDate) : defaultStartDate;
+    let endDate = isIsoDate(params.get("end") ?? "") ? (params.get("end") ?? defaultEndDate) : defaultEndDate;
+    let teamSearch = "";
+
+    if (endDate > defaultEndDate) {
+      endDate = defaultEndDate;
+    }
+
+    if (startDate > endDate) {
+      startDate = endDate;
+    }
+
+    const portfolioTotals = metricsTeams.reduce(
+      (totals: { repositories: number; users: number; sessions: number; spend: number }, team: AiMetricsTeam) => {
+        totals.repositories += team.repositories.length;
+        totals.users += team.metrics.monthlyActiveUsers;
+        totals.sessions += team.metrics.monthlySessions;
+        totals.spend += team.metrics.estimatedMonthlySpendUsd;
+        return totals;
+      },
+      { repositories: 0, users: 0, sessions: 0, spend: 0 }
+    );
+
+    const getVisibleTeams = (): AiMetricsTeam[] =>
+      selectedTeams.size === 0
+        ? metricsTeams
+        : metricsTeams.filter((team: AiMetricsTeam) => selectedTeams.has(team.slug));
+
+    const syncButtons = () => {
+      valueModeButtons.forEach((button) => {
+        button.classList.toggle("is-active", button.getAttribute("data-value-mode") === valueMode);
+      });
+    };
+
+    const syncTeamFilterUi = () => {
+      const selectedCount = selectedTeams.size;
+      const selectedLabel =
+        selectedCount === 0
+          ? "All teams"
+          : selectedCount === 1
+            ? metricsTeams.find((team) => selectedTeams.has(team.slug))?.name ?? "1 team"
+            : `${selectedCount} teams selected`;
+
+      if (teamFilterLabel) {
+        teamFilterLabel.textContent = selectedLabel;
+      }
+
+      teamCheckboxes.forEach((checkbox) => {
+        if (!(checkbox instanceof HTMLInputElement)) {
+          return;
+        }
+
+        checkbox.checked = selectedTeams.has(checkbox.value);
+      });
+
+      teamOptions.forEach((option) => {
+        const searchTarget = option.getAttribute("data-search") ?? "";
+        const matchesSearch = !teamSearch || searchTarget.includes(teamSearch);
+        option.toggleAttribute("hidden", !matchesSearch);
+      });
+
+      if (teamResetButton instanceof HTMLElement) {
+        teamResetButton.classList.toggle("is-active", selectedTeams.size === 0);
+      }
+    };
+
+    const setTeamPanelOpen = (open: boolean) => {
+      if (!(teamPanel instanceof HTMLElement) || !(teamTrigger instanceof HTMLButtonElement)) {
+        return;
+      }
+
+      teamPanel.hidden = !open;
+      teamTrigger.setAttribute("aria-expanded", open ? "true" : "false");
+
+      if (open && teamSearchInput instanceof HTMLInputElement) {
+        teamSearchInput.focus();
+      }
+    };
+
+    const syncQueryParams = () => {
+      if (selectedTeams.size > 0) {
+        params.set("teams", [...selectedTeams].join(","));
+      } else {
+        params.delete("teams");
+      }
+
+      if (valueMode === "ratio") {
+        params.set("mode", "ratio");
+      } else {
+        params.delete("mode");
+      }
+
+      if (startDate !== defaultStartDate) {
+        params.set("start", startDate);
+      } else {
+        params.delete("start");
+      }
+
+      if (endDate !== defaultEndDate) {
+        params.set("end", endDate);
+      } else {
+        params.delete("end");
+      }
+
+      const nextUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
+      window.history.replaceState({}, "", nextUrl);
+    };
+
+    const renderPlatformChart = (teams: AiMetricsTeam[]) => {
+      if (!(platformChart instanceof HTMLElement)) {
+        return;
+      }
+
+      if (!platformChartInstance) {
+        platformChartInstance = echarts.init(platformChart, undefined, { renderer: "canvas" });
+      }
+
+      const totalsByPlatform = new Map(platformOrder.map((platform) => [platform, 0]));
+
+        teams.forEach((team: AiMetricsTeam) => {
+          team.platformUsage.forEach((usage: AiMetricsPlatformUsage) => {
+            totalsByPlatform.set(usage.platform, (totalsByPlatform.get(usage.platform) ?? 0) + usage.users);
+          });
         });
-        updateSkillResults();
+        const sortedPlatformOrder = sortByTotalDescending(platformOrder, totalsByPlatform);
+  
+          const series = teams.map((team: AiMetricsTeam) => ({
+          name: team.name,
+          type: "bar",
+          stack: "platform-users",
+          barMaxWidth: 34,
+          barCategoryGap: "22%",
+          itemStyle: {
+            color: team.color,
+            borderRadius: [0, 0, 0, 0],
+          },
+        emphasis: {
+          focus: "series",
+        },
+          data: sortedPlatformOrder.map((platform) => {
+            const usage = team.platformUsage.find((entry: AiMetricsPlatformUsage) => entry.platform === platform);
+          const rawUsers = usage?.users ?? 0;
+          const platformTotal = totalsByPlatform.get(platform) ?? 0;
+
+          return {
+            value: valueMode === "ratio" ? (platformTotal > 0 ? rawUsers / platformTotal : 0) : rawUsers,
+            rawUsers,
+            platform,
+            platformTotal,
+          };
+        }),
+      }));
+
+      platformChartInstance.setOption(
+          {
+            animationDuration: 250,
+            animationDurationUpdate: 250,
+            color: teams.map((team: AiMetricsTeam) => team.color),
+            grid: {
+              left: 156,
+              right: 32,
+              top: 72,
+              bottom: 14,
+            },
+          legend: {
+            type: "scroll",
+            top: 12,
+            left: 12,
+            right: 12,
+            itemWidth: 12,
+            itemHeight: 12,
+            textStyle: {
+              color: "#162028",
+              fontFamily: "Cascadia Code, Fira Code, monospace",
+              fontSize: 12,
+              fontWeight: 700,
+            },
+          },
+          tooltip: {
+            trigger: "axis",
+            axisPointer: {
+              type: "shadow",
+            },
+            backgroundColor: "rgba(255, 255, 255, 0.96)",
+            borderColor: "rgba(22, 32, 40, 0.12)",
+            borderWidth: 1,
+            textStyle: {
+              color: "#162028",
+              fontFamily: "Cascadia Code, Fira Code, monospace",
+            },
+            formatter: (paramsList: unknown) => {
+              const points = (Array.isArray(paramsList) ? paramsList : [paramsList]) as MetricsTooltipPoint[];
+              const platform = points[0]?.axisValueLabel ?? "";
+              const totalUsers = points[0]?.data?.platformTotal ?? 0;
+              const rows = points
+                .filter((point) => (point.data?.rawUsers ?? 0) > 0)
+                .map((point) => {
+                  const ratio = totalUsers > 0 ? point.data.rawUsers / totalUsers : 0;
+                  const valueLabel =
+                    valueMode === "ratio"
+                      ? `${formatPercent(point.data.value)} of ${platform}`
+                      : `${formatInt(point.data.rawUsers)} users`;
+
+                  return `${point.marker} ${point.seriesName}: ${valueLabel} (${formatPercent(ratio)})`;
+                });
+
+              return [
+                `<strong>${platform}</strong>`,
+                `Total users: ${formatInt(totalUsers)}`,
+                ...rows,
+              ].join("<br/>");
+            },
+          },
+          xAxis: {
+            type: "value",
+            max: valueMode === "ratio" ? 1 : undefined,
+            axisLabel: {
+              color: "#57636e",
+              formatter: (value: number) => (valueMode === "ratio" ? formatPercent(value) : formatInt(value)),
+            },
+            splitLine: {
+              lineStyle: {
+                color: "rgba(87, 99, 110, 0.16)",
+              },
+            },
+          },
+          yAxis: {
+            type: "category",
+              data: sortedPlatformOrder,
+            axisTick: {
+              show: false,
+            },
+            axisLabel: {
+              color: "#162028",
+              fontFamily: "Cascadia Code, Fira Code, monospace",
+              fontSize: 12,
+              fontWeight: 700,
+            },
+          },
+          series,
+        },
+        true
+      );
+    };
+
+      const renderSummary = (teams: AiMetricsTeam[]) => {
+      const teamCount = teams.length;
+      const repositoryCount = teams.reduce((total: number, team: AiMetricsTeam) => total + team.repositories.length, 0);
+      const sessionCount = teams.reduce((total: number, team: AiMetricsTeam) => total + team.metrics.monthlySessions, 0);
+      const spendCount = teams.reduce((total: number, team: AiMetricsTeam) => total + team.metrics.estimatedMonthlySpendUsd, 0);
+      const teamLabel =
+        teamCount === metricsTeams.length
+          ? `All ${metricsTeams.length} teams in view`
+          : `${teamCount} selected team${teamCount === 1 ? "" : "s"} in view`;
+      const dateRangeLabel = `${formatShortDate(startDate)} to ${formatShortDate(endDate)}`;
+      const repoLabel =
+        valueMode === "ratio"
+          ? formatPercent(portfolioTotals.repositories > 0 ? repositoryCount / portfolioTotals.repositories : 0)
+          : formatInt(repositoryCount);
+      const sessionLabel =
+        valueMode === "ratio"
+          ? formatPercent(portfolioTotals.sessions > 0 ? sessionCount / portfolioTotals.sessions : 0)
+          : formatInt(sessionCount);
+      const spendLabel =
+        valueMode === "ratio"
+          ? formatPercent(portfolioTotals.spend > 0 ? spendCount / portfolioTotals.spend : 0)
+          : formatCurrency(spendCount);
+
+      if (selectionMeta) {
+        selectionMeta.textContent = `${teamLabel} • ${dateRangeLabel} • ${valueMode === "ratio" ? "Ratio mode by platform" : "Total mode"}`;
+      }
+
+      if (summaryTeams) {
+        summaryTeams.textContent = formatInt(teamCount);
+      }
+
+      if (summaryRepositories) {
+        summaryRepositories.textContent = repoLabel;
+      }
+
+      if (summarySessions) {
+        summarySessions.textContent = sessionLabel;
+      }
+
+      if (summarySpend) {
+        summarySpend.textContent = spendLabel;
+      }
+
+      if (summaryTeams) {
+        summaryTeams.textContent =
+          valueMode === "ratio"
+            ? formatPercent(teamCount / metricsTeams.length)
+            : formatInt(teamCount);
+      }
+
+        };
+
+      const renderRepositoryChart = (teams: AiMetricsTeam[]) => {
+        if (!(repositoryChart instanceof HTMLElement)) {
+          return;
+        }
+
+        if (!repositoryChartInstance) {
+          repositoryChartInstance = echarts.init(repositoryChart, undefined, { renderer: "canvas" });
+        }
+
+        const sortedTeams = [...teams].sort((left, right) => right.repositories.length - left.repositories.length);
+        const totalRepositories = sortedTeams.reduce(
+          (total: number, team: AiMetricsTeam) => total + team.repositories.length,
+          0
+        );
+
+        repositoryChartInstance.setOption(
+          {
+            animationDuration: 250,
+            animationDurationUpdate: 250,
+            grid: {
+              left: 156,
+              right: 32,
+              top: 6,
+              bottom: 14,
+            },
+            tooltip: {
+              trigger: "axis",
+              axisPointer: {
+                type: "shadow",
+              },
+              backgroundColor: "rgba(255, 255, 255, 0.96)",
+              borderColor: "rgba(22, 32, 40, 0.12)",
+              borderWidth: 1,
+              textStyle: {
+                color: "#162028",
+                fontFamily: "Cascadia Code, Fira Code, monospace",
+              },
+              formatter: (paramsList: unknown) => {
+                const point = (Array.isArray(paramsList) ? paramsList[0] : paramsList) as MetricsRepositoryPoint;
+                const rawRepositories = point?.data?.rawRepositories ?? 0;
+                const ratio = totalRepositories > 0 ? rawRepositories / totalRepositories : 0;
+
+                return [
+                  `<strong>${point?.axisValueLabel ?? ""}</strong>`,
+                  `Repositories: ${formatInt(rawRepositories)}`,
+                  `Share of visible repositories: ${formatPercent(ratio)}`,
+                ].join("<br/>");
+              },
+            },
+            xAxis: {
+              type: "value",
+              max: valueMode === "ratio" ? 1 : undefined,
+              axisLabel: {
+                color: "#57636e",
+                formatter: (value: number) => (valueMode === "ratio" ? formatPercent(value) : formatInt(value)),
+              },
+              splitLine: {
+                lineStyle: {
+                  color: "rgba(87, 99, 110, 0.16)",
+                },
+              },
+            },
+            yAxis: {
+              type: "category",
+              data: sortedTeams.map((team: AiMetricsTeam) => team.name),
+              axisTick: {
+                show: false,
+              },
+              axisLabel: {
+                color: "#162028",
+                fontFamily: "Cascadia Code, Fira Code, monospace",
+                fontSize: 12,
+                fontWeight: 700,
+              },
+            },
+            series: [
+              {
+                type: "bar",
+                barMaxWidth: 34,
+                barCategoryGap: "18%",
+                data: sortedTeams.map((team: AiMetricsTeam) => ({
+                  value:
+                    valueMode === "ratio"
+                      ? (totalRepositories > 0 ? team.repositories.length / totalRepositories : 0)
+                      : team.repositories.length,
+                  rawRepositories: team.repositories.length,
+                  totalRepositories,
+                  itemStyle: {
+                    color: team.color,
+                    borderRadius: [0, 0, 0, 0],
+                  },
+                })),
+                label: {
+                  show: true,
+                  position: "right",
+                  color: "#162028",
+                  fontFamily: "Cascadia Code, Fira Code, monospace",
+                  fontSize: 11,
+                  formatter: (params: { data: { rawRepositories: number; value: number } }) =>
+                    valueMode === "ratio"
+                      ? formatPercent(params.data?.value ?? 0)
+                      : formatInt(params.data?.rawRepositories ?? 0),
+                },
+              },
+            ],
+          },
+          true
+        );
+      };
+
+      const renderModelChart = (teams: AiMetricsTeam[]) => {
+        if (!(modelChart instanceof HTMLElement)) {
+          return;
+        }
+
+        if (!modelChartInstance) {
+          modelChartInstance = echarts.init(modelChart, undefined, { renderer: "canvas" });
+        }
+
+        const totalsByModel = new Map(modelOrder.map((model) => [model, { users: 0, tokens: 0 }]));
+
+          teams.forEach((team: AiMetricsTeam) => {
+            team.modelUsage.forEach((usage: AiMetricsModelUsage) => {
+              const currentTotals = totalsByModel.get(usage.model) ?? { users: 0, tokens: 0 };
+              totalsByModel.set(usage.model, {
+                users: currentTotals.users + usage.users,
+                tokens: currentTotals.tokens + usage.monthlyTokens,
+              });
+            });
+          });
+          const modelTotalsForSorting = new Map(
+            [...totalsByModel.entries()].map(([model, totals]) => [model, totals.users] as const)
+          );
+          const sortedModelOrder = sortByTotalDescending(modelOrder, modelTotalsForSorting);
+  
+          const series = teams.map((team: AiMetricsTeam) => ({
+          name: team.name,
+          type: "bar",
+          stack: "model-users",
+          barMaxWidth: 28,
+          barCategoryGap: "20%",
+          itemStyle: {
+            color: team.color,
+            borderRadius: [0, 0, 0, 0],
+          },
+          emphasis: {
+            focus: "series",
+          },
+          data: sortedModelOrder.map((model) => {
+            const usage = team.modelUsage.find((entry: AiMetricsModelUsage) => entry.model === model);
+            const rawUsers = usage?.users ?? 0;
+            const rawSessions = usage?.monthlySessions ?? 0;
+            const rawTokens = usage?.monthlyTokens ?? 0;
+            const modelTotals = totalsByModel.get(model) ?? { users: 0, tokens: 0 };
+
+            return {
+              value: valueMode === "ratio" ? (modelTotals.users > 0 ? rawUsers / modelTotals.users : 0) : rawUsers,
+              rawUsers,
+              rawSessions,
+              rawTokens,
+              modelTotal: modelTotals.users,
+              totalTokens: modelTotals.tokens,
+            };
+          }),
+        }));
+
+        modelChartInstance.setOption(
+          {
+            animationDuration: 250,
+            animationDurationUpdate: 250,
+            color: teams.map((team: AiMetricsTeam) => team.color),
+            grid: {
+              left: 156,
+              right: 32,
+              top: 72,
+              bottom: 14,
+            },
+            legend: {
+              type: "scroll",
+              top: 12,
+              left: 12,
+              right: 12,
+              itemWidth: 12,
+              itemHeight: 12,
+              textStyle: {
+                color: "#162028",
+                fontFamily: "Cascadia Code, Fira Code, monospace",
+                fontSize: 12,
+                fontWeight: 700,
+              },
+            },
+            tooltip: {
+              trigger: "axis",
+              axisPointer: {
+                type: "shadow",
+              },
+              backgroundColor: "rgba(255, 255, 255, 0.96)",
+              borderColor: "rgba(22, 32, 40, 0.12)",
+              borderWidth: 1,
+              textStyle: {
+                color: "#162028",
+                fontFamily: "Cascadia Code, Fira Code, monospace",
+              },
+              formatter: (paramsList: unknown) => {
+                const points = (Array.isArray(paramsList) ? paramsList : [paramsList]) as MetricsModelPoint[];
+                const model = points[0]?.axisValueLabel ?? "";
+                const totalUsers = points[0]?.data?.modelTotal ?? 0;
+                const totalTokens = points[0]?.data?.totalTokens ?? 0;
+                const rows = points
+                  .filter((point) => (point.data?.rawUsers ?? 0) > 0)
+                  .map((point) => {
+                    const ratio = totalUsers > 0 ? point.data.rawUsers / totalUsers : 0;
+                    const valueLabel =
+                      valueMode === "ratio"
+                        ? `${formatPercent(point.data.value)} of ${model}`
+                        : `${formatInt(point.data.rawUsers)} users`;
+
+                    return `${point.marker} ${point.seriesName}: ${valueLabel} (${formatPercent(ratio)}) • ${formatInt(point.data.rawSessions)} sessions • ${formatCompactInt(point.data.rawTokens)} tokens`;
+                  });
+
+                return [
+                  `<strong>${model}</strong>`,
+                  `Total users: ${formatInt(totalUsers)}`,
+                  `Total tokens: ${formatCompactInt(totalTokens)}`,
+                  ...rows,
+                ].join("<br/>");
+              },
+            },
+            xAxis: {
+              type: "value",
+              max: valueMode === "ratio" ? 1 : undefined,
+              axisLabel: {
+                color: "#57636e",
+                formatter: (value: number) => (valueMode === "ratio" ? formatPercent(value) : formatInt(value)),
+              },
+              splitLine: {
+                lineStyle: {
+                  color: "rgba(87, 99, 110, 0.16)",
+                },
+              },
+            },
+            yAxis: {
+              type: "category",
+                data: sortedModelOrder,
+              axisTick: {
+                show: false,
+              },
+              axisLabel: {
+                color: "#162028",
+                fontFamily: "Cascadia Code, Fira Code, monospace",
+                fontSize: 12,
+                fontWeight: 700,
+              },
+            },
+            series,
+          },
+          true
+        );
+      };
+
+        const renderAll = () => {
+      const teams = getVisibleTeams();
+      if (startDateInput instanceof HTMLInputElement) {
+        startDateInput.value = startDate;
+        startDateInput.max = endDate;
+      }
+
+      if (endDateInput instanceof HTMLInputElement) {
+        endDateInput.value = endDate;
+        endDateInput.min = startDate;
+        endDateInput.max = defaultEndDate;
+      }
+
+        syncButtons();
+        syncTeamFilterUi();
+        syncQueryParams();
+          renderPlatformChart(teams);
+          renderRepositoryChart(teams);
+          renderModelChart(teams);
+          renderSummary(teams);
+        };
+
+    if (teamTrigger instanceof HTMLButtonElement) {
+      teamTrigger.addEventListener("click", () => {
+        const isOpen = teamTrigger.getAttribute("aria-expanded") === "true";
+        setTeamPanelOpen(!isOpen);
+      });
+    }
+
+    if (teamResetButton instanceof HTMLButtonElement) {
+      teamResetButton.addEventListener("click", () => {
+        selectedTeams.clear();
+        renderAll();
+        setTeamPanelOpen(false);
+      });
+    }
+
+    teamCheckboxes.forEach((checkbox) => {
+      if (!(checkbox instanceof HTMLInputElement)) {
+        return;
+      }
+
+      checkbox.addEventListener("change", () => {
+        if (checkbox.checked) {
+          selectedTeams.add(checkbox.value);
+        } else {
+          selectedTeams.delete(checkbox.value);
+        }
+
+        renderAll();
       });
     });
 
-    updateSkillResults();
-  </script>
+    if (teamSearchInput instanceof HTMLInputElement) {
+      teamSearchInput.addEventListener("input", () => {
+        teamSearch = teamSearchInput.value.trim().toLowerCase();
+        syncTeamFilterUi();
+      });
+    }
+
+    valueModeButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        valueMode = button.getAttribute("data-value-mode") === "ratio" ? "ratio" : "total";
+        renderAll();
+      });
+    });
+
+    if (startDateInput instanceof HTMLInputElement) {
+      startDateInput.addEventListener("change", () => {
+        if (!isIsoDate(startDateInput.value)) {
+          startDateInput.value = startDate;
+          return;
+        }
+
+        startDate = startDateInput.value;
+
+        if (startDate > endDate) {
+          endDate = startDate;
+        }
+
+        renderAll();
+      });
+    }
+
+    if (endDateInput instanceof HTMLInputElement) {
+      endDateInput.addEventListener("change", () => {
+        if (!isIsoDate(endDateInput.value)) {
+          endDateInput.value = endDate;
+          return;
+        }
+
+        endDate = endDateInput.value > defaultEndDate ? defaultEndDate : endDateInput.value;
+
+        if (endDate < startDate) {
+          startDate = endDate;
+        }
+
+        renderAll();
+      });
+      }
+
+      window.addEventListener("resize", () => {
+        platformChartInstance?.resize();
+        repositoryChartInstance?.resize();
+        modelChartInstance?.resize();
+      });
+      document.addEventListener("pointerdown", (event) => {
+        if (!(teamFilter instanceof HTMLElement) || !(event.target instanceof Node)) {
+          return;
+        }
+
+        if (!teamFilter.contains(event.target)) {
+          setTeamPanelOpen(false);
+      }
+    }, true);
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        setTeamPanelOpen(false);
+      }
+    });
+
+    renderAll();
+</script>
+
+<script>
+  import { initFloatingRail } from "../../scripts/floating-rail.ts";
+
+  initFloatingRail({
+    rail: "#metrics-team-rail",
+    anchor: "#metrics-team-rail-anchor",
+    dock: "#metrics-team-rail-dock",
+  });
+</script>
 ) : null}

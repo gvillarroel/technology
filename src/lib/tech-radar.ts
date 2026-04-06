@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { parse } from "yaml";
 import { getScopedHtmlPageUrl, getScopedMarkdownPageUrl } from "./dual-format";
 import { withBasePath } from "./site-url";
+import { createMarkdownDocument, markdownLink } from "./markdown";
 
 export interface RadarEntry {
   slug: string;
@@ -305,96 +306,75 @@ export function getRadarBlipLayouts(entries: RadarEntry[]) {
 }
 
 export function getRadarIndexMarkdown(entries: RadarEntry[]) {
-  const lines = [
-    "---",
-    "title: Tech Radar",
-    "description: The technology radar for approved and emerging technologies at e*f(x).",
-    `canonical_html: ${withBasePath("/tech-radar/")}`,
-    "---",
-    "",
-    "# Tech Radar",
-    "",
-    "Operational catalog for evaluated, exploratory, retired, and not yet evaluated technologies.",
-    "",
-    "## Index",
-    "",
-  ];
+  const doc = createMarkdownDocument({
+    title: "Tech Radar",
+    description: "The technology radar for approved and emerging technologies at e*f(x).",
+    canonicalHtml: withBasePath("/tech-radar/"),
+  });
+
+  doc.heading("Tech Radar");
+  doc.paragraph("Operational catalog for evaluated, exploratory, retired, and not yet evaluated technologies.");
+  doc.section("Index");
 
   for (const entry of entries) {
-    lines.push(`- [${entry.name}](${getScopedMarkdownPageUrl("/tech-radar", entry.slug)})`);
-    lines.push(`  - Ring: ${entry.ring}`);
-    lines.push(`  - Primary scope: ${entry.primaryScope}`);
-    lines.push(`  - Archetypes: ${entry.archetypes.join(", ")}`);
-    lines.push(`  - Source type: ${entry.sourceType}`);
-    lines.push(`  - Status: ${entry.status}`);
-    lines.push(`  - Domain: ${entry.domain}`);
-    lines.push(`  - Summary: ${entry.summary}`);
+    doc.bullet(markdownLink(entry.name, getScopedMarkdownPageUrl("/tech-radar", entry.slug)));
+    doc.keyValueList([
+      { label: "Ring", value: entry.ring },
+      { label: "Primary scope", value: entry.primaryScope },
+      { label: "Archetypes", value: entry.archetypes.join(", ") },
+      { label: "Source type", value: entry.sourceType },
+      { label: "Status", value: entry.status },
+      { label: "Domain", value: entry.domain },
+      { label: "Summary", value: entry.summary },
+    ], 1);
     if (entry.alternatives.length > 0) {
-      lines.push(`  - Alternatives: ${entry.alternatives.join(", ")}`);
+      doc.bullet(`Alternatives: ${entry.alternatives.join(", ")}`, 1);
+      doc.blank();
     }
   }
 
-  lines.push("");
-  return `${lines.join("\n")}\n`;
+  return doc.finish();
 }
 
 export function getRadarEntryMarkdown(entry: RadarEntry) {
-  const lines = [
-    "---",
-    `title: ${entry.name}`,
-    `description: ${entry.summary}`,
-    `canonical_html: ${getScopedHtmlPageUrl("/tech-radar", entry.slug)}`,
-    "---",
-    "",
-    `# ${entry.name}`,
-    "",
-    entry.summary,
-    "",
-    "## Classification",
-    "",
-    `- Ring: ${entry.ring}`,
-    `- Primary scope: ${entry.primaryScope}`,
-    `- Archetypes: ${entry.archetypes.join(", ")}`,
-    `- Source type: ${entry.sourceType}`,
-    `- Status: ${entry.status}`,
-    `- Domain: ${entry.domain}`,
-    `- Owner: ${entry.owner}`,
-    `- Updated: ${entry.updated}`,
-    "",
-    "## Decision",
-    "",
-    entry.reasoning,
-    "",
-    "## Operation",
-    "",
-    `- Scope: ${entry.operationScope}`,
-    `- Model: ${entry.operationModel}`,
-    `- Maturity: ${entry.maturity}`,
-    `- Review cadence: ${entry.reviewCadence}`,
-    "",
-    "## Capabilities",
-    "",
-    ...entry.capabilities.map((item) => `- ${item}`),
-    "",
-    "## Guardrails",
-    "",
-    ...entry.guardrails.map((item) => `- ${item}`),
-    "",
-    "## Signals",
-    "",
-    ...entry.signals.map((item) => `- ${item}`),
-    "",
-    "## Actions",
-    "",
-    ...entry.actions.map((item) => `- ${item}`),
-    "",
-    `[Back to index](${withBasePath("/tech-radar.md")})`,
-    "",
-  ];
+  const doc = createMarkdownDocument({
+    title: entry.name,
+    description: entry.summary,
+    canonicalHtml: getScopedHtmlPageUrl("/tech-radar", entry.slug),
+  });
+
+  doc.heading(entry.name);
+  doc.paragraph(entry.summary);
+  doc.section("Classification", () => {
+    doc.keyValueList([
+      { label: "Ring", value: entry.ring },
+      { label: "Primary scope", value: entry.primaryScope },
+      { label: "Archetypes", value: entry.archetypes.join(", ") },
+      { label: "Source type", value: entry.sourceType },
+      { label: "Status", value: entry.status },
+      { label: "Domain", value: entry.domain },
+      { label: "Owner", value: entry.owner },
+      { label: "Updated", value: entry.updated },
+    ]);
+  });
+  doc.section("Decision", () => doc.paragraph(entry.reasoning));
+  doc.section("Operation", () => {
+    doc.keyValueList([
+      { label: "Scope", value: entry.operationScope },
+      { label: "Model", value: entry.operationModel },
+      { label: "Maturity", value: entry.maturity },
+      { label: "Review cadence", value: entry.reviewCadence },
+    ]);
+  });
+  doc.section("Capabilities", () => doc.bullets(entry.capabilities));
+  doc.section("Guardrails", () => doc.bullets(entry.guardrails));
+  doc.section("Signals", () => doc.bullets(entry.signals));
+  doc.section("Actions", () => doc.bullets(entry.actions));
 
   if (entry.alternatives.length > 0) {
-    lines.splice(lines.length - 2, 0, "## Alternatives", "", ...entry.alternatives.map((item) => `- ${item}`), "");
+    doc.section("Alternatives", () => doc.bullets(entry.alternatives));
   }
 
-  return `${lines.join("\n")}`;
+  doc.paragraph(markdownLink("Back to index", withBasePath("/tech-radar.md")));
+  return doc.finish({ trailingNewline: false });
 }

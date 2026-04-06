@@ -1,4 +1,15 @@
 repositories:
+  - slug: openai-curated-skills
+    name: OpenAI Curated Skills
+    source: github
+    location: C:/Users/villa/.codex/vendor_imports/skills/skills/.curated
+    repository: openai/skills
+    ref: main
+    skill_root: skills/.curated
+    allowed: true
+    purpose: Curated Codex skills approved for explicit installation from the OpenAI skills catalog
+    install_snippet_template: npx skills add {repository}@{slug}
+
   - slug: openai-system-skills
     name: OpenAI System Skills
     source: github
@@ -6,9 +17,23 @@ repositories:
     repository: openai/skills
     ref: main
     skill_root: skills/.system
-    install_package: openai/skills
     allowed: true
-    purpose: Preinstalled system skills mirrored locally from the trusted OpenAI skills repository
+    purpose: Built-in Codex system skills approved as reference capabilities from the OpenAI catalog
+    install_snippet_template: |
+      # Included with recent Codex releases
+      # Source: {skillUrl}
+
+  - slug: anthropic-skills
+    name: Anthropic Skills
+    source: github
+    repository: anthropics/skills
+    ref: main
+    skill_root: skills
+    allowed: true
+    purpose: Approved external reference skills from Anthropic's public Agent Skills repository
+    install_snippet_template: |
+      /plugin marketplace add anthropics/skills
+      # Skill source: {skillUrl}
 
   - slug: agent-marketplace
     name: Agent Marketplace
@@ -24,6 +49,6 @@ repositories:
     repository: gvillarroel/knowledge
     ref: main
     skill_root: skills
-    install_package: gvillarroel/knowledge
     allowed: true
     purpose: Repository-backed skills focused on knowledge ingestion and retrieval workflows
+    install_snippet_template: npx skills add {repository}@{slug}

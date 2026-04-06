@@ -1,0 +1,319 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import StandardPageHeader from "../components/StandardPageHeader.astro";
+import { getAdrIndexData } from "../lib/adrs";
+import { withBasePath } from "../lib/site-url";
+
+const { pages, repositories } = await getAdrIndexData();
+const yamlPreview = [
+  "repositories:",
+  ...repositories.flatMap((repository) => [
+    `  - slug: ${repository.slug}`,
+    `    account: ${repository.account}`,
+    ...(repository.repository ? [`    repository: ${repository.repository}`] : []),
+    ...(repository.ref ? [`    ref: ${repository.ref}`] : []),
+    "    domains:",
+    ...repository.domains.map((domain) => `      - ${domain}`),
+    "    include:",
+    ...repository.include.map((pattern) => `      - ${pattern}`),
+    ...(repository.exclude.length > 0
+      ? ["    exclude:", ...repository.exclude.map((pattern) => `      - ${pattern}`)]
+      : ["    exclude: []"]),
+  ]),
+].join("\n");
+const normalizeCompactLabel = (value: string) => value.toLowerCase().replace(/[\s_-]+/g, "");
+---
+
+<BaseLayout
+  title="ADRs | e*f(x) Technology"
+  description="Architecture decision records stored as nested Markdown files and indexed for filtering by product, date, status, and area."
+>
+  <main class="shell shell-narrow standard-page">
+    <StandardPageHeader
+      currentPage="adrs"
+      searchAction={withBasePath("/adrs/")}
+      searchPlaceholder="Search ADRs, products, or tags"
+    />
+
+    <section class="standard-page-intro">
+      <div>
+        <p class="eyebrow">Practice</p>
+        <h1 class="standard-page-title">Architecture decision records.</h1>
+        <p class="copy standard-copy-wide">
+          This page indexes ADRs fetched directly from GitHub repositories declared in
+          `data/adr-repositories.yaml`. Start with the source summary, then filter the catalog by
+          product, status, year, and area before opening the decision record you need.
+        </p>
+      </div>
+    </section>
+
+    <section class="bat-grid bat-grid-detail">
+      <article class="bat-card bat-card-wide">
+        <div class="bat-card-bar">
+          <span class="bat-card-file">.specs/adr/</span>
+          <span class="bat-card-lang">md</span>
+        </div>
+
+        <div class="bat-card-body bat-card-body-stack">
+          <div class="bat-line">
+            <span class="bat-gutter">1</span>
+            <div class="bat-code">
+              <p class="bat-heading">How ADR auto-discovery works</p>
+              <p class="bat-copy">
+                The site reads an internal repository catalog, expands each configured GitHub
+                account into its repositories, and looks inside the declared ADR folder or domain.
+                Every Markdown file that matches that filter is treated as an ADR and fetched
+                directly from GitHub raw at render time.
+              </p>
+            </div>
+          </div>
+          <div class="bat-line">
+            <span class="bat-gutter">2</span>
+            <div class="bat-code">
+              <p class="bat-heading bat-heading-inline">What teams need to do</p>
+              <ul class="bat-list adrs-guidance-list">
+                <li class="bat-copy">Keep ADRs as Markdown files in the agreed folder, such as `.specs/adr/`.</li>
+                <li class="bat-copy">Follow the current naming convention, for example `0001-some-decision.md`.</li>
+                <li class="bat-copy">Add optional frontmatter when you want better summary, product, owner, area, tags, or date metadata.</li>
+                <li class="bat-copy">Once a repository belongs to the configured GitHub account and contains that folder, every matching Markdown file is discovered automatically.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="bat-line">
+            <span class="bat-gutter">3</span>
+            <div class="bat-code bat-meta-row">
+              <span>adrs: {pages.length}</span>
+              <span>config entries: {repositories.length}</span>
+              <span>repositories scanned: {new Set(pages.map((page) => page.repository)).size}</span>
+              <span>products: {new Set(pages.map((page) => page.product)).size}</span>
+              <span>statuses: {new Set(pages.map((page) => page.status)).size}</span>
+              <span>areas: {new Set(pages.map((page) => page.area)).size}</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="bat-card">
+        <div class="bat-card-bar">
+          <span class="bat-card-file">data/adr-repositories.yaml</span>
+          <span class="bat-card-lang">yaml</span>
+        </div>
+        <div class="bat-card-body bat-card-body-stack">
+          <div class="bat-line">
+            <span class="bat-gutter">1</span>
+            <div class="bat-code">
+              <p class="bat-heading">Current scan filter</p>
+              <p class="bat-copy">
+                This is the active repository configuration the page uses to discover ADR Markdown
+                files across GitHub. In this example, discovery is configured at the account level
+                for all repositories under `gvillarroel`.
+              </p>
+            </div>
+          </div>
+          <div class="bat-line">
+            <span class="bat-gutter">2</span>
+            <div class="bat-code">
+              <pre class="adrs-yaml-preview"><code>{yamlPreview}</code></pre>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="standard-toolbar skills-toolbar adrs-toolbar" aria-label="ADR filters">
+      <div class="radar-control">
+        <label class="standard-label" for="adrs-search">Search</label>
+        <input
+          id="adrs-search"
+          class="standard-select"
+          type="search"
+          placeholder="Search ADR title, summary, product, owner, tags, or path"
+        />
+      </div>
+
+    </section>
+
+    <section class="standard-section-heading">
+      <div>
+        <p class="eyebrow">Catalog</p>
+        <h2>Filterable ADR index</h2>
+      </div>
+      <p class="standard-section-meta" id="adrs-results-count">{pages.length} ADRs visible</p>
+    </section>
+
+    <section class="adrs-grid" id="adrs-list">
+      {pages.map((page) => (
+        <article
+          class="adr-card"
+          data-search={`${page.adrNumber} ${page.title} ${page.summary} ${page.product} ${page.status} ${page.date} ${page.area} ${page.owner} ${page.tags.join(" ")}`.toLowerCase()}
+          data-product={page.product}
+          data-status={page.status}
+          data-year={page.year}
+          data-area={page.area}
+        >
+          <div class="adr-card-topline">
+            <div class="adr-card-identifiers">
+              <span class="adr-card-reference">
+                {(page.repository.split("/").at(-1) ?? page.repository)} / {page.adrNumber ? `ADR ${page.adrNumber}` : "ADR"}
+              </span>
+              <span class={`docs-status-pill docs-status-${page.status.toLowerCase().replace(/\s+/g, "-")}`}>
+                {page.status}
+              </span>
+            </div>
+          </div>
+
+          <div class="adr-card-body">
+            {normalizeCompactLabel(page.product) !== normalizeCompactLabel(page.repository.split("/").at(-1) ?? page.repository) && (
+              <p class="adr-card-product" data-highlight-text>{page.product}</p>
+            )}
+            <h3 class="adr-card-title">
+              <a class="adr-card-title-link" href={page.htmlUrl}>
+                <span data-highlight-text>{page.title}</span>
+              </a>
+            </h3>
+            <p class="adr-card-copy" data-highlight-text>{page.summary}</p>
+            <div class="adr-card-highlights" aria-label="ADR highlights">
+              {page.date && (
+                <span class="adr-card-pill" data-highlight-text>{page.date}</span>
+              )}
+            </div>
+          </div>
+          <div class="adr-card-footer">
+            <a class="adr-card-footer-link" href={page.sourceUrl} target="_blank" rel="noreferrer">
+              View source
+            </a>
+            <a class="adr-card-footer-link" href={page.rawUrl} target="_blank" rel="noreferrer">
+              View raw
+            </a>
+          </div>
+        </article>
+      ))}
+    </section>
+
+    <p class="standard-empty-state" id="adrs-empty-state" hidden>
+      No ADRs match the current filters.
+    </p>
+  </main>
+</BaseLayout>
+
+<script is:inline>
+  const initAdrsPage = () => {
+    const searchInput = document.querySelector("#adrs-search");
+    const list = document.querySelector("#adrs-list");
+    const entries = list ? [...list.querySelectorAll(".adr-card")] : [];
+    const countLabel = document.querySelector("#adrs-results-count");
+    const emptyState = document.querySelector("#adrs-empty-state");
+    const params = new URLSearchParams(window.location.search);
+    const highlightTargets = entries.flatMap((entry) => [...entry.querySelectorAll("[data-highlight-text]")]);
+
+    if (!entries.length) {
+      return;
+    }
+
+    const normalize = (value) => value.trim().toLowerCase();
+    const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+    const renderHighlightedText = (element, query) => {
+      const originalText = element.dataset.originalText ?? element.textContent ?? "";
+      element.dataset.originalText = originalText;
+
+      if (!query) {
+        element.textContent = originalText;
+        return;
+      }
+
+      const matcher = new RegExp(`(${escapeRegExp(query)})`, "ig");
+      const fragments = originalText.split(matcher);
+
+      element.replaceChildren(
+        ...fragments
+          .filter((fragment) => fragment.length > 0)
+          .map((fragment) => {
+            if (fragment.toLowerCase() === query) {
+              const mark = document.createElement("mark");
+              mark.className = "skills-search-highlight";
+              mark.textContent = fragment;
+              return mark;
+            }
+
+            return document.createTextNode(fragment);
+          })
+      );
+    };
+
+    const getFilters = () => ({
+      search: searchInput instanceof HTMLInputElement ? normalize(searchInput.value) : "",
+    });
+
+    const syncQueryParams = () => {
+      const nextParams = new URLSearchParams(window.location.search);
+      const controlValues = [["q", searchInput instanceof HTMLInputElement ? searchInput.value.trim() : ""]];
+
+      controlValues.forEach(([key, value]) => {
+        if (value) {
+          nextParams.set(key, value);
+        } else {
+          nextParams.delete(key);
+        }
+      });
+
+      const nextUrl = nextParams.toString() ? `?${nextParams.toString()}` : window.location.pathname;
+      window.history.replaceState({}, "", nextUrl);
+    };
+
+    const updateResults = () => {
+      const filters = getFilters();
+      const visibleEntries = [];
+
+      entries.forEach((entry) => {
+        const search = entry.getAttribute("data-search") ?? "";
+        const matchesSearch = !filters.search || search.includes(filters.search);
+        const shouldShow = matchesSearch;
+
+        if (shouldShow) {
+          if (entry instanceof HTMLElement) {
+            entry.style.display = "";
+          }
+          entry.removeAttribute("hidden");
+          visibleEntries.push(entry);
+        } else {
+          if (entry instanceof HTMLElement) {
+            entry.style.display = "none";
+          }
+          entry.setAttribute("hidden", "");
+        }
+      });
+
+      if (countLabel) {
+        countLabel.textContent = `${visibleEntries.length} ADRs visible`;
+      }
+
+      if (emptyState instanceof HTMLElement) {
+        emptyState.hidden = visibleEntries.length > 0;
+      }
+
+      highlightTargets.forEach((element) => {
+        renderHighlightedText(element, filters.search);
+      });
+
+      syncQueryParams();
+    };
+
+    if (searchInput instanceof HTMLInputElement && params.has("q")) {
+      searchInput.value = params.get("q") ?? "";
+    }
+
+    if (searchInput instanceof HTMLInputElement) {
+      searchInput.addEventListener("input", updateResults);
+      searchInput.addEventListener("change", updateResults);
+    }
+
+    updateResults();
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initAdrsPage, { once: true });
+  } else {
+    initAdrsPage();
+  }
+</script>

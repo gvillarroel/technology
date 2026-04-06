@@ -8,53 +8,180 @@ export interface NavItem {
   current?: boolean;
 }
 
+export interface NavGroup {
+  label: string;
+  compactLabel?: string;
+  current?: boolean;
+  items: NavItem[];
+}
+
+export interface SecondaryNavItem {
+  href?: string;
+  label: string;
+  current?: boolean;
+}
+
 export interface Props {
-  navItems: NavItem[];
+  navGroups: NavGroup[];
   searchAction?: string;
   searchPlaceholder?: string;
   searchQuery?: string;
+  sectionNavItems?: SecondaryNavItem[];
+  sectionNavLabel?: string;
+  sectionTrailItems?: SecondaryNavItem[];
+  sectionTrailLabel?: string;
 }
 
 const {
-  navItems,
+  navGroups,
   searchAction = withBasePath("/tech-radar/"),
   searchPlaceholder = "Search technologies",
   searchQuery = "",
+  sectionNavItems = [],
+  sectionNavLabel = "Section",
+  sectionTrailItems = [],
+  sectionTrailLabel = "Path",
 } = Astro.props;
 ---
 
-<header class="standard-header">
-  <a class="brand" href={withBasePath("/")}>
-    <span class="brand-mark">e*f(x)</span>
-    <span class="brand-copy">Technology</span>
-  </a>
+<div class="standard-header-stack">
+  <header class="standard-header">
+    <a class="brand" href={withBasePath("/")}>
+      <span class="brand-mark">e*f(x)</span>
+      <span class="brand-copy">Technology</span>
+    </a>
 
-  <div class="standard-header-actions">
-    <nav class="nav standard-nav" aria-label="Primary">
-      {navItems.map((item) => (
-        <a
-          href={item.href}
-          aria-current={item.current ? "page" : undefined}
-          data-has-compact-label={item.compactLabel ? "true" : undefined}
-          title={item.compactLabel ? item.label : undefined}
-        >
-          <span class="nav-label-full">{item.label}</span>
-          {item.compactLabel ? <span class="nav-label-compact">{item.compactLabel}</span> : null}
-        </a>
+    <div class="standard-header-actions">
+      <nav class="nav standard-nav" aria-label="Primary">
+        {navGroups.map((group) =>
+          group.items.length === 1 ? (
+            <a
+              class="standard-nav-link"
+              href={group.items[0].href}
+              aria-current={group.items[0].current ? "page" : undefined}
+              data-has-compact-label={group.compactLabel ? "true" : undefined}
+              title={group.compactLabel ? group.label : undefined}
+            >
+              <span class="nav-label-full">{group.label}</span>
+              {group.compactLabel ? <span class="nav-label-compact">{group.compactLabel}</span> : null}
+            </a>
+          ) : (
+            <details class="standard-nav-group" data-current={group.current ? "true" : undefined}>
+              <summary
+                class="standard-nav-group-summary"
+                data-has-compact-label={group.compactLabel ? "true" : undefined}
+                title={group.compactLabel ? group.label : undefined}
+              >
+                <span class="nav-label-full">{group.label}</span>
+                {group.compactLabel ? <span class="nav-label-compact">{group.compactLabel}</span> : null}
+                <span class="material-symbols-rounded standard-nav-group-icon" aria-hidden="true">expand_more</span>
+              </summary>
+
+              <div class="standard-nav-group-panel">
+                {group.items.map((item) => (
+                  <a href={item.href} aria-current={item.current ? "page" : undefined}>
+                    <span>{item.label}</span>
+                  </a>
+                ))}
+              </div>
+            </details>
+          ),
+        )}
+      </nav>
+
+      <form class="standard-search" action={searchAction} method="get">
+        <label class="standard-search-label" for="site-search">
+          <span class="material-symbols-rounded" aria-hidden="true">search</span>
+        </label>
+        <input
+          id="site-search"
+          name="q"
+          type="search"
+          placeholder={searchPlaceholder}
+          value={searchQuery}
+        />
+      </form>
+    </div>
+  </header>
+
+  {sectionNavItems.length ? (
+    <nav class="standard-subnav" aria-label={sectionNavLabel}>
+      {sectionNavItems.map((item) =>
+        item.href ? (
+          <a class="standard-subnav-link" href={item.href} aria-current={item.current ? "page" : undefined}>
+            {item.label}
+          </a>
+        ) : (
+          <span class="standard-subnav-link" aria-current={item.current ? "page" : undefined}>
+            {item.label}
+          </span>
+        ),
+      )}
+    </nav>
+  ) : null}
+
+  {sectionTrailItems.length ? (
+    <nav class="standard-subnav standard-subnav-trail" aria-label={sectionTrailLabel}>
+      {sectionTrailItems.map((item, index) => (
+        <>
+          {index > 0 ? <span class="standard-subnav-separator" aria-hidden="true">/</span> : null}
+          {item.href ? (
+            <a class="standard-subnav-link is-trail" href={item.href} aria-current={item.current ? "page" : undefined}>
+              {item.label}
+            </a>
+          ) : (
+            <span class="standard-subnav-link is-trail" aria-current={item.current ? "page" : undefined}>
+              {item.label}
+            </span>
+          )}
+        </>
       ))}
     </nav>
+  ) : null}
+</div>
 
-    <form class="standard-search" action={searchAction} method="get">
-      <label class="standard-search-label" for="site-search">
-        <span class="material-symbols-rounded" aria-hidden="true">search</span>
-      </label>
-      <input
-        id="site-search"
-        name="q"
-        type="search"
-        placeholder={searchPlaceholder}
-        value={searchQuery}
-      />
-    </form>
-  </div>
-</header>
+<script is:inline>
+  const navGroups = [...document.querySelectorAll(".standard-nav-group")];
+
+  if (navGroups.length) {
+    navGroups.forEach((group) => {
+      group.addEventListener("toggle", () => {
+        if (!(group instanceof HTMLDetailsElement) || !group.open) {
+          return;
+        }
+
+        navGroups.forEach((candidate) => {
+          if (candidate !== group && candidate instanceof HTMLDetailsElement) {
+            candidate.open = false;
+          }
+        });
+      });
+    });
+
+    document.addEventListener("click", (event) => {
+      const target = event.target instanceof Node ? event.target : null;
+
+      if (target && navGroups.some((group) => group.contains(target))) {
+        return;
+      }
+
+      navGroups.forEach((group) => {
+        if (group instanceof HTMLDetailsElement) {
+          group.open = false;
+        }
+      });
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") {
+        return;
+      }
+
+      navGroups.forEach((group) => {
+        if (group instanceof HTMLDetailsElement) {
+          group.open = false;
+        }
+      });
+    });
+  }
+</script>

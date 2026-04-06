@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { parse } from "yaml";
 import { getScopedHtmlPageUrl, getScopedMarkdownPageUrl } from "./dual-format";
 import { withBasePath } from "./site-url";
+import { createMarkdownDocument, markdownLink } from "./markdown";
 
 export interface CloudEnablementProduct {
   slug: string;
@@ -156,51 +157,48 @@ export function getCloudEnablementDetailMarkdownUrl(providerSlug: string, slug: 
 }
 
 export function getCloudEnablementIndexMarkdown(providers: CloudEnablementProvider[]) {
-  const lines = [
-    "---",
-    "title: Cloud Enablement",
-    "description: Google Cloud and AWS enablement inventory with seeded products and known features.",
-    `canonical_html: ${withBasePath("/cloud-enablement/")}`,
-    "---",
-    "",
-    "# Cloud Enablement",
-    "",
-    "Operational inventory for Google Cloud and AWS products, source links, and seeded known features.",
-    "",
-  ];
+  const doc = createMarkdownDocument({
+    title: "Cloud Enablement",
+    description: "Google Cloud and AWS enablement inventory with seeded products and known features.",
+    canonicalHtml: withBasePath("/cloud-enablement/"),
+  });
+
+  doc.heading("Cloud Enablement");
+  doc.paragraph("Operational inventory for Google Cloud and AWS products, source links, and seeded known features.");
 
   for (const provider of providers) {
-    lines.push(`## ${provider.name}`);
-    lines.push("");
-    lines.push(`- Priority: ${provider.priority}`);
-    lines.push(`- Coverage: ${provider.coverageStatus}`);
-    lines.push(`- Official inventory: [${provider.officialInventoryLabel}](${provider.officialInventoryUrl})`);
-    lines.push(`- Documentation hub: [Reference](${provider.documentationUrl})`);
-    lines.push(`- Updated: ${provider.updated}`);
-    lines.push("");
-    lines.push("### Products");
-    lines.push("");
+    doc.section(provider.name, () => {
+      doc.keyValueList([
+        { label: "Priority", value: provider.priority },
+        { label: "Coverage", value: provider.coverageStatus },
+        { label: "Official inventory", value: markdownLink(provider.officialInventoryLabel, provider.officialInventoryUrl) },
+        { label: "Documentation hub", value: markdownLink("Reference", provider.documentationUrl) },
+        { label: "Updated", value: provider.updated },
+      ]);
+      doc.subheading("Products", 3);
+    });
 
     for (const product of provider.products) {
-      lines.push(`- ${product.name}`);
-      lines.push(`  - Archetype: ${product.archetype}`);
-      lines.push(`  - Category: ${product.category}`);
-      lines.push(`  - Feature coverage: ${product.featureCoverage}`);
-      lines.push(`  - Summary: ${product.summary}`);
-      lines.push(`  - Product page: ${product.productUrl}`);
-      lines.push(`  - Feature source: ${product.featureSourceUrl}`);
+      doc.bullet(product.name);
+      doc.keyValueList([
+        { label: "Archetype", value: product.archetype },
+        { label: "Category", value: product.category },
+        { label: "Feature coverage", value: product.featureCoverage },
+        { label: "Summary", value: product.summary },
+        { label: "Product page", value: product.productUrl },
+        { label: "Feature source", value: product.featureSourceUrl },
+      ], 1);
       if (product.iamSourceUrl) {
-        lines.push(`  - IAM source: ${product.iamSourceUrl}`);
+        doc.bullet(`IAM source: ${product.iamSourceUrl}`, 1);
       }
       if (product.knownFeatures.length > 0) {
-        lines.push(`  - Known features: ${product.knownFeatures.join(", ")}`);
+        doc.bullet(`Known features: ${product.knownFeatures.join(", ")}`, 1);
+        doc.blank();
       }
     }
-
-    lines.push("");
   }
 
-  return `${lines.join("\n")}\n`;
+  return doc.finish();
 }
 
 export function getCloudEnablementProductMarkdown(
@@ -219,49 +217,52 @@ export function getCloudEnablementProductMarkdown(
     | "featureCoverage"
   > & { slug?: string },
 ) {
-  const lines = [
-    "---",
-    `title: ${provider.shortName} ${product.name}`,
-    `description: ${product.summary}`,
-    `canonical_html: ${product.slug ? getCloudEnablementDetailHtmlUrl(provider.slug, product.slug) : `/cloud-enablement/?provider=${provider.slug}&q=${encodeURIComponent(product.name)}`}`,
-    "---",
-    "",
-    `# ${provider.name} / ${product.name}`,
-    "",
-    product.summary,
-    "",
-    "## Classification",
-    "",
-    `- Provider: ${provider.name}`,
-    `- Archetype: ${product.archetype}`,
-    `- Category: ${product.category}`,
-    `- Feature coverage: ${product.featureCoverage}`,
-    "",
-    "## Official sources",
-    "",
-    `- Product page: [Open](${product.productUrl})`,
-    `- Feature source: [Open](${product.featureSourceUrl})`,
-    ...(product.iamSourceUrl ? [`- IAM source: [Open](${product.iamSourceUrl})`] : []),
-    "",
-    "## Known features",
-    "",
-    ...product.knownFeatures.map((item) => `- ${item}`),
-    "",
-    ...(product.iamPermissions.length > 0
-      ? [
-          "## IAM access mapping",
-          "",
-          ...product.iamPermissions.flatMap((mapping: CloudEnablementPermissionMapping) => [
-            `- Permission: ${mapping.permission}`,
-            `  - Included in roles: ${mapping.includedInRoles.join(", ") || "None listed"}`,
-            `  - Approved company roles: ${mapping.approvedCompanyRoles.join(", ") || "None mapped yet"}`,
-          ]),
-          "",
-        ]
-      : []),
-    `[Back to cloud enablement](${withBasePath(`/cloud-enablement.md?q=${encodeURIComponent(product.name)}&provider=${provider.slug}`)})`,
-    "",
-  ];
+  const doc = createMarkdownDocument({
+    title: `${provider.shortName} ${product.name}`,
+    description: product.summary,
+    canonicalHtml:
+      product.slug
+        ? getCloudEnablementDetailHtmlUrl(provider.slug, product.slug)
+        : `/cloud-enablement/?provider=${provider.slug}&q=${encodeURIComponent(product.name)}`,
+  });
 
-  return lines.join("\n");
+  doc.heading(`${provider.name} / ${product.name}`);
+  doc.paragraph(product.summary);
+  doc.section("Classification", () => {
+    doc.keyValueList([
+      { label: "Provider", value: provider.name },
+      { label: "Archetype", value: product.archetype },
+      { label: "Category", value: product.category },
+      { label: "Feature coverage", value: product.featureCoverage },
+    ]);
+  });
+  doc.section("Official sources", () => {
+    doc.keyValueList([
+      { label: "Product page", value: markdownLink("Open", product.productUrl) },
+      { label: "Feature source", value: markdownLink("Open", product.featureSourceUrl) },
+      ...(product.iamSourceUrl ? [{ label: "IAM source", value: markdownLink("Open", product.iamSourceUrl) }] : []),
+    ]);
+  });
+  doc.section("Known features", () => doc.bullets(product.knownFeatures));
+
+  if (product.iamPermissions.length > 0) {
+    doc.section("IAM access mapping", () => {
+      for (const mapping of product.iamPermissions) {
+        doc.bullet(`Permission: ${mapping.permission}`);
+        doc.keyValueList([
+          { label: "Included in roles", value: mapping.includedInRoles.join(", ") || "None listed" },
+          { label: "Approved company roles", value: mapping.approvedCompanyRoles.join(", ") || "None mapped yet" },
+        ], 1);
+      }
+    });
+  }
+
+  doc.paragraph(
+    markdownLink(
+      "Back to cloud enablement",
+      withBasePath(`/cloud-enablement.md?q=${encodeURIComponent(product.name)}&provider=${provider.slug}`),
+    ),
+  );
+
+  return doc.finish({ trailingNewline: false });
 }

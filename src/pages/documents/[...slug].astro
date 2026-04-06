@@ -1,0 +1,494 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import DocumentsTree from "../../components/DocumentsTree.astro";
+import StandardPageHeader from "../../components/StandardPageHeader.astro";
+import { getDocumentPageBySlug, getDocumentPages, getDocumentStaticPaths, getDocumentTree } from "../../lib/documents";
+import { withBasePath } from "../../lib/site-url";
+
+export async function getStaticPaths() {
+  return getDocumentStaticPaths();
+}
+
+const slugSegments = Astro.params.slug?.split("/").filter(Boolean) ?? [];
+const page = await getDocumentPageBySlug(slugSegments);
+
+if (!page) {
+  return Astro.redirect(withBasePath("/documents/"));
+}
+
+const tree = await getDocumentTree(page.repositorySlug, page.slugSegments);
+const sidebarTree = page.pageType === "repository" ? tree : (tree[0]?.children ?? tree);
+const repositoryPages = (await getDocumentPages()).filter((entry) => entry.repositorySlug === page.repositorySlug);
+const pageTitleBySlug = new Map(repositoryPages.map((entry) => [entry.slugSegments.join("/"), entry.title]));
+const breadcrumbItems = page.slugSegments.map((segment, index) => {
+  const breadcrumbSlug = page.slugSegments.slice(0, index + 1);
+  return {
+    label: pageTitleBySlug.get(breadcrumbSlug.join("/")) ?? (index === 0 ? page.repository : segment),
+    href: withBasePath(`/documents/${breadcrumbSlug.join("/")}/`),
+    isCurrent: index === page.slugSegments.length - 1,
+  };
+});
+const headingMatches = [...page.body.matchAll(/^#{2,3}\s+(.+)$/gm)]
+  .map((match) => match[1]?.trim() ?? "")
+  .filter(Boolean)
+  .filter((heading) => heading.toLowerCase() !== page.title.toLowerCase());
+const outlineItems = headingMatches.map((heading) => ({
+  label: heading.replace(/`/g, ""),
+  href: `#${heading
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")}`,
+}));
+const currentFolderSegments =
+  page.pageType === "repository"
+    ? page.slugSegments
+    : page.isFolderIndex
+      ? page.slugSegments
+      : page.slugSegments.slice(0, -1);
+const childDocuments = repositoryPages
+  .filter((entry) => entry.pageType === "document")
+  .filter((entry) => {
+    if (entry.slugSegments.join("/") === page.slugSegments.join("/")) {
+      return false;
+    }
+
+    if (entry.pageType !== "document") {
+      return false;
+    }
+
+    const parentSegments = entry.isFolderIndex ? entry.slugSegments.slice(0, -1) : entry.slugSegments.slice(0, -1);
+    return parentSegments.join("/") === currentFolderSegments.join("/");
+  })
+  .sort((left, right) => Number(right.isFolderIndex) - Number(left.isFolderIndex) || left.title.localeCompare(right.title));
+const siblingDocuments =
+  page.pageType === "document" && !page.isFolderIndex
+    ? repositoryPages
+        .filter((entry) => entry.pageType === "document")
+        .filter((entry) => !entry.isFolderIndex)
+        .filter((entry) => entry.slugSegments.join("/") !== page.slugSegments.join("/"))
+        .filter((entry) => entry.slugSegments.slice(0, -1).join("/") === page.slugSegments.slice(0, -1).join("/"))
+        .sort((left, right) => left.title.localeCompare(right.title))
+    : [];
+const relatedDocuments = (siblingDocuments.length > 0 ? siblingDocuments : childDocuments).slice(0, 8);
+const orderedDocuments = repositoryPages
+  .filter((entry) => entry.pageType === "document")
+  .sort((left, right) => left.relativePath.localeCompare(right.relativePath) || left.title.localeCompare(right.title));
+const currentDocumentIndex = orderedDocuments.findIndex(
+  (entry) => entry.slugSegments.join("/") === page.slugSegments.join("/"),
+);
+const previousDocument = currentDocumentIndex > 0 ? orderedDocuments[currentDocumentIndex - 1] : null;
+const nextDocument =
+  currentDocumentIndex >= 0 && currentDocumentIndex < orderedDocuments.length - 1
+    ? orderedDocuments[currentDocumentIndex + 1]
+    : null;
+const normalizeDocumentText = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/`/g, "")
+    .replace(/[^\p{L}\p{N}\s-]/gu, "")
+    .replace(/\s+/g, " ")
+    .trim();
+const leadingHeadingMatch = page.body.match(/^#\s+(.+)$/m);
+const bodyStartsWithPageTitle =
+  !!leadingHeadingMatch && normalizeDocumentText(leadingHeadingMatch[1] ?? "") === normalizeDocumentText(page.title);
+const firstBodyParagraph = page.body
+  .split(/\n\s*\n/g)
+  .map((section) => section.replace(/\s+/g, " ").trim())
+  .filter(Boolean)
+  .find((section) => !section.startsWith("#")) ?? "";
+const summaryDuplicatesOpeningParagraph =
+  !!page.summary &&
+  !!firstBodyParagraph &&
+  normalizeDocumentText(page.summary) === normalizeDocumentText(firstBodyParagraph);
+const compactHeader = bodyStartsWithPageTitle && summaryDuplicatesOpeningParagraph;
+const formatDisplayDate = (value?: string) => {
+  if (!value) {
+    return "Unknown";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+};
+
+const formatDisplayDateTime = (value?: string) => {
+  if (!value) {
+    return "Unknown";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  }).format(date);
+};
+const hasDatedRepositoryDocuments = (page.datedDocumentCount ?? 0) > 0;
+---
+
+<BaseLayout
+  title={`${page.title} | Documentation | e*f(x) Technology`}
+  description={page.summary}
+>
+  <main class="standard-page docs-detail-page">
+    <div class="shell shell-narrow docs-shell-header">
+      <StandardPageHeader
+        currentPage="documents"
+        searchAction={withBasePath("/documents/")}
+        searchPlaceholder="Search repositories or document paths"
+        searchQuery={page.title}
+      />
+    </div>
+
+    <section class:list={["shell", "docs-shell", "docs-reference-layout", page.pageType === "repository" && "is-repository-layout"]}>
+      <aside class="docs-reference-sidebar">
+        <div class="docs-reference-sidebar-shell">
+          <div class="docs-reference-sidebar-top">
+            <p class="docs-reference-sidebar-label">Documentation</p>
+            <a class="docs-reference-sidebar-repo" href={withBasePath(`/documents/${page.repositorySlug}/`)}>
+              {page.repository}
+            </a>
+            <p class="docs-reference-sidebar-copy">
+              Structured navigation for the scanned repository tree.
+            </p>
+          </div>
+          <div class="docs-reference-sidebar-tree">
+            <DocumentsTree nodes={sidebarTree} variant="reference" />
+          </div>
+        </div>
+      </aside>
+
+      <div class="docs-reference-main">
+        {page.pageType !== "repository" ? (
+          <nav class="docs-reference-breadcrumbs" aria-label="Document path">
+            {breadcrumbItems.map((item, index) => (
+              <>
+                {index > 0 ? <span class="docs-reference-breadcrumb-separator">/</span> : null}
+                {item.isCurrent ? (
+                  <span class="docs-reference-breadcrumb-current">{item.label}</span>
+                ) : (
+                  <a class="docs-reference-breadcrumb-link" href={item.href}>{item.label}</a>
+                )}
+              </>
+            ))}
+          </nav>
+        ) : null}
+
+        {page.pageType === "repository" ? (
+          <>
+            <section class="docs-repo-intro">
+              <p class="eyebrow">Documentation</p>
+              <div class="docs-reference-topline docs-repo-topline">
+                <p class="docs-reference-kicker">{page.docType}</p>
+                <span class:list={["docs-reference-status", `is-${page.status.toLowerCase().replace(/\s+/g, "-")}`]}>
+                  {page.status}
+                </span>
+              </div>
+              <h1 class="standard-page-title docs-repo-page-title">{page.repository}</h1>
+              <p class="copy standard-copy-wide docs-repo-summary">{page.summary}</p>
+              <div class="docs-repo-meta">
+                <span>owner: {page.owner}</span>
+                <span>updated: {hasDatedRepositoryDocuments ? formatDisplayDate(page.updated) : "No dated docs"}</span>
+                <span>files: {page.fileCount ?? 0}</span>
+                <span>folders: {page.folderCount ?? 0}</span>
+                <span>rules: {page.ruleLabels.length}</span>
+                <span>roots: {page.domainRoots.join(", ") || "None"}</span>
+              </div>
+              <div class="docs-repo-actions" aria-label="Repository actions">
+                <a class="docs-repo-action" href={page.repositoryUrl} target="_blank" rel="noreferrer">Repository</a>
+                {page.sourceUrl ? <a class="docs-repo-action" href={page.sourceUrl} target="_blank" rel="noreferrer">Source</a> : null}
+                {page.rawUrl ? <a class="docs-repo-action" href={page.rawUrl} target="_blank" rel="noreferrer">Raw</a> : null}
+                <a class="docs-repo-action" href={page.markdownUrl}>Markdown</a>
+              </div>
+            </section>
+
+            <section class="docs-repo-trust-strip" aria-label="Repository scan metadata">
+              <article class="docs-repo-trust-card">
+                <p class="docs-repo-trust-label">Last scan</p>
+                <p class="docs-repo-trust-value">{formatDisplayDateTime(page.lastScannedAt)}</p>
+                <p class="docs-repo-trust-copy">
+                  Static snapshot generated during site build from the configured GitHub scan rules.
+                </p>
+              </article>
+              <article class="docs-repo-trust-card">
+                <p class="docs-repo-trust-label">Latest document update</p>
+                <p class="docs-repo-trust-value">
+                  {hasDatedRepositoryDocuments ? formatDisplayDate(page.latestDocumentUpdated || page.updated) : "No dated pages found"}
+                </p>
+                <p class="docs-repo-trust-copy">
+                  {hasDatedRepositoryDocuments
+                    ? "Most recent document timestamp found in the scanned repository content."
+                    : "The scan found Markdown pages, but none exposed a usable timestamp from source metadata or commit history."}
+                </p>
+              </article>
+              <article class="docs-repo-trust-card">
+                <p class="docs-repo-trust-label">Most recently changed page</p>
+                {hasDatedRepositoryDocuments && page.latestDocumentHtmlUrl ? (
+                  <p class="docs-repo-trust-value">
+                    <a href={page.latestDocumentHtmlUrl}>{page.latestDocumentTitle}</a>
+                  </p>
+                ) : (
+                  <p class="docs-repo-trust-value">No dated page identified</p>
+                )}
+                <p class="docs-repo-trust-copy">
+                  {hasDatedRepositoryDocuments
+                    ? page.latestDocumentPath
+                    : "No document path with a confirmed update date was found in this snapshot."}
+                </p>
+              </article>
+              <article class="docs-repo-trust-card">
+                <p class="docs-repo-trust-label">Confidence signal</p>
+                <p class="docs-repo-trust-value">
+                  {page.datedDocumentCount ?? 0} of {page.fileCount ?? 0} pages dated
+                </p>
+                <p class="docs-repo-trust-copy">
+                  Use this to gauge how complete the freshness metadata is for this repository snapshot.
+                </p>
+              </article>
+            </section>
+
+            <section class="bat-grid bat-grid-detail docs-repo-grid">
+              <article class="bat-card bat-card-wide" id="repository-metadata">
+                <div class="bat-card-bar">
+                  <span class="bat-card-file">Repository metadata</span>
+                  <span class="bat-card-lang">scan</span>
+                </div>
+                <div class="bat-card-body bat-card-body-stack">
+                  <p class="bat-heading">Repository profile</p>
+                  <p class="bat-copy">
+                    Documentation discovered from GitHub using configured repository filters and
+                    document scan rules for <code>{page.repository}</code>.
+                  </p>
+                  <div class="bat-meta-row">
+                    <span>owner: {page.owner}</span>
+                    <span>branch: {page.repositoryRef}</span>
+                    <span>files discovered: {page.fileCount ?? 0}</span>
+                    <span>folders discovered: {page.folderCount ?? 0}</span>
+                  </div>
+                  <div class="bat-meta-row">
+                    <span>scan rules: {page.ruleLabels.join(", ") || "None"}</span>
+                    <span>roots: {page.domainRoots.join(", ") || "None"}</span>
+                  </div>
+                </div>
+              </article>
+
+              <article class="bat-card" id="discovery-model">
+                <div class="bat-card-bar">
+                  <span class="bat-card-file">Discovery model</span>
+                  <span class="bat-card-lang">flow</span>
+                </div>
+                <div class="bat-card-body bat-card-body-stack">
+                  <p class="bat-heading">Static repository landing page</p>
+                  <p class="bat-copy">
+                    Each repository page is generated after the site expands the configured
+                    repository filters, scans the GitHub tree for Markdown files that match the
+                    declared document rules, and maps the surviving files into a folder-aware
+                    navigation tree.
+                  </p>
+                </div>
+              </article>
+
+              <article class="bat-card" id="source-configs">
+                <div class="bat-card-bar">
+                  <span class="bat-card-file">Source configs</span>
+                  <span class="bat-card-lang">yaml</span>
+                </div>
+                <div class="bat-card-body bat-card-body-stack">
+                  <p class="bat-heading">Configuration sources</p>
+                  <div class="bat-list">
+                    {page.sourceNames.map((sourceName) => (
+                      <p class="bat-copy">{sourceName}</p>
+                    ))}
+                  </div>
+                </div>
+              </article>
+
+              {relatedDocuments.length > 0 ? (
+                <article class="bat-card" id="pages-in-section">
+                  <div class="bat-card-bar">
+                    <span class="bat-card-file">Pages in this section</span>
+                    <span class="bat-card-lang">docs</span>
+                  </div>
+                  <div class="bat-card-body bat-card-body-stack">
+                    <div class="docs-repo-pages-list">
+                      {relatedDocuments.map((entry) => (
+                        <a class="docs-repo-pages-link" href={entry.htmlUrl}>
+                          <span class="docs-repo-pages-link-title">{entry.title}</span>
+                          <span class="docs-repo-pages-link-meta">{entry.docType}</span>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                </article>
+              ) : null}
+            </section>
+          </>
+        ) : (
+          <>
+            <header class:list={["docs-reference-header", compactHeader && "is-compact"]}>
+              <div class="docs-reference-topline">
+                <p class="docs-reference-kicker">{page.docType}</p>
+                <span class:list={["docs-reference-status", `is-${page.status.toLowerCase().replace(/\s+/g, "-")}`]}>
+                  {page.status}
+                </span>
+              </div>
+              {!bodyStartsWithPageTitle ? <h1 class="docs-reference-title">{page.title}</h1> : null}
+              {!summaryDuplicatesOpeningParagraph ? <p class="docs-reference-summary">{page.summary}</p> : null}
+            </header>
+
+            <article class="docs-reference-article">
+              <div class="docs-markdown docs-reference-markdown" set:html={page.bodyHtml} />
+            </article>
+          </>
+        )}
+
+        {relatedDocuments.length > 0 && page.isFolderIndex ? (
+          <section class="docs-reference-section-links">
+            <p class="docs-reference-section-links-title">
+              {page.isFolderIndex ? "Pages in this section" : "Nearby pages"}
+            </p>
+            <div class="docs-reference-section-links-grid">
+              {relatedDocuments.map((entry) => (
+                <a class="docs-reference-section-link" href={entry.htmlUrl}>
+                  <span class="docs-reference-section-link-title">{entry.title}</span>
+                  <span class="docs-reference-section-link-meta">{entry.docType}</span>
+                </a>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {previousDocument || nextDocument ? (
+          <nav class="docs-reference-pagination" aria-label="Document pagination">
+            {previousDocument ? (
+              <a class="docs-reference-pagination-link is-previous" href={previousDocument.htmlUrl}>
+                <span class="docs-reference-pagination-label">Previous</span>
+                <span class="docs-reference-pagination-title">{previousDocument.title}</span>
+              </a>
+            ) : <span />}
+            {nextDocument ? (
+              <a class="docs-reference-pagination-link is-next" href={nextDocument.htmlUrl}>
+                <span class="docs-reference-pagination-label">Next</span>
+                <span class="docs-reference-pagination-title">{nextDocument.title}</span>
+              </a>
+            ) : null}
+          </nav>
+        ) : null}
+      </div>
+
+      <aside class:list={["docs-reference-toc", page.pageType === "repository" && "is-repository-toc"]}>
+        {outlineItems.length > 0 ? (
+          <section class="docs-reference-toc-card">
+            <p class="docs-reference-toc-title">On this page</p>
+            <nav class="docs-outline-list" aria-label="On this page">
+              {outlineItems.map((item) => (
+                <a href={item.href}>{item.label}</a>
+              ))}
+            </nav>
+          </section>
+        ) : null}
+
+        {relatedDocuments.length > 0 && page.pageType === "document" ? (
+          <section class="docs-reference-toc-card">
+            <p class="docs-reference-toc-title">This section</p>
+            <nav class="docs-related-list" aria-label="This section">
+              {relatedDocuments.map((entry) => (
+                <a class="docs-related-link" href={entry.htmlUrl}>
+                  <span>{entry.title}</span>
+                  <small>{entry.docType}</small>
+                </a>
+              ))}
+            </nav>
+          </section>
+        ) : null}
+
+        <section class="docs-reference-toc-card">
+          <p class="docs-reference-toc-title">Document</p>
+          <dl class="docs-reference-definition-list">
+            <div>
+              <dt>Repository</dt>
+              <dd>{page.repository}</dd>
+            </div>
+            <div>
+              <dt>Updated</dt>
+              <dd>{page.updated || "Updated date unknown"}</dd>
+            </div>
+            <div>
+              <dt>Owner</dt>
+              <dd>{page.owner}</dd>
+            </div>
+            {page.pageType === "document" ? (
+              <div>
+                <dt>Path</dt>
+                <dd>{page.relativePath}</dd>
+              </div>
+            ) : null}
+            <div>
+              <dt>Status</dt>
+              <dd>{page.status}</dd>
+            </div>
+            <div>
+              <dt>Type</dt>
+              <dd>{page.docType}</dd>
+            </div>
+            <div>
+              <dt>Rules</dt>
+              <dd>{page.ruleLabels.join(", ") || "None"}</dd>
+            </div>
+            <div>
+              <dt>Roots</dt>
+              <dd>{page.domainRoots.join(", ") || "None"}</dd>
+            </div>
+          </dl>
+          <div class="docs-reference-card-actions">
+            <a href={page.repositoryUrl} target="_blank" rel="noreferrer">Repository</a>
+            {page.sourceUrl ? <a href={page.sourceUrl} target="_blank" rel="noreferrer">Source</a> : null}
+            {page.rawUrl ? <a href={page.rawUrl} target="_blank" rel="noreferrer">Raw</a> : null}
+            <a href={page.markdownUrl}>Markdown</a>
+          </div>
+        </section>
+      </aside>
+    </section>
+
+    <section class="shell shell-narrow standard-footer-actions">
+      <a class="button button-secondary" href={withBasePath("/documents/")}>
+        Back to documentation
+      </a>
+    </section>
+  </main>
+</BaseLayout>
+
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.esm.min.mjs";
+
+  mermaid.initialize({
+    startOnLoad: false,
+    securityLevel: "loose",
+    theme: "neutral",
+  });
+
+  const diagrams = document.querySelectorAll(".docs-reference-markdown .mermaid");
+
+  if (diagrams.length > 0) {
+    await mermaid.run({
+      nodes: Array.from(diagrams),
+    });
+  }
+</script>

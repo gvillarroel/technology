@@ -1,0 +1,321 @@
+evaluations:
+  - id: openai-playwright-compare
+    skill:
+      repository_slug: openai-curated-skills
+      slug: playwright
+    benchmark:
+      id: playwright-interactive-compare
+      description: Compare browser task execution with and without the Playwright skill on UI regression prompts.
+      tags:
+        - compare
+        - playwright
+        - ui
+    task:
+      prompts:
+        - id: login-happy-path
+          description: Validate login flow against a seeded fixture app.
+        - id: trace-cart-checkout
+          description: Trace checkout failure and report the blocking selector.
+        - id: capture-accessibility-proof
+          description: Produce evidence for the main navigation accessibility state.
+    workspace:
+      sources:
+        - type: local-path
+          target: /
+          path: evaluations/playwright-interactive/fixtures/workspaces/base
+      initialize_git: true
+      skill_source:
+        type: git
+        repo: https://github.com/openai/skills.git
+        skill_path: skills/.curated/playwright
+      install_strategy: workspace-overlay
+    evaluation:
+      assertions:
+        - javascript
+        - llm-rubric
+      requests: 10
+      timeout_ms: 180000
+      max_concurrency: 4
+      no_cache: true
+      tracing: false
+    comparison:
+      profiles:
+        - id: no-skill
+          description: Fully isolated control without the Playwright skill.
+        - id: skill
+          description: Profile with only the Playwright skill enabled.
+      variants:
+        - id: codex-mini
+          adapter: codex
+          model: gpt-5.1-codex-mini
+          variant_display_name: codex mini
+        - id: pi-gpt5mini
+          adapter: pi
+          model: github-copilot/gpt-5-mini
+          variant_display_name: pi gpt-5 mini
+    results:
+      started_at: 2026-04-03T09:10:00Z
+      completed_at: 2026-04-03T09:37:00Z
+      pass_count: 46
+      total_runs: 60
+      cells:
+        - prompt_id: login-happy-path
+          profile_id: no-skill
+          variant_id: codex-mini
+          variant_display_name: codex mini
+          completed_runs: 10
+          pass_count: 6
+        - prompt_id: login-happy-path
+          profile_id: skill
+          variant_id: codex-mini
+          variant_display_name: codex mini
+          completed_runs: 10
+          pass_count: 9
+        - prompt_id: trace-cart-checkout
+          profile_id: no-skill
+          variant_id: codex-mini
+          variant_display_name: codex mini
+          completed_runs: 10
+          pass_count: 5
+        - prompt_id: trace-cart-checkout
+          profile_id: skill
+          variant_id: codex-mini
+          variant_display_name: codex mini
+          completed_runs: 10
+          pass_count: 8
+        - prompt_id: capture-accessibility-proof
+          profile_id: no-skill
+          variant_id: pi-gpt5mini
+          variant_display_name: pi gpt-5 mini
+          completed_runs: 10
+          pass_count: 8
+        - prompt_id: capture-accessibility-proof
+          profile_id: skill
+          variant_id: pi-gpt5mini
+          variant_display_name: pi gpt-5 mini
+          completed_runs: 10
+          pass_count: 10
+
+  - id: anthropic-frontend-design-compare
+    skill:
+      repository_slug: anthropic-skills
+      slug: frontend-design
+    benchmark:
+      id: frontend-design-compare
+      description: Evaluate design-system implementation quality with and without the frontend-design skill.
+      tags:
+        - compare
+        - frontend
+        - design
+    task:
+      prompts:
+        - id: hero-layout
+          description: Build a responsive hero section from a layout brief.
+        - id: filter-panel
+          description: Improve a filter panel for compact desktop and mobile layouts.
+      workspace:
+        note: none
+    workspace:
+      sources:
+        - type: local-path
+          target: /
+          path: evaluations/frontend-design/fixtures/workspaces/base
+      initialize_git: true
+      skill_source:
+        type: git
+        repo: https://github.com/anthropics/skills.git
+        skill_path: skills/frontend-design
+      install_strategy: workspace-overlay
+    evaluation:
+      assertions:
+        - llm-rubric
+      requests: 8
+      timeout_ms: 240000
+      max_concurrency: 3
+      no_cache: true
+      tracing: false
+    comparison:
+      profiles:
+        - id: no-skill
+          description: Baseline without the design skill.
+        - id: skill
+          description: Profile with the frontend-design skill enabled.
+      variants:
+        - id: codex-mini
+          adapter: codex
+          model: gpt-5.1-codex-mini
+          variant_display_name: codex mini
+        - id: copilot-gpt54mini
+          adapter: copilot-cli
+          model: gpt-5.4-mini
+          variant_display_name: copilot gpt-5.4 mini
+    results:
+      started_at: 2026-04-02T14:00:00Z
+      completed_at: 2026-04-02T14:26:00Z
+      pass_count: 22
+      total_runs: 32
+      cells:
+        - prompt_id: hero-layout
+          profile_id: no-skill
+          variant_id: codex-mini
+          variant_display_name: codex mini
+          completed_runs: 8
+          pass_count: 4
+        - prompt_id: hero-layout
+          profile_id: skill
+          variant_id: codex-mini
+          variant_display_name: codex mini
+          completed_runs: 8
+          pass_count: 7
+        - prompt_id: filter-panel
+          profile_id: no-skill
+          variant_id: copilot-gpt54mini
+          variant_display_name: copilot gpt-5.4 mini
+          completed_runs: 8
+          pass_count: 5
+        - prompt_id: filter-panel
+          profile_id: skill
+          variant_id: copilot-gpt54mini
+          variant_display_name: copilot gpt-5.4 mini
+          completed_runs: 8
+          pass_count: 6
+
+  - id: knowledge-know-workflow-compare
+    skill:
+      repository_slug: knowledge-skills
+      slug: know
+    benchmark:
+      id: know-cli-source-registration
+      description: Measure reproducibility of source registration and export flows with the know skill.
+      tags:
+        - compare
+        - knowledge
+        - cli
+    task:
+      prompts:
+        - id: register-repo-source
+          description: Add a GitHub repository as a knowledge source with the expected key structure.
+        - id: export-markdown
+          description: Export normalized Markdown after a sync run.
+        - id: inspect-sources
+          description: Report the configured source inventory for one knowledge key.
+    workspace:
+      sources:
+        - type: local-path
+          target: /
+          path: evaluations/know-cli/fixtures/workspaces/base
+      initialize_git: true
+      skill_source:
+        type: git
+        repo: https://github.com/gvillarroel/knowledge.git
+        skill_path: skills/know
+      install_strategy: workspace-overlay
+    evaluation:
+      assertions:
+        - javascript
+        - llm-rubric
+      requests: 6
+      timeout_ms: 180000
+      max_concurrency: 2
+      no_cache: true
+      tracing: false
+    comparison:
+      profiles:
+        - id: no-skill
+          description: Baseline with no knowledge workflow instructions.
+        - id: skill
+          description: Profile with the know skill enabled.
+      variants:
+        - id: codex-mini
+          adapter: codex
+          model: gpt-5.1-codex-mini
+          variant_display_name: codex mini
+    results:
+      started_at: 2026-04-01T18:20:00Z
+      completed_at: 2026-04-01T18:42:00Z
+      pass_count: 13
+      total_runs: 18
+      cells:
+        - prompt_id: register-repo-source
+          profile_id: no-skill
+          variant_id: codex-mini
+          variant_display_name: codex mini
+          completed_runs: 6
+          pass_count: 3
+        - prompt_id: register-repo-source
+          profile_id: skill
+          variant_id: codex-mini
+          variant_display_name: codex mini
+          completed_runs: 6
+          pass_count: 5
+        - prompt_id: export-markdown
+          profile_id: skill
+          variant_id: codex-mini
+          variant_display_name: codex mini
+          completed_runs: 6
+          pass_count: 5
+
+  - id: openai-docs-retrieval-compare
+    skill:
+      repository_slug: openai-system-skills
+      slug: openai-docs
+    benchmark:
+      id: openai-docs-retrieval
+      description: Verify retrieval of current official guidance using the OpenAI docs system skill.
+      tags:
+        - compare
+        - docs
+        - retrieval
+    task:
+      prompts:
+        - id: latest-model-guidance
+          description: Retrieve current official model guidance for a coding use case.
+        - id: api-upgrade-path
+          description: Summarize the recommended upgrade path to the current API interface.
+    workspace:
+      sources:
+        - type: empty
+          target: /
+      initialize_git: false
+      skill_source:
+        type: system-installed
+        repo: https://github.com/openai/skills.git
+        skill_path: skills/.system/openai-docs
+      install_strategy: system-installed
+    evaluation:
+      assertions:
+        - llm-rubric
+      requests: 5
+      timeout_ms: 120000
+      max_concurrency: 2
+      no_cache: true
+      tracing: false
+    comparison:
+      profiles:
+        - id: no-skill
+          description: Control without explicit docs instructions.
+        - id: skill
+          description: System-installed OpenAI docs skill available.
+      variants:
+        - id: codex-frontier
+          adapter: codex
+          model: gpt-5.4
+          variant_display_name: codex frontier
+    results:
+      started_at: 2026-04-04T11:05:00Z
+      completed_at: 2026-04-04T11:18:00Z
+      pass_count: 8
+      total_runs: 10
+      cells:
+        - prompt_id: latest-model-guidance
+          profile_id: no-skill
+          variant_id: codex-frontier
+          variant_display_name: codex frontier
+          completed_runs: 5
+          pass_count: 3
+        - prompt_id: latest-model-guidance
+          profile_id: skill
+          variant_id: codex-frontier
+          variant_display_name: codex frontier
+          completed_runs: 5
+          pass_count: 5

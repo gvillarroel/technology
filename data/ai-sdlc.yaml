@@ -34,28 +34,59 @@ overview:
     links_heading: Links
     back_label: Back to AI SDLC
 topics:
-  - slug: agents
-    name: Agents
+  - slug: harness-tools
+    name: Harness Tools
     status: Active
     owner: AI Platform
-    summary: Define where autonomous and semi-autonomous agents are allowed, how they are bounded, and which approval points remain human-owned.
-    outcome: Teams can introduce agentic workflows without losing execution controls, traceability, or release accountability.
+    summary: Standardize the tools used to generate code, run evaluations, verify changes, and observe production behavior through a shared Tech Radar posture.
+    outcome: Teams can move from AI-assisted code generation to production confidence with an explicit toolchain and visible lifecycle status for each tool.
     signals:
-      - Task boundaries are explicit before runtime.
-      - Tool permissions are documented and least-privilege.
-      - Escalation points and fallback paths are defined.
+      - Code generation paths are governed instead of ad hoc.
+      - Verification tooling is connected to repeatable delivery gates.
+      - Production checks expose whether AI-assisted changes are actually behaving correctly after release.
     practices:
-      - Record the agent objective, available tools, and stop conditions.
-      - Distinguish planning agents from execution agents.
-      - Require approval for actions with production or customer impact.
-      - Capture decision logs for retries, handoffs, and escalations.
+      - Use the Tech Radar ring as the default decision signal before introducing a new harness tool.
+      - Keep authoring, regression, and production verification tools connected as one workflow.
+      - Prefer tools that leave an auditable trail in CI or production operations.
+      - Review tool ownership and lifecycle state before scaling usage across teams.
     metrics:
-      - Successful autonomous runs
-      - Human handoff rate
-      - Mean time to recover from failed runs
+      - Time from code generation to verified merge
+      - Regression detection rate before release
+      - Production issue detection time after rollout
+      - Number of AI-assisted changes blocked by validation tooling
+    tool_groups:
+      - title: Code generation
+        summary: Tools that help teams generate or shape code with AI assistance before changes move into the delivery path.
+        tools:
+          - slug: openai-workflows
+            role: Governed workflow layer for prompt templates, eval loops, and model routing in AI-assisted engineering flows.
+            focus: Code generation patterns with explicit evaluation gates and human review.
+            production_signal: Use only in bounded internal workflows until evaluation standards and security posture mature further.
+      - title: Regression and delivery validation
+        summary: Tools that confirm generated code still works before it reaches production.
+        tools:
+          - slug: github-actions
+            role: Default CI orchestration for running checks, protected deployments, and repeatable release gates.
+            focus: Central place to run automated validation for AI-assisted changes.
+            production_signal: Preferred delivery control point for required checks, environment gates, and audited releases.
+          - slug: playwright
+            role: Browser-based regression and screenshot verification for high-value interfaces touched by generated code.
+            focus: Catch UI and workflow regressions before release.
+            production_signal: Use on critical user flows first and review flaky scenarios before expanding coverage.
+      - title: Production verification
+        summary: Tools used after deployment to confirm the code is behaving correctly in the real operating environment.
+        tools:
+          - slug: metrics-dashboards
+            role: Shared metrics and dashboard layer for quality, operational health, and trend visibility after rollout.
+            focus: Confirm whether the released code is meeting runtime expectations.
+            production_signal: Use certified dashboards and owned KPIs to validate production outcomes instead of anecdotal checks.
+          - slug: internal-ops-copilot
+            role: Internal assistant for deployment triage, incident guidance, and operational lookup once code is live.
+            focus: Help operators investigate failures or suspicious behavior in production.
+            production_signal: Keep humans in the loop and audit every operational suggestion while trust remains in pilot mode.
     links:
-      - label: OpenAI agents guidance
-        url: https://platform.openai.com/docs/guides/agents
+      - label: Tech Radar
+        url: /tech-radar/
       - label: Internal AI SDLC index
         url: /ai-sdlc/
   - slug: skills
@@ -64,6 +95,124 @@ topics:
     owner: Developer Experience
     summary: Standardize reusable capabilities, prompts, and tool recipes so teams can compose AI workflows without rebuilding the same instructions per project.
     outcome: Shared AI capabilities become reviewable assets with versioning, provenance, and bounded scope.
+    skills_page:
+      source_file: data/skills-repositories.yaml
+      source_heading: Approved skill sources
+      source_description: The catalog is built from trusted repositories only. Build-time scanning finds every `SKILL.md`, extracts frontmatter and nested metadata, derives pack tags from the folder structure, and generates the install snippet from repository metadata.
+      repositories_label: repositories
+      skills_label: skills
+      filter_search_label: Search skills
+      filter_search_placeholder: Filter by name, description, tag, or repository
+      filter_toggle_label: Evaluated only
+      filter_toggle_hint: Show only skills with recorded evaluations
+      catalog_eyebrow: Catalog
+      catalog_heading: Approved skills
+      results_count_suffix: skills visible
+      status_evaluated: evaluated
+      status_not_evaluated: not evaluated
+      average_success_ratio_label: avg success ratio
+      average_success_ratio_empty: n/a
+      detail_link_label: open detail
+      install_heading: Install
+      metadata_heading: Metadata
+      source_link_label: open skill source
+      repository_link_label: open repository
+      empty_state: No skills match the current filters.
+      install_unavailable_snippet: |-
+        # Local-only trusted source
+        # Publish remote install metadata to expose a standard install snippet
+      markdown_repositories_heading: Approved repositories
+      markdown_skills_heading: Approved skills
+      markdown_repository_source_label: Source
+      markdown_repository_type_label: Type
+      markdown_repository_root_label: Root
+      markdown_repository_purpose_label: Purpose
+      markdown_repository_skill_count_label: Skills discovered
+      markdown_repository_url_label: Repository URL
+      markdown_skill_repository_label: Repository
+      markdown_skill_summary_label: Summary
+      markdown_skill_evaluated_label: Evaluated
+      markdown_skill_average_success_ratio_label: Average success ratio
+      markdown_skill_tags_label: Tags
+      markdown_skill_source_path_label: Source path
+      markdown_skill_detail_label: Detail
+      markdown_skill_source_url_label: Source URL
+      markdown_skill_metadata_label: Metadata
+      markdown_skill_install_label: Install
+      markdown_install_unavailable: Local-only repository metadata; publish a remote install source before exposing a CLI command.
+      markdown_yes_label: yes
+      markdown_no_label: no
+      markdown_none_label: none
+      markdown_open_label: Open
+      markdown_tag_prefix: Tag
+    skill_detail:
+      breadcrumb_prefix: AI SDLC / Skills
+      search_placeholder: Search skills
+      status_evaluated: evaluated
+      status_not_evaluated: not evaluated
+      average_success_ratio_label: avg success ratio
+      average_success_ratio_empty: n/a
+      evaluation_count_label: evaluations
+      install_heading: Install
+      metadata_heading: Metadata
+      install_unavailable_snippet: |-
+        # Local-only trusted source
+        # Publish remote install metadata to expose a standard install snippet
+      evaluation_summary_file: evaluation-summary.json
+      repository_label: repository
+      source_label: source
+      pass_count_label: pass count
+      total_runs_label: total runs
+      benchmark_file_suffix: .evaluation.yaml
+      benchmark_success_ratio_label: success ratio
+      benchmark_runs_label: runs
+      benchmark_requests_label: requests
+      benchmark_timeout_label: timeout
+      benchmark_setup_heading: Benchmark setup
+      benchmark_table_heading: Scenario matrix
+      benchmark_prompt_column_label: prompt
+      benchmark_scenario_column_label: scenario
+      benchmark_delta_column_label: delta
+      benchmark_delta_positive_prefix: +
+      benchmark_missing_cell_label: n/a
+      benchmark_assertions_label: assertions
+      benchmark_concurrency_label: concurrency
+      benchmark_variant_model_label: model
+      benchmark_workspace_sources_label: workspace sources
+      prompts_heading: Prompts
+      workspace_profiles_heading: Workspace and profiles
+      workspace_install_label: install
+      workspace_skill_source_label: skill source
+      workspace_skill_path_label: skill path
+      cells_heading: Cells
+      no_evaluations_empty: This skill has no recorded evaluations yet.
+      back_label: Back to skills
+      markdown_summary_heading: Summary
+      markdown_repository_label: Repository
+      markdown_evaluated_label: Evaluated
+      markdown_average_success_ratio_label: Average success ratio
+      markdown_evaluation_count_label: Evaluation count
+      markdown_install_path_label: Install path
+      markdown_install_heading: Install
+      markdown_metadata_heading: Metadata
+      markdown_evaluations_heading: Evaluations
+      markdown_description_label: Description
+      markdown_success_ratio_label: Success ratio
+      markdown_runs_label: Runs
+      markdown_requests_label: Requests
+      markdown_timeout_label: Timeout ms
+      markdown_max_concurrency_label: Max concurrency
+      markdown_install_strategy_label: Install strategy
+      markdown_skill_source_label: Skill source
+      markdown_profiles_label: Profiles
+      markdown_variants_label: Variants
+      markdown_prompt_prefix: Prompt
+      markdown_workspace_source_prefix: Workspace source
+      markdown_cell_prefix: Cell
+      markdown_back_label: Back to skills
+      markdown_yes_label: yes
+      markdown_no_label: no
+      markdown_tag_prefix: Tag
     signals:
       - Skills have one clear job and known inputs.
       - Source repositories are approved before adoption.
@@ -82,102 +231,125 @@ topics:
         url: /tech-radar/
       - label: Internal AI SDLC index
         url: /ai-sdlc/
-  - slug: monitoring
-    name: Monitoring
+  - slug: metrics
+    name: Metrics
     status: Active
     owner: Observability
-    summary: Track runtime quality, cost, latency, safety, and drift signals so AI systems can be operated with the same discipline as other production services.
-    outcome: AI workloads expose clear health signals and trigger review before quality or spend degrade materially.
+    summary: Track organizational adoption, usage, output, cost, and quality signals with a clear split between repository evidence, product telemetry, and vendor admin APIs.
+    outcome: Teams can explain where AI usage is growing, what it is costing, which workflows produce accepted output, and where governance or quality still lag.
     signals:
-      - Prompt and model changes are observable in production.
-      - Latency, token usage, and fallback rates are trended.
-      - Safety events and evaluation regressions are reviewable.
+      - Repository-level AI conventions are visible by owner, path, and first adoption date.
+      - Tool usage, token spend, and accepted output can be reviewed by platform instead of inferred from anecdotes.
+      - Governance coverage is separated from runtime usage so adoption does not get overstated.
+      - Quality and spend regressions are reviewed with the model, tool, and workflow that produced them.
     practices:
-      - Define product, model, and infrastructure metrics separately.
-      - Connect offline evaluations to production rollout criteria.
-      - Alert on quality drift, not only infrastructure failures.
-      - Keep incident review examples tied to prompts, tools, and model versions.
+      - Separate governance coverage, developer usage, generated output, and runtime quality into different views.
+      - Prefer metrics that can be pulled from existing systems of record instead of survey-only proxies.
+      - Keep provider-specific signals visible by tool because Copilot, Claude Code, and OpenAI expose different slices of the workflow.
+      - Treat cost per active user and cost per accepted output as more decision-useful than raw spend alone.
+      - Do not present vendor usage growth as productivity gain without accepted-output or quality context.
     metrics:
-      - Cost per successful task
-      - P95 latency
-      - Evaluation regression rate
-      - Safety intervention rate
+      - AI workflow coverage by repository, owner, and document convention
+      - Weekly active AI users and sessions by platform
+      - Accepted AI-generated lines, edits, commits, or pull requests by platform
+      - Spend per active user, per session, and per accepted output unit
+      - Token usage and cost by model, project, API key, or service tier
+      - AI document adoption slope, linked-document density, and first-seen rollout timeline
+      - Evaluation regression rate, safety intervention rate, and fallback rate
+      - P95 task latency only for product workflows with runtime inference telemetry
+    measurement_layers:
+      - title: Governance and repository readiness
+        summary: Use repository evidence to show where AI operating conventions exist before claiming broad organizational adoption.
+        signals:
+          - Repository coverage for AGENTS.md, CLAUDE.md, SKILL.md, skills.md, copilot-instructions.md, and related AI markdown entrypoints.
+          - Adoption by owner, business unit, or repository set.
+          - First-seen adoption timeline and AI-doc commit history.
+          - Linked-document structure that shows whether entrypoints point to specs, skills, or supporting docs.
+        chart: Cumulative adoption line plus stacked horizontal bar by owner and convention.
+        source_hint: Pulse report data, repository snapshots, AI-doc occurrences, AI-doc links, and weekly AI-doc commit history.
+      - title: Usage and reach
+        summary: Measure who is actually using each assistant platform and how consistently they return.
+        signals:
+          - Weekly active users, monthly active users, and active seats by platform.
+          - Sessions, chats, or coding sessions per active user.
+          - Usage split by team, organization, or owner when the vendor exposes it.
+          - Top languages, editors, terminal types, or feature modes when available.
+        chart: Multi-series line for active users over time and grouped bar for usage mix by platform.
+        source_hint: GitHub Copilot usage metrics, Claude Code analytics, and OpenAI usage buckets grouped by user, project, or API key.
+      - title: Output and accepted change
+        summary: Focus on accepted or merged output instead of total generated text when comparing assistants.
+        signals:
+          - Accepted suggestion rate or acceptance count for generated code.
+          - Accepted lines, edited lines, added lines, deleted lines, or generated code volume.
+          - Commits or pull requests attributed to AI agents or assistant-driven workflows.
+          - Repository paths or teams receiving the highest AI-assisted change volume.
+        chart: Grouped bar for accepted output by platform and scatter plot of cost versus accepted output.
+        source_hint: Copilot lines-of-code metrics, Claude Code analytics, and repository commit or PR evidence where the workflow leaves provenance.
+      - title: Cost and efficiency
+        summary: Track spend in the same view as reach and accepted output so efficiency decisions are visible.
+        signals:
+          - Total spend and spend trend by provider.
+          - Cost by model, API key, project, or service tier.
+          - Cost per active user, cost per session, and cost per accepted output unit.
+          - Token mix across input, cached input, output, and tool-call-heavy workflows.
+        chart: Area or line chart for spend trend and bubble chart for spend versus accepted output by team or provider.
+        source_hint: Anthropic Usage and Cost API, OpenAI organization usage and costs endpoints, and vendor billing dashboards.
+      - title: Runtime quality and control
+        summary: Keep production quality signals separate from documentation and developer adoption signals.
+        signals:
+          - Offline evaluation regression rate after prompt or model changes.
+          - Safety intervention rate, fallback rate, and incident counts tied to model or tool versions.
+          - P95 task latency and failure rate for user-facing AI features.
+          - Review backlog for suspicious spend, drift, or policy violations.
+        chart: Control chart or line chart for regression and safety events, with a separate latency trend for production workloads.
+        source_hint: Product telemetry, evaluation pipelines, incident tooling, and production observability rather than repository scans.
+    data_sources:
+      - name: Pulse
+        scope: Organization-wide repository evidence and AI-document adoption across GitHub repositories.
+        availability: Available now from repository fetches, snapshots, file paths, markdown links, and weekly Git history.
+        metrics:
+          - Repository count with AI entrypoint docs by owner or repository group.
+          - AI-doc adoption percentage and first-seen adoption timeline.
+          - Linked markdown structures such as AGENTS.md to specs or skills documentation.
+          - Weekly commit history touching AI-related documentation.
+        caveats:
+          - Strong for workflow readiness and governance coverage, not for runtime AI usage.
+          - Does not prove an assistant was actively used in the code path.
+      - name: GitHub Copilot
+        scope: Enterprise and organization usage, adoption, and code-generation activity for Copilot features.
+        availability: Exposed through the Copilot usage metrics dashboard and APIs at enterprise, organization, and user levels.
+        metrics:
+          - 28-day usage and adoption trends.
+          - Active users and feature usage across chat, completions, and agent features.
+          - Lines-of-code metrics for suggested, added, or deleted lines.
+          - Metrics segmented at enterprise, organization, and user level.
+        caveats:
+          - Best for Copilot-native workflows, not for non-Copilot assistants.
+          - Productivity interpretation still needs accepted-output and quality context.
+      - name: Claude Code and Anthropic admin APIs
+        scope: Claude Code adoption, productivity activity, and organization cost tracking.
+        availability: Claude Code workspace cost controls plus Anthropic Administration APIs for Usage and Cost and Claude Code Analytics.
+        metrics:
+          - Centralized Claude Code cost tracking and spend limits at organization level.
+          - Historical API usage and cost data for the organization.
+          - Claude Code adoption and developer productivity signals from the analytics API.
+          - Commits, pull requests, lines changed, terminal type, or actor-level analytics where exposed by the Claude Code analytics surface.
+        caveats:
+          - Analytics are Anthropic-specific and should be shown separately from repository evidence.
+          - Field availability can differ between Claude Code auth flows and general API traffic.
+      - name: OpenAI usage and costs APIs for Codex and API workloads
+        scope: Organization API usage, cost, and model-level breakdowns for OpenAI-hosted workloads.
+        availability: OpenAI organization usage endpoints, usage dashboard, and costs endpoint.
+        metrics:
+          - Tokens and requests grouped by model, project, user, or API key where the endpoint supports grouping.
+          - Cost reconciliation from the Costs endpoint and usage dashboard.
+          - Spend split by model family, service tier, and tool-call-heavy workloads.
+          - Codex model usage and cost trends when those workloads run through the OpenAI API.
+        caveats:
+          - Strong for API traffic and cost accounting, but not for repository governance coverage.
+          - Accepted code change or merge-quality metrics need to be joined with repository or delivery data.
     links:
       - label: Observability context
         url: /communities/
       - label: Internal AI SDLC index
         url: /ai-sdlc/
-  - slug: hooks
-    name: Hooks
-    status: Active
-    owner: Developer Experience
-    summary: Define pre-commit, CI, and workflow hooks that keep AI-assisted changes reviewable, traceable, and aligned with repository controls.
-    outcome: AI-generated changes hit the same policy gates as human-written code before they move into shared branches or release paths.
-    signals:
-      - Hook coverage is defined per repository stage.
-      - AI-specific checks run before merge when applicable.
-      - Failures explain the next remediation step clearly.
-    practices:
-      - Run lightweight checks in local hooks and heavier checks in CI hooks.
-      - Validate prompt artifacts, generated files, and policy metadata when they are part of delivery.
-      - Keep hook output deterministic so retries are easy to interpret.
-      - Version hook rules alongside the repositories they protect.
-    metrics:
-      - Hook pass rate
-      - Mean time to remediate blocked changes
-      - Percentage of repositories with AI policy hooks enabled
-    links:
-      - label: Internal AI SDLC index
-        url: /ai-sdlc/
-      - label: Tech Radar
-        url: /tech-radar/
-  - slug: testing
-    name: Testing
-    status: Active
-    owner: Quality Engineering
-    summary: Establish repeatable test strategy for prompts, tools, outputs, and regressions so AI features can be changed without blind spots.
-    outcome: Teams can ship AI changes with clear confidence boundaries across offline evaluation, integration tests, and user-facing validation.
-    signals:
-      - Test layers are defined for prompt, tool, and product behavior.
-      - Regression suites run against known success and failure cases.
-      - Human review focuses on ambiguous or high-risk outputs.
-    practices:
-      - Keep representative golden cases for prompts and workflows.
-      - Separate deterministic assertions from rubric-based evaluation.
-      - Exercise tool-calling paths with realistic fixtures and failure states.
-      - Tie release approval to regression thresholds, not only anecdotal demos.
-    metrics:
-      - Regression pass rate
-      - Coverage of critical AI journeys
-      - Time to detect behavior drift
-      - Manual review volume per release
-    links:
-      - label: Internal AI SDLC index
-        url: /ai-sdlc/
-      - label: Tech Communities
-        url: /communities/
-  - slug: harness
-    name: Harness
-    status: Active
-    owner: AI Platform
-    summary: Standardize the execution harnesses used to run evaluations, replay cases, benchmark prompts, and compare model or workflow variants.
-    outcome: Teams can compare AI changes under controlled conditions instead of relying on ad hoc spot checks.
-    signals:
-      - Harness inputs and fixtures are versioned.
-      - Evaluation runs are reproducible across environments.
-      - Variant comparison outputs are easy to audit after the run.
-    practices:
-      - Store benchmark fixtures close to the workflows they validate.
-      - Record model, prompt, tool, and environment versions for each run.
-      - Support replay for both successful and failed traces.
-      - Keep harness output compact enough for routine review in CI.
-    metrics:
-      - Reproducibility rate
-      - Benchmark runtime
-      - Variant comparison turnaround time
-      - Number of production issues caught in harness runs
-    links:
-      - label: Internal AI SDLC index
-        url: /ai-sdlc/
-      - label: Cloud Enablement
-        url: /cloud-enablement/

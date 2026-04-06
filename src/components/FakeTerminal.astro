@@ -1,6 +1,4 @@
 ---
-import { withBasePath } from "../lib/site-url";
-
 export interface CommandLink {
   label: string;
   href: string;
@@ -56,10 +54,7 @@ const intro =
 const summary =
   props.summary ??
   "Use this workspace to understand what the company runs, what teams should adopt next, and where standards already exist.";
-const rights = props.rights ?? [];
-const commands = props.commands ?? [];
 const domains = props.domains ?? [];
-const statusLabel = props.statusLabel ?? "Current platform status: aligned";
 const shellClass = props.shellClass ?? "";
 const shellStyle = props.shellStyle ?? "";
 const commandConfigs = props.commandConfigs ?? [];
@@ -84,8 +79,7 @@ const searchNamespaces = props.searchNamespaces ?? [];
   <div class="terminal-body terminal-body-scroll">
     <div class="terminal-hero-grid">
       <section class="terminal-primary">
-        <p class="terminal-line">e*f(x) technology workspace ready.</p>
-        <p class="terminal-prompt">visitor@efx:~$ cat welcome.md</p>
+        <p class="terminal-prompt">visitor@efx:~$ bat welcome.md</p>
         <h1 class="terminal-title">
           <span class="terminal-title-brand">e*f(x)</span>
           <span class="terminal-title-divider" aria-hidden="true"> </span>
@@ -94,84 +88,22 @@ const searchNamespaces = props.searchNamespaces ?? [];
         <p class="terminal-subtitle">## Welcome, team.</p>
         <p class="terminal-copy">{intro}</p>
         <p class="terminal-copy terminal-copy-strong">{summary}</p>
-
-        <div class="terminal-block terminal-status-row">
-          <p class="terminal-subtitle terminal-subtitle-green">{statusLabel}</p>
-          <span class="terminal-badge">Guided entry point</span>
-        </div>
-
-        <div class="terminal-block">
-          <p class="terminal-subtitle">## Suggested commands</p>
-          <div class="terminal-command-list" aria-label="Suggested commands">
-            {commands.map((command) => (
-              <a
-                class="terminal-command"
-                href={command.href}
-                data-terminal-command={command.command ?? command.label}
-              >
-                <span class="terminal-command-prefix">$</span>
-                {command.label}
-              </a>
-            ))}
-          </div>
-        </div>
-
-        <div class="terminal-block">
-          <p class="terminal-subtitle">## Capabilities</p>
-          <ul class="terminal-list terminal-list-compact">
-            <li>Technology standards and platform guidance</li>
-            <li>Engineering delivery patterns and governance</li>
-            <li>AI, data, and decision intelligence direction</li>
-            <li>Approved tools through a shared technology radar</li>
-          </ul>
-        </div>
-
         <div class="terminal-block terminal-runtime-block" id="terminal-runtime-block" hidden>
           <p class="terminal-subtitle">## Command output</p>
           <div class="terminal-runtime-output" id="terminal-runtime-output"></div>
         </div>
       </section>
 
-      <aside class="terminal-sidebar">
-        <div class="terminal-panel">
-          <p class="terminal-panel-label">First route</p>
-          <p class="terminal-panel-title">Start with the right domain, not with a random page.</p>
-          <div class="terminal-domain-list" aria-label="Technology domains">
-            {domains.map((domain) => (
-              <a class="terminal-domain-chip" href={domain.href}>
-                <span class="terminal-domain-prefix">&gt;</span>
-                {domain.label}
-              </a>
-            ))}
-          </div>
+      <nav class="terminal-sidebar" aria-label="Main navigation">
+        <div class="terminal-domain-list" aria-label="Technology domains">
+          {domains.map((domain) => (
+            <a class="terminal-domain-chip" href={domain.href}>
+              <span class="terminal-domain-prefix">&gt;</span>
+              {domain.label}
+            </a>
+          ))}
         </div>
-
-        <div class="terminal-panel">
-          <p class="terminal-panel-label">Technology rights</p>
-          <p class="terminal-copy">Teams working in this environment should be able to:</p>
-          <ul class="terminal-list terminal-list-accent">
-            {rights.map((item) => <li>{item}</li>)}
-          </ul>
-          <p class="terminal-copy terminal-copy-warm">
-            To propose a change or ask questions, start with the tech radar and continue
-            into the relevant standards page.
-          </p>
-        </div>
-
-        <div class="terminal-panel terminal-footnote">
-          <p class="terminal-copy terminal-copy-muted">
-            Still there? Try <a class="terminal-inline-link" href={withBasePath("/tech-radar/")}>/tech-radar</a> to review approved technologies.
-          </p>
-          <p class="terminal-copy terminal-copy-muted">
-            This terminal has more standards than you think...
-          </p>
-          <p class="terminal-prompt">technology-agent@efx:~$ next</p>
-          <p class="terminal-response">
-            Start from the radar for approved technologies, then move into domain pages and
-            operating standards.
-          </p>
-        </div>
-      </aside>
+      </nav>
     </div>
   </div>
 
@@ -420,9 +352,126 @@ const searchNamespaces = props.searchNamespaces ?? [];
     `;
   };
 
+  const renderNamespaceList = (namespace, results) => {
+    const resultLines = results
+      .map((entry, index) => {
+        const sourceLink = entry.htmlUrl
+          ? `<a class="terminal-runtime-link" href="${entry.htmlUrl}">open page</a>`
+          : "";
+
+        return `
+          <div class="bat-line">
+            <span class="bat-gutter">${index + 1}</span>
+            <div class="bat-code">
+              <p class="terminal-runtime-title">${escapeHtml(entry.title)}</p>
+              <p class="terminal-runtime-copy">${escapeHtml(entry.summary)}</p>
+              ${sourceLink ? `<div class="terminal-runtime-meta">${sourceLink}</div>` : ""}
+            </div>
+          </div>
+        `;
+      })
+      .join("");
+
+    return `
+      <article class="bat-card terminal-bat-card">
+        <div class="bat-card-bar">
+          <span class="bat-card-file">${escapeHtml(namespace)}.list</span>
+          <span class="bat-card-lang">catalog</span>
+        </div>
+        <div class="bat-card-body bat-card-body-stack">
+          ${resultLines}
+        </div>
+      </article>
+    `;
+  };
+
+  const renderGlobalSearchResults = (query, results) => {
+    const resultLines = results
+      .map((entry, index) => {
+        const sourceLink = entry.htmlUrl
+          ? `<a class="terminal-runtime-link" href="${entry.htmlUrl}">open page</a>`
+          : "";
+
+        return `
+          <div class="bat-line">
+            <span class="bat-gutter">${index + 1}</span>
+            <div class="bat-code">
+              <p class="terminal-runtime-title">${escapeHtml(entry.title)}</p>
+              <p class="terminal-runtime-copy">${escapeHtml(entry.summary)}</p>
+              ${sourceLink ? `<div class="terminal-runtime-meta">${sourceLink}</div>` : ""}
+            </div>
+          </div>
+        `;
+      })
+      .join("");
+
+    return `
+      <article class="bat-card terminal-bat-card">
+        <div class="bat-card-bar">
+          <span class="bat-card-file">search.results</span>
+          <span class="bat-card-lang">pages</span>
+        </div>
+        <div class="bat-card-body bat-card-body-stack">
+          <div class="bat-line">
+            <span class="bat-gutter">#</span>
+            <div class="bat-code">
+              <p class="terminal-runtime-copy">${escapeHtml(`Query: ${query}`)}</p>
+            </div>
+          </div>
+          ${resultLines}
+        </div>
+      </article>
+    `;
+  };
+
+  const parseCommandPipeline = (rawCommand) => {
+    const grepMatch = rawCommand.match(/^(.*?)(?:\s*\|\s*grep\s+(.+))$/i);
+
+    if (!grepMatch) {
+      return {
+        baseCommand: rawCommand.trim(),
+        grepQuery: "",
+      };
+    }
+
+    return {
+      baseCommand: grepMatch[1].trim(),
+      grepQuery: grepMatch[2].trim(),
+    };
+  };
+
   const normalizeCommand = (value) => value.trim().replace(/\s+/g, " ").toLowerCase();
   const normalizeSearchText = (value) => normalizeCommand(value);
   const getSearchTokens = (value) => normalizeSearchText(value).split(" ").filter(Boolean);
+  const matchesGrep = (value, grepQuery) =>
+    !grepQuery || normalizeSearchText(value).includes(normalizeSearchText(grepQuery));
+  const filterEntriesByGrep = (entries, grepQuery) =>
+    !grepQuery
+      ? entries
+      : entries.filter((entry) =>
+          matchesGrep(
+            [entry.title, entry.slug, entry.summary, entry.searchText, entry.fileName, entry.htmlUrl]
+              .filter(Boolean)
+              .join(" "),
+            grepQuery
+          )
+        );
+  const filterHelpEntriesByGrep = (entries, grepQuery) =>
+    !grepQuery
+      ? entries
+      : entries.filter((entry) =>
+          matchesGrep([entry.command ?? "", entry.description ?? "", entry.namespace ?? ""].join(" "), grepQuery)
+        );
+  const filterMarkdownByGrep = (markdown, grepQuery) => {
+    if (!grepQuery) {
+      return markdown;
+    }
+
+    const grepLines = getMarkdownLines(markdown).filter((line) => matchesGrep(line, grepQuery));
+    return grepLines.join("\n");
+  };
+  const renderGrepEmpty = (grepQuery) =>
+    renderSystemMessage("No grep matches", `No output matched "${grepQuery}".`, "is-error");
   const scoreSearchResult = (entry, normalizedQuery, tokens) => {
     let score = 0;
     const title = normalizeSearchText(entry.title);
@@ -594,6 +643,26 @@ const searchNamespaces = props.searchNamespaces ?? [];
         }))
       ),
     ];
+    const globalSearchDocuments = [
+      ...configs
+        .filter((entry) => entry.kind === "markdown-page" && entry.htmlUrl)
+        .map((entry) => ({
+          title: entry.command,
+          slug: entry.command.replace(/^\//, ""),
+          summary: entry.description,
+          htmlUrl: entry.htmlUrl,
+          markdownUrl: entry.markdownUrl,
+          fileName: entry.fileName,
+          markdown: "",
+          searchText: normalizeSearchText([
+            entry.command,
+            entry.description,
+            entry.fileName ?? "",
+            entry.htmlUrl ?? "",
+          ]),
+        })),
+      ...namespaces.flatMap((entry) => entry.documents),
+    ];
 
     let currentSuggestions = [];
     let activeSuggestionIndex = -1;
@@ -672,8 +741,81 @@ const searchNamespaces = props.searchNamespaces ?? [];
 
       runtimeBlock.hidden = false;
 
-      const command = normalizeCommand(prompt);
+      const { baseCommand, grepQuery } = parseCommandPipeline(prompt);
+      const command = normalizeCommand(baseCommand);
       const match = configMap.get(command);
+
+      if (command === "/search") {
+        appendRuntimeEntry(
+          runtimeOutput,
+          prompt,
+          renderSystemMessage("Search query required", "Usage: /search <terms>.", "is-error"),
+          bodyScroll
+        );
+        return;
+      }
+
+      if (command.startsWith("/search ")) {
+        const query = baseCommand.slice("/search".length).trim();
+
+        if (!query) {
+          appendRuntimeEntry(
+            runtimeOutput,
+            prompt,
+            renderSystemMessage("Search query required", "Usage: /search <terms>.", "is-error"),
+            bodyScroll
+          );
+          return;
+        }
+
+        const normalizedQuery = normalizeSearchText(query);
+        const tokens = getSearchTokens(query);
+        const dedupedResults = new Map();
+
+        for (const entry of globalSearchDocuments) {
+          if (!tokens.every((token) => normalizeSearchText(entry.searchText).includes(token))) {
+            continue;
+          }
+
+          const scoredEntry = {
+            ...entry,
+            score: scoreSearchResult(entry, normalizedQuery, tokens),
+          };
+          const dedupeKey = entry.htmlUrl ?? `${entry.title}:${entry.fileName ?? entry.slug}`;
+          const previousEntry = dedupedResults.get(dedupeKey);
+
+          if (!previousEntry || scoredEntry.score > previousEntry.score) {
+            dedupedResults.set(dedupeKey, scoredEntry);
+          }
+        }
+
+        const results = filterEntriesByGrep(
+          [...dedupedResults.values()].sort(
+            (left, right) => right.score - left.score || left.title.localeCompare(right.title)
+          ),
+          grepQuery
+        ).slice(0, 10);
+
+        if (results.length === 0) {
+          appendRuntimeEntry(
+            runtimeOutput,
+            prompt,
+            grepQuery
+              ? renderGrepEmpty(grepQuery)
+              : renderSystemMessage("No matches found", `No pages matched "${query}".`, "is-error"),
+            bodyScroll
+          );
+          return;
+        }
+
+        appendRuntimeEntry(
+          runtimeOutput,
+          prompt,
+          renderGlobalSearchResults(query, results),
+          bodyScroll
+        );
+        return;
+      }
 
       if (!match) {
         const searchMatch = command.match(/^\/([a-z0-9-]+)(?:\s+(.*))?$/i);
@@ -700,24 +842,28 @@ const searchNamespaces = props.searchNamespaces ?? [];
 
             const normalizedQuery = normalizeSearchText(query);
             const tokens = getSearchTokens(query);
-            const results = [...namespaceConfig.documents]
-              .filter((entry) => tokens.every((token) => normalizeSearchText(entry.searchText).includes(token)))
-              .map((entry) => ({
-                ...entry,
-                score: scoreSearchResult(entry, normalizedQuery, tokens),
-              }))
-              .sort((left, right) => right.score - left.score || left.title.localeCompare(right.title))
-              .slice(0, 5);
+            const results = filterEntriesByGrep(
+              [...namespaceConfig.documents]
+                .filter((entry) => tokens.every((token) => normalizeSearchText(entry.searchText).includes(token)))
+                .map((entry) => ({
+                  ...entry,
+                  score: scoreSearchResult(entry, normalizedQuery, tokens),
+                }))
+                .sort((left, right) => right.score - left.score || left.title.localeCompare(right.title)),
+              grepQuery
+            ).slice(0, 5);
 
             if (results.length === 0) {
               appendRuntimeEntry(
                 runtimeOutput,
                 prompt,
-                renderSystemMessage(
-                  "No matches found",
-                  `No ${namespace.slice(1)} entries matched "${query}".`,
-                  "is-error"
-                ),
+                grepQuery
+                  ? renderGrepEmpty(grepQuery)
+                  : renderSystemMessage(
+                      "No matches found",
+                      `No ${namespace.slice(1)} entries matched "${query}".`,
+                      "is-error"
+                    ),
                 bodyScroll
               );
               return;
@@ -728,7 +874,7 @@ const searchNamespaces = props.searchNamespaces ?? [];
               prompt,
               `${renderSearchResults(namespace.slice(1), query, results)}${renderBatCard(
                 results[0].fileName,
-                results[0].markdown,
+                filterMarkdownByGrep(results[0].markdown, grepQuery),
                 results[0].htmlUrl
               )}`,
               bodyScroll
@@ -747,7 +893,39 @@ const searchNamespaces = props.searchNamespaces ?? [];
       }
 
       if (match.kind === "builtin") {
-        appendRuntimeEntry(runtimeOutput, prompt, renderHelp(configs, namespaces), bodyScroll);
+        const listMatch = command.match(/^\/([a-z0-9-]+)\s+list$/i);
+
+        if (listMatch) {
+          const namespace = `/${normalizeCommand(listMatch[1]).replace(/^\//, "")}`;
+          const namespaceConfig = namespaceMap.get(namespace);
+
+          if (namespaceConfig) {
+            const filteredDocuments = filterEntriesByGrep(namespaceConfig.documents.slice(0, 12), grepQuery);
+
+            if (filteredDocuments.length === 0) {
+              appendRuntimeEntry(runtimeOutput, prompt, renderGrepEmpty(grepQuery), bodyScroll);
+              return;
+            }
+
+            appendRuntimeEntry(
+              runtimeOutput,
+              prompt,
+              renderNamespaceList(namespace.slice(1), filteredDocuments),
+              bodyScroll
+            );
+            return;
+          }
+        }
+
+        const filteredConfigs = filterHelpEntriesByGrep(configs, grepQuery);
+        const filteredNamespaces = filterHelpEntriesByGrep(namespaces, grepQuery);
+
+        if (grepQuery && filteredConfigs.length === 0 && filteredNamespaces.length === 0) {
+          appendRuntimeEntry(runtimeOutput, prompt, renderGrepEmpty(grepQuery), bodyScroll);
+          return;
+        }
+
+        appendRuntimeEntry(runtimeOutput, prompt, renderHelp(filteredConfigs, filteredNamespaces), bodyScroll);
         return;
       }
 
@@ -780,8 +958,20 @@ const searchNamespaces = props.searchNamespaces ?? [];
         }
 
         const markdown = await response.text();
+        const filteredMarkdown = filterMarkdownByGrep(markdown, grepQuery);
         runtimeOutput.lastElementChild?.remove();
-        appendRuntimeEntry(runtimeOutput, prompt, renderBatCard(match.fileName, markdown, match.htmlUrl), bodyScroll);
+
+        if (grepQuery && !filteredMarkdown.trim()) {
+          appendRuntimeEntry(runtimeOutput, prompt, renderGrepEmpty(grepQuery), bodyScroll);
+          return;
+        }
+
+        appendRuntimeEntry(
+          runtimeOutput,
+          prompt,
+          renderBatCard(match.fileName, filteredMarkdown, match.htmlUrl),
+          bodyScroll
+        );
       } catch (error) {
         runtimeOutput.lastElementChild?.remove();
         appendRuntimeEntry(

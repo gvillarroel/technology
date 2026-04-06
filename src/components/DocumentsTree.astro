@@ -1,0 +1,68 @@
+---
+import type { DocumentTreeNode } from "../lib/documents";
+
+export interface Props {
+  nodes: DocumentTreeNode[];
+  variant?: "default" | "reference";
+}
+
+const { nodes, variant = "default" } = Astro.props;
+---
+
+<ul class:list={["docs-tree-list", variant === "reference" && "is-reference"]}>
+  {nodes.map((node) => (
+    <li
+      class:list={[
+        "docs-tree-item",
+        node.kind === "folder" ? "is-folder" : "is-file",
+        variant === "reference" && "is-reference",
+      ]}
+      style={`--docs-tree-depth:${node.depth};`}
+    >
+      {node.kind === "folder" ? (
+        <details class:list={["docs-tree-folder", variant === "reference" && "is-reference"]} open={node.isActive || node.depth < 1}>
+          <summary>
+            {node.href ? (
+              <a class:list={["docs-tree-link", variant === "reference" && "is-reference", node.isActive && "is-active"]} href={node.href}>
+                <span class="docs-tree-label">
+                  {variant === "reference" ? (
+                    <span class="docs-tree-caret" aria-hidden="true">{node.depth === 0 ? "" : "›"}</span>
+                  ) : (
+                    <span class="docs-tree-icon" aria-hidden="true">{node.depth === 0 ? "repo" : "dir"}</span>
+                  )}
+                  <span>{node.title}</span>
+                </span>
+                {variant === "default" && node.status ? <span class="docs-tree-pill">{node.status}</span> : null}
+              </a>
+            ) : (
+              <span class:list={["docs-tree-link", variant === "reference" && "is-reference", node.isActive && "is-active"]}>
+                <span class="docs-tree-label">
+                  {variant === "reference" ? (
+                    <span class="docs-tree-caret" aria-hidden="true">{node.depth === 0 ? "" : "›"}</span>
+                  ) : (
+                    <span class="docs-tree-icon" aria-hidden="true">{node.depth === 0 ? "repo" : "dir"}</span>
+                  )}
+                  <span>{node.title}</span>
+                </span>
+                {variant === "default" && node.status ? <span class="docs-tree-pill">{node.status}</span> : null}
+              </span>
+            )}
+          </summary>
+          {node.children.length > 0 ? <Astro.self nodes={node.children} variant={variant} /> : null}
+        </details>
+      ) : (
+        <a class:list={["docs-tree-link", variant === "reference" && "is-reference", node.isActive && "is-active"]} href={node.href!}>
+          <span class="docs-tree-label">
+            {variant === "reference" ? (
+              <span class="docs-tree-caret docs-tree-caret-file" aria-hidden="true">•</span>
+            ) : (
+              <span class="docs-tree-icon" aria-hidden="true">md</span>
+            )}
+            <span>{node.title}</span>
+          </span>
+          {variant === "default" && node.status ? <span class="docs-tree-pill">{node.status}</span> : null}
+        </a>
+      )}
+    </li>
+  ))}
+</ul>

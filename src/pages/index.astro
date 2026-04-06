@@ -3,7 +3,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import FakeTerminal from "../components/FakeTerminal.astro";
 import { getTerminalCommandConfigs } from "../lib/terminal-commands";
 import { getTerminalSearchNamespaces } from "../lib/terminal-search";
-import { withBasePath } from "../lib/site-url";
 
 const sections = [
   {
@@ -30,23 +29,17 @@ const sections = [
     copy: "Operational standards for agents, reusable skills, and monitoring across the AI delivery lifecycle.",
     icon: "schema",
   },
-];
-
-const commandConfigs = await getTerminalCommandConfigs();
-const searchNamespaces = await getTerminalSearchNamespaces();
-
-const terminalCommands = [
-  ...commandConfigs
-    .filter((item) => item.kind === "markdown-page" && item.htmlUrl)
-    .map((item) => ({
-      label: item.command,
-      href: item.htmlUrl ?? withBasePath("/"),
-      command: item.command,
-    })),
   {
-    label: "/help",
-    href: withBasePath("/"),
-    command: "/help",
+    id: "adrs",
+    title: "ADRs",
+    copy: "Architecture decision records that capture product, status, date, and rationale directly from nested Markdown files.",
+    icon: "account_tree",
+  },
+  {
+    id: "documents",
+    title: "Documentation",
+    copy: "Governed Markdown libraries for internal manuals, security protocols, and operational company documents.",
+    icon: "folder_managed",
   },
 ];
 
@@ -55,12 +48,8 @@ const terminalDomains = sections.map((section) => ({
   href: `#${section.id}`,
 }));
 
-const rights = [
-  "Know which technologies are approved for enterprise use",
-  "Request review for a new tool or framework",
-  "Withdraw an unsupported stack before scale-up",
-  "Escalate architectural conflicts to the platform group",
-];
+const commandConfigs = await getTerminalCommandConfigs();
+const searchNamespaces = await getTerminalSearchNamespaces();
 
 ---
 
@@ -71,9 +60,6 @@ const rights = [
   <main class="terminal-page">
     <section class="terminal-hero">
       <FakeTerminal
-        summary="The first screen should explain where to go next, what standards already exist, and which technology areas shape the company stack."
-        rights={rights}
-        commands={terminalCommands}
         domains={terminalDomains}
         commandConfigs={commandConfigs}
         searchNamespaces={searchNamespaces}
