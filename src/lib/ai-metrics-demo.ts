@@ -80,6 +80,30 @@ const pulseOwnersCsvPath = join(
   "gvillarroel-repos-owned.csv",
 );
 
+const fallbackOwnersCsv = `repo,owner,owner_color
+technology,Atlas,#1f77b4
+knowledge,Atlas,#1f77b4
+pulse,Atlas,#1f77b4
+agent-news,Aurora,#ff7f0e
+adk-conn,Aurora,#ff7f0e
+skill-arena,Beacon,#2ca02c
+zx-harness,Beacon,#2ca02c
+prompt-lab,Forge,#d62728
+workflow-canvas,Forge,#d62728
+ops-telemetry,Helix,#9467bd
+incident-helper,Helix,#9467bd
+docs-runtime,Lattice,#8c564b
+repository-catalog,Lattice,#8c564b
+model-registry,Nimbus,#e377c2
+eval-orchestrator,Nimbus,#e377c2
+playwright-review,Nova,#7f7f7f
+release-console,Nova,#7f7f7f
+delivery-gates,Quasar,#bcbd22
+team-radar,Quasar,#bcbd22
+codex-tooling,Vertex,#17becf
+skills-index,Vertex,#17becf
+`;
+
 const teamMetricSeedByOwner: Record<string, TeamMetricSeed> = {
   Atlas: {
     copilot: 34, claude: 18, codex: 12, sessions: 910, spend: 4820,
@@ -149,7 +173,7 @@ function parseCsv(raw: string): OwnerCsvRow[] {
 }
 
 export async function getAiMetricsDemoDataset(): Promise<AiMetricsDemoDataset> {
-  const rawCsv = await readFile(pulseOwnersCsvPath, "utf-8");
+  const rawCsv = await readFile(pulseOwnersCsvPath, "utf-8").catch(() => fallbackOwnersCsv);
   const rows = parseCsv(rawCsv);
   const groupedTeams = new Map<string, OwnerCsvRow[]>();
 
