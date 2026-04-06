@@ -3,41 +3,48 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import FakeTerminal from "../components/FakeTerminal.astro";
 import { getTerminalCommandConfigs } from "../lib/terminal-commands";
 import { getTerminalSearchNamespaces } from "../lib/terminal-search";
+import { withBasePath } from "../lib/site-url";
 
 const sections = [
   {
     id: "core-platforms",
     title: "Core Platforms",
+    href: withBasePath("/cloud-enablement/"),
     copy: "Products and services that keep identity, data, and decisioning workloads moving across the company.",
     icon: "hub",
   },
   {
     id: "delivery-systems",
     title: "Delivery Systems",
+    href: withBasePath("/tech-radar/"),
     copy: "The engineering toolchain, release patterns, and operational controls used to ship safely at scale.",
     icon: "deployed_code",
   },
   {
     id: "decision-intelligence",
     title: "Decision Intelligence",
+    href: withBasePath("/communities/"),
     copy: "Analytics, AI workflows, and governed data products that support faster and more reliable business decisions.",
     icon: "psychology",
   },
   {
     id: "ai-sdlc",
     title: "AI SDLC",
+    href: withBasePath("/ai-sdlc/"),
     copy: "Operational standards for agents, reusable skills, and monitoring across the AI delivery lifecycle.",
     icon: "schema",
   },
   {
     id: "adrs",
     title: "ADRs",
+    href: withBasePath("/adrs/"),
     copy: "Architecture decision records that capture product, status, date, and rationale directly from nested Markdown files.",
     icon: "account_tree",
   },
   {
     id: "documents",
     title: "Documentation",
+    href: withBasePath("/documents/"),
     copy: "Governed Markdown libraries for internal manuals, security protocols, and operational company documents.",
     icon: "folder_managed",
   },
@@ -45,7 +52,7 @@ const sections = [
 
 const terminalDomains = sections.map((section) => ({
   label: section.title,
-  href: `#${section.id}`,
+  href: section.href,
 }));
 
 const commandConfigs = await getTerminalCommandConfigs();

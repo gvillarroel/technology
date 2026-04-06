@@ -440,8 +440,11 @@ const searchNamespaces = props.searchNamespaces ?? [];
     };
   };
 
-  const normalizeCommand = (value) => value.trim().replace(/\s+/g, " ").toLowerCase();
-  const normalizeSearchText = (value) => normalizeCommand(value);
+  const normalizeCommand = (value) => String(value ?? "").trim().replace(/\s+/g, " ").toLowerCase();
+  const normalizeSearchText = (value) =>
+    Array.isArray(value)
+      ? value.map((item) => String(item ?? "")).join(" ").trim().replace(/\s+/g, " ").toLowerCase()
+      : normalizeCommand(value);
   const getSearchTokens = (value) => normalizeSearchText(value).split(" ").filter(Boolean);
   const matchesGrep = (value, grepQuery) =>
     !grepQuery || normalizeSearchText(value).includes(normalizeSearchText(grepQuery));
@@ -516,15 +519,20 @@ const searchNamespaces = props.searchNamespaces ?? [];
   };
 
   const appendRuntimeEntry = (container, prompt, html, scrollContainer) => {
-    container.insertAdjacentHTML(
-      "beforeend",
-      `
-        <div class="terminal-runtime-entry">
-          <p class="terminal-prompt terminal-runtime-prompt">visitor@efx:~$ ${escapeHtml(prompt)}</p>
-          ${html}
-        </div>
-      `
-    );
+    const entry = document.createElement("div");
+    entry.className = "terminal-runtime-entry";
+
+    const promptNode = document.createElement("p");
+    promptNode.className = "terminal-prompt terminal-runtime-prompt";
+    promptNode.textContent = `visitor@efx:~$ ${prompt}`;
+
+    const contentNode = document.createElement("div");
+    const template = document.createElement("template");
+    template.innerHTML = html.trim();
+    contentNode.append(template.content.cloneNode(true));
+
+    entry.append(promptNode, contentNode);
+    container.append(entry);
     container.scrollTop = container.scrollHeight;
     if (scrollContainer instanceof HTMLElement) {
       requestAnimationFrame(() => {
@@ -740,25 +748,12 @@ const searchNamespaces = props.searchNamespaces ?? [];
       }
 
       runtimeBlock.hidden = false;
+      try {
+        const { baseCommand, grepQuery } = parseCommandPipeline(prompt);
+        const command = normalizeCommand(baseCommand);
+        const match = configMap.get(command);
 
-      const { baseCommand, grepQuery } = parseCommandPipeline(prompt);
-      const command = normalizeCommand(baseCommand);
-      const match = configMap.get(command);
-
-      if (command === "/search") {
-        appendRuntimeEntry(
-          runtimeOutput,
-          prompt,
-          renderSystemMessage("Search query required", "Usage: /search <terms>.", "is-error"),
-          bodyScroll
-        );
-        return;
-      }
-
-      if (command.startsWith("/search ")) {
-        const query = baseCommand.slice("/search".length).trim();
-
-        if (!query) {
+        if (command === "/search") {
           appendRuntimeEntry(
             runtimeOutput,
             prompt,
@@ -768,41 +763,185 @@ const searchNamespaces = props.searchNamespaces ?? [];
           return;
         }
 
-        const normalizedQuery = normalizeSearchText(query);
-        const tokens = getSearchTokens(query);
-        const dedupedResults = new Map();
+        if (command.startsWith("/search ")) {
+          const query = baseCommand.slice("/search".length).trim();
 
-        for (const entry of globalSearchDocuments) {
-          if (!tokens.every((token) => normalizeSearchText(entry.searchText).includes(token))) {
-            continue;
+          if (!query) {
+            appendRuntimeEntry(
+              runtimeOutput,
+              prompt,
+              renderSystemMessage("Search query required", "Usage: /search <terms>.", "is-error"),
+              bodyScroll
+            );
+            return;
           }
 
-          const scoredEntry = {
-            ...entry,
-            score: scoreSearchResult(entry, normalizedQuery, tokens),
-          };
-          const dedupeKey = entry.htmlUrl ?? `${entry.title}:${entry.fileName ?? entry.slug}`;
-          const previousEntry = dedupedResults.get(dedupeKey);
+          const normalizedQuery = normalizeSearchText(query);
+          const tokens = getSearchTokens(query);
+          const dedupedResults = new Map();
 
-          if (!previousEntry || scoredEntry.score > previousEntry.score) {
-            dedupedResults.set(dedupeKey, scoredEntry);
+          for (const entry of globalSearchDocuments) {
+            if (!tokens.every((token) => normalizeSearchText(entry.searchText).includes(token))) {
+              continue;
+            }
+
+            const scoredEntry = {
+              ...entry,
+              score: scoreSearchResult(entry, normalizedQuery, tokens),
+            };
+            const dedupeKey = entry.htmlUrl ?? `${entry.title}:${entry.fileName ?? entry.slug}`;
+            const previousEntry = dedupedResults.get(dedupeKey);
+
+            if (!previousEntry || scoredEntry.score > previousEntry.score) {
+              dedupedResults.set(dedupeKey, scoredEntry);
+            }
           }
-        }
 
-        const results = filterEntriesByGrep(
-          [...dedupedResults.values()].sort(
-            (left, right) => right.score - left.score || left.title.localeCompare(right.title)
-          ),
-          grepQuery
-        ).slice(0, 10);
+          const results = filterEntriesByGrep(
+            [...dedupedResults.values()].sort(
+              (left, right) => right.score - left.score || left.title.localeCompare(right.title)
+            ),
+            grepQuery
+          ).slice(0, 10);
 
-        if (results.length === 0) {
+          if (results.length === 0) {
+            appendRuntimeEntry(
+              runtimeOutput,
+              prompt,
+              grepQuery
+                ? renderGrepEmpty(grepQuery)
+                : renderSystemMessage("No matches found", `No pages matched "${query}".`, "is-error"),
+              bodyScroll
+            );
+            return;
+          }
+
           appendRuntimeEntry(
             runtimeOutput,
             prompt,
-            grepQuery
-              ? renderGrepEmpty(grepQuery)
-              : renderSystemMessage("No matches found", `No pages matched "${query}".`, "is-error"),
+            renderGlobalSearchResults(query, results),
+            bodyScroll
+          );
+          return;
+        }
+
+        if (!match) {
+          const searchMatch = command.match(/^\/([a-z0-9-]+)(?:\s+(.*))?$/i);
+
+          if (searchMatch) {
+            const namespace = `/${normalizeCommand(searchMatch[1]).replace(/^\//, "")}`;
+            const query = searchMatch[2]?.trim() ?? "";
+            const namespaceConfig = namespaceMap.get(namespace);
+
+            if (namespaceConfig) {
+              if (!query) {
+                appendRuntimeEntry(
+                  runtimeOutput,
+                  prompt,
+                  renderSystemMessage(
+                    "Search query required",
+                    `Usage: ${namespace} <terms>. ${namespaceConfig.description}`,
+                    "is-error"
+                  ),
+                  bodyScroll
+                );
+                return;
+              }
+
+              const normalizedQuery = normalizeSearchText(query);
+              const tokens = getSearchTokens(query);
+              const results = filterEntriesByGrep(
+                [...namespaceConfig.documents]
+                  .filter((entry) => tokens.every((token) => normalizeSearchText(entry.searchText).includes(token)))
+                  .map((entry) => ({
+                    ...entry,
+                    score: scoreSearchResult(entry, normalizedQuery, tokens),
+                  }))
+                  .sort((left, right) => right.score - left.score || left.title.localeCompare(right.title)),
+                grepQuery
+              ).slice(0, 5);
+
+              if (results.length === 0) {
+                appendRuntimeEntry(
+                  runtimeOutput,
+                  prompt,
+                  grepQuery
+                    ? renderGrepEmpty(grepQuery)
+                    : renderSystemMessage(
+                        "No matches found",
+                        `No ${namespace.slice(1)} entries matched "${query}".`,
+                        "is-error"
+                      ),
+                  bodyScroll
+                );
+                return;
+              }
+
+              appendRuntimeEntry(
+                runtimeOutput,
+                prompt,
+                `${renderSearchResults(namespace.slice(1), query, results)}${renderBatCard(
+                  results[0].fileName,
+                  filterMarkdownByGrep(results[0].markdown, grepQuery),
+                  results[0].htmlUrl
+                )}`,
+                bodyScroll
+              );
+              return;
+            }
+          }
+
+          appendRuntimeEntry(
+            runtimeOutput,
+            prompt,
+            renderSystemMessage("Command not found", 'Try "/help" to list the available commands.', "is-error"),
+            bodyScroll
+          );
+          return;
+        }
+
+        if (match.kind === "builtin") {
+          const listMatch = command.match(/^\/([a-z0-9-]+)\s+list$/i);
+
+          if (listMatch) {
+            const namespace = `/${normalizeCommand(listMatch[1]).replace(/^\//, "")}`;
+            const namespaceConfig = namespaceMap.get(namespace);
+
+            if (namespaceConfig) {
+              const filteredDocuments = filterEntriesByGrep(namespaceConfig.documents.slice(0, 12), grepQuery);
+
+              if (filteredDocuments.length === 0) {
+                appendRuntimeEntry(runtimeOutput, prompt, renderGrepEmpty(grepQuery), bodyScroll);
+                return;
+              }
+
+              appendRuntimeEntry(
+                runtimeOutput,
+                prompt,
+                renderNamespaceList(namespace.slice(1), filteredDocuments),
+                bodyScroll
+              );
+              return;
+            }
+          }
+
+          const filteredConfigs = filterHelpEntriesByGrep(configs, grepQuery);
+          const filteredNamespaces = filterHelpEntriesByGrep(namespaces, grepQuery);
+
+          if (grepQuery && filteredConfigs.length === 0 && filteredNamespaces.length === 0) {
+            appendRuntimeEntry(runtimeOutput, prompt, renderGrepEmpty(grepQuery), bodyScroll);
+            return;
+          }
+
+          appendRuntimeEntry(runtimeOutput, prompt, renderHelp(filteredConfigs, filteredNamespaces), bodyScroll);
+          return;
+        }
+
+        if (!match.markdownUrl || !match.fileName) {
+          appendRuntimeEntry(
+            runtimeOutput,
+            prompt,
+            renderSystemMessage("Command misconfigured", "This command is missing a Markdown source.", "is-error"),
             bodyScroll
           );
           return;
@@ -811,175 +950,57 @@ const searchNamespaces = props.searchNamespaces ?? [];
         appendRuntimeEntry(
           runtimeOutput,
           prompt,
-          renderGlobalSearchResults(query, results),
+          renderSystemMessage("Fetching Markdown", `Loading ${match.fileName} from ${match.markdownUrl} ...`),
           bodyScroll
         );
-        return;
-      }
 
-      if (!match) {
-        const searchMatch = command.match(/^\/([a-z0-9-]+)(?:\s+(.*))?$/i);
+        try {
+          const response = await fetch(match.markdownUrl, {
+            headers: {
+              Accept: "text/markdown, text/plain;q=0.9, */*;q=0.1",
+            },
+          });
 
-        if (searchMatch) {
-          const namespace = `/${normalizeCommand(searchMatch[1]).replace(/^\//, "")}`;
-          const query = searchMatch[2]?.trim() ?? "";
-          const namespaceConfig = namespaceMap.get(namespace);
+          if (!response.ok) {
+            throw new Error(`Request failed with status ${response.status}`);
+          }
 
-          if (namespaceConfig) {
-            if (!query) {
-              appendRuntimeEntry(
-                runtimeOutput,
-                prompt,
-                renderSystemMessage(
-                  "Search query required",
-                  `Usage: ${namespace} <terms>. ${namespaceConfig.description}`,
-                  "is-error"
-                ),
-                bodyScroll
-              );
-              return;
-            }
+          const markdown = await response.text();
+          const filteredMarkdown = filterMarkdownByGrep(markdown, grepQuery);
+          runtimeOutput.lastElementChild?.remove();
 
-            const normalizedQuery = normalizeSearchText(query);
-            const tokens = getSearchTokens(query);
-            const results = filterEntriesByGrep(
-              [...namespaceConfig.documents]
-                .filter((entry) => tokens.every((token) => normalizeSearchText(entry.searchText).includes(token)))
-                .map((entry) => ({
-                  ...entry,
-                  score: scoreSearchResult(entry, normalizedQuery, tokens),
-                }))
-                .sort((left, right) => right.score - left.score || left.title.localeCompare(right.title)),
-              grepQuery
-            ).slice(0, 5);
-
-            if (results.length === 0) {
-              appendRuntimeEntry(
-                runtimeOutput,
-                prompt,
-                grepQuery
-                  ? renderGrepEmpty(grepQuery)
-                  : renderSystemMessage(
-                      "No matches found",
-                      `No ${namespace.slice(1)} entries matched "${query}".`,
-                      "is-error"
-                    ),
-                bodyScroll
-              );
-              return;
-            }
-
-            appendRuntimeEntry(
-              runtimeOutput,
-              prompt,
-              `${renderSearchResults(namespace.slice(1), query, results)}${renderBatCard(
-                results[0].fileName,
-                filterMarkdownByGrep(results[0].markdown, grepQuery),
-                results[0].htmlUrl
-              )}`,
-              bodyScroll
-            );
+          if (grepQuery && !filteredMarkdown.trim()) {
+            appendRuntimeEntry(runtimeOutput, prompt, renderGrepEmpty(grepQuery), bodyScroll);
             return;
           }
+
+          appendRuntimeEntry(
+            runtimeOutput,
+            prompt,
+            renderBatCard(match.fileName, filteredMarkdown, match.htmlUrl),
+            bodyScroll
+          );
+        } catch (error) {
+          runtimeOutput.lastElementChild?.remove();
+          appendRuntimeEntry(
+            runtimeOutput,
+            prompt,
+            renderSystemMessage(
+              "Request failed",
+              error instanceof Error ? error.message : "Unknown request failure.",
+              "is-error"
+            ),
+            bodyScroll
+          );
         }
-
-        appendRuntimeEntry(
-          runtimeOutput,
-          prompt,
-          renderSystemMessage("Command not found", 'Try "/help" to list the available commands.', "is-error"),
-          bodyScroll
-        );
-        return;
-      }
-
-      if (match.kind === "builtin") {
-        const listMatch = command.match(/^\/([a-z0-9-]+)\s+list$/i);
-
-        if (listMatch) {
-          const namespace = `/${normalizeCommand(listMatch[1]).replace(/^\//, "")}`;
-          const namespaceConfig = namespaceMap.get(namespace);
-
-          if (namespaceConfig) {
-            const filteredDocuments = filterEntriesByGrep(namespaceConfig.documents.slice(0, 12), grepQuery);
-
-            if (filteredDocuments.length === 0) {
-              appendRuntimeEntry(runtimeOutput, prompt, renderGrepEmpty(grepQuery), bodyScroll);
-              return;
-            }
-
-            appendRuntimeEntry(
-              runtimeOutput,
-              prompt,
-              renderNamespaceList(namespace.slice(1), filteredDocuments),
-              bodyScroll
-            );
-            return;
-          }
-        }
-
-        const filteredConfigs = filterHelpEntriesByGrep(configs, grepQuery);
-        const filteredNamespaces = filterHelpEntriesByGrep(namespaces, grepQuery);
-
-        if (grepQuery && filteredConfigs.length === 0 && filteredNamespaces.length === 0) {
-          appendRuntimeEntry(runtimeOutput, prompt, renderGrepEmpty(grepQuery), bodyScroll);
-          return;
-        }
-
-        appendRuntimeEntry(runtimeOutput, prompt, renderHelp(filteredConfigs, filteredNamespaces), bodyScroll);
-        return;
-      }
-
-      if (!match.markdownUrl || !match.fileName) {
-        appendRuntimeEntry(
-          runtimeOutput,
-          prompt,
-          renderSystemMessage("Command misconfigured", "This command is missing a Markdown source.", "is-error"),
-          bodyScroll
-        );
-        return;
-      }
-
-      appendRuntimeEntry(
-        runtimeOutput,
-        prompt,
-        renderSystemMessage("Fetching Markdown", `Loading ${match.fileName} from ${match.markdownUrl} ...`),
-        bodyScroll
-      );
-
-      try {
-        const response = await fetch(match.markdownUrl, {
-          headers: {
-            Accept: "text/markdown, text/plain;q=0.9, */*;q=0.1",
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(`Request failed with status ${response.status}`);
-        }
-
-        const markdown = await response.text();
-        const filteredMarkdown = filterMarkdownByGrep(markdown, grepQuery);
-        runtimeOutput.lastElementChild?.remove();
-
-        if (grepQuery && !filteredMarkdown.trim()) {
-          appendRuntimeEntry(runtimeOutput, prompt, renderGrepEmpty(grepQuery), bodyScroll);
-          return;
-        }
-
-        appendRuntimeEntry(
-          runtimeOutput,
-          prompt,
-          renderBatCard(match.fileName, filteredMarkdown, match.htmlUrl),
-          bodyScroll
-        );
       } catch (error) {
-        runtimeOutput.lastElementChild?.remove();
+        console.error("Terminal runtime failure", error);
         appendRuntimeEntry(
           runtimeOutput,
           prompt,
           renderSystemMessage(
-            "Request failed",
-            error instanceof Error ? error.message : "Unknown request failure.",
+            "Runtime failure",
+            error instanceof Error ? error.message : String(error),
             "is-error"
           ),
           bodyScroll
