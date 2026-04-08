@@ -133,6 +133,10 @@ export interface DocumentSearchEntry {
   htmlUrl: string;
   markdownUrl: string;
   headings: string[];
+  updated: string;
+  docType: string;
+  isFolderIndex: boolean;
+  status: string;
 }
 
 export interface DocumentTreeNode {
@@ -855,13 +859,65 @@ function getMarkdownTableAlignments(line: string) {
   });
 }
 
+function parseCodeFenceInfo(info: string) {
+  const trimmed = info.trim();
+
+  if (!trimmed) {
+    return {
+      language: "",
+      title: "",
+      metadata: [] as string[],
+    };
+  }
+
+  const tokens = trimmed.split(/\s+/);
+  let language = "";
+  let attributesSource = trimmed;
+
+  if (tokens[0] && !tokens[0].includes("=")) {
+    language = tokens[0];
+    attributesSource = trimmed.slice(tokens[0].length).trim();
+  }
+
+  const attributes = new Map<string, string>();
+
+  for (const match of attributesSource.matchAll(/([a-zA-Z0-9_-]+)=("([^"]*)"|'([^']*)'|(\S+))/g)) {
+    const key = match[1]?.trim().toLowerCase();
+    const value = match[3] ?? match[4] ?? match[5] ?? "";
+
+    if (key) {
+      attributes.set(key, value.trim());
+    }
+  }
+
+  const title =
+    attributes.get("title") ??
+    attributes.get("file") ??
+    attributes.get("filename") ??
+    attributes.get("label") ??
+    "";
+  const metadata = [...attributes.entries()]
+    .filter(([key]) => !["title", "file", "filename", "label"].includes(key))
+    .map(([key, value]) => `${key}: ${value}`);
+
+  return {
+    language,
+    title,
+    metadata,
+  };
+}
+
 function renderMarkdownToHtml(markdown: string) {
   const lines = markdown.replace(/\r\n/g, "\n").split("\n");
   const blocks: string[] = [];
   const paragraphBuffer: string[] = [];
-  const listBuffer: Array<{ type: "ul" | "ol"; html: string }> = [];
+  const listStack: Array<{ type: "ul" | "ol"; indent: number; items: string[] }> = [];
   const codeBuffer: string[] = [];
-  let codeFenceLanguage = "";
+  let codeFenceInfo = {
+    language: "",
+    title: "",
+    metadata: [] as string[],
+  };
   let isInCodeFence = false;
 
   const flushParagraph = () => {
@@ -873,14 +929,93 @@ function renderMarkdownToHtml(markdown: string) {
     paragraphBuffer.length = 0;
   };
 
-  const flushList = () => {
-    if (listBuffer.length === 0) {
+  const closeTopList = () => {
+    const currentList = listStack.pop();
+
+    if (!currentList) {
       return;
     }
 
-    const listType = listBuffer[0]?.type ?? "ul";
-    blocks.push(`<${listType}>${listBuffer.map((item) => `<li>${item.html}</li>`).join("")}</${listType}>`);
-    listBuffer.length = 0;
+    const listHtml = `<${currentList.type}>${currentList.items.map((item) => `<li>${item}</li>`).join("")}</${currentList.type}>`;
+    const parentList = listStack.at(-1);
+
+    if (parentList && parentList.items.length > 0) {
+      parentList.items[parentList.items.length - 1] += listHtml;
+      return;
+    }
+
+    blocks.push(listHtml);
+  };
+
+  const flushList = () => {
+    while (listStack.length > 0) {
+      closeTopList();
+    }
+  };
+
+  const pushListItem = (type: "ul" | "ol", indent: number, html: string) => {
+    while (listStack.length > 0) {
+      const currentList = listStack.at(-1);
+
+      if (!currentList) {
+        break;
+      }
+
+      if (indent > currentList.indent) {
+        break;
+      }
+
+      if (indent === currentList.indent && type === currentList.type) {
+        break;
+      }
+
+      closeTopList();
+    }
+
+    const currentList = listStack.at(-1);
+
+    if (!currentList || indent > currentList.indent || type !== currentList.type) {
+      listStack.push({
+        type,
+        indent,
+        items: [html],
+      });
+      return;
+    }
+
+    currentList.items.push(html);
+  };
+
+  const flushBlockquote = (startIndex: number) => {
+    const quoteLines: string[] = [];
+    let cursor = startIndex;
+
+    while (cursor < lines.length) {
+      const candidate = lines[cursor] ?? "";
+
+      if (!candidate.trim()) {
+        quoteLines.push("");
+        cursor += 1;
+        continue;
+      }
+
+      const quoteLineMatch = candidate.match(/^\s*>\s?(.*)$/);
+
+      if (!quoteLineMatch) {
+        break;
+      }
+
+      quoteLines.push(quoteLineMatch[1] ?? "");
+      cursor += 1;
+    }
+
+    const quoteBody = quoteLines.join("\n").trim();
+
+    if (quoteBody) {
+      blocks.push(`<blockquote>${renderMarkdownToHtml(quoteBody)}</blockquote>`);
+    }
+
+    return cursor - 1;
   };
 
   const flushCodeFence = () => {
@@ -888,19 +1023,34 @@ function renderMarkdownToHtml(markdown: string) {
       return;
     }
 
-    const normalizedLanguage = codeFenceLanguage.toLowerCase();
+    const normalizedLanguage = codeFenceInfo.language.toLowerCase();
 
     if (normalizedLanguage === "mermaid") {
       blocks.push(
         `<div class="bat-mermaid-diagram" aria-label="Documentation diagram"><div class="mermaid">${escapeHtml(codeBuffer.join("\n"))}</div></div>`,
       );
     } else {
-      const languageClass = codeFenceLanguage ? ` class="language-${escapeHtml(codeFenceLanguage)}"` : "";
-      blocks.push(`<pre><code${languageClass}>${escapeHtml(codeBuffer.join("\n"))}</code></pre>`);
+      const languageClass = codeFenceInfo.language ? ` class="language-${escapeHtml(codeFenceInfo.language)}"` : "";
+      const headerFragments = [
+        codeFenceInfo.title ? `<span class="docs-code-block-title">${escapeHtml(codeFenceInfo.title)}</span>` : "",
+        codeFenceInfo.language ? `<span class="docs-code-block-badge">${escapeHtml(codeFenceInfo.language)}</span>` : "",
+        ...codeFenceInfo.metadata.map((item) => `<span class="docs-code-block-meta">${escapeHtml(item)}</span>`),
+      ].filter(Boolean);
+      const headerHtml =
+        headerFragments.length > 0
+          ? `<figcaption class="docs-code-block-header">${headerFragments.join("")}</figcaption>`
+          : "";
+      blocks.push(
+        `<figure class="docs-code-block">${headerHtml}<pre><code${languageClass}>${escapeHtml(codeBuffer.join("\n"))}</code></pre></figure>`,
+      );
     }
 
     codeBuffer.length = 0;
-    codeFenceLanguage = "";
+    codeFenceInfo = {
+      language: "",
+      title: "",
+      metadata: [],
+    };
     isInCodeFence = false;
   };
 
@@ -963,7 +1113,7 @@ function renderMarkdownToHtml(markdown: string) {
         flushParagraph();
         flushList();
         isInCodeFence = true;
-        codeFenceLanguage = codeFenceMatch[1]?.trim() ?? "";
+        codeFenceInfo = parseCodeFenceInfo(codeFenceMatch[1] ?? "");
       }
 
       continue;
@@ -1000,26 +1150,20 @@ function renderMarkdownToHtml(markdown: string) {
 
     if (unorderedMatch) {
       flushParagraph();
-      if (listBuffer.length > 0 && listBuffer[0]?.type !== "ul") {
-        flushList();
-      }
-      listBuffer.push({ type: "ul", html: renderInlineMarkdown(unorderedMatch[1].trim()) });
+      pushListItem("ul", unorderedMatch[0].match(/^\s*/)?.[0].length ?? 0, renderInlineMarkdown(unorderedMatch[1].trim()));
       continue;
     }
 
     if (orderedMatch) {
       flushParagraph();
-      if (listBuffer.length > 0 && listBuffer[0]?.type !== "ol") {
-        flushList();
-      }
-      listBuffer.push({ type: "ol", html: renderInlineMarkdown(orderedMatch[1].trim()) });
+      pushListItem("ol", orderedMatch[0].match(/^\s*/)?.[0].length ?? 0, renderInlineMarkdown(orderedMatch[1].trim()));
       continue;
     }
 
     if (quoteMatch) {
       flushParagraph();
       flushList();
-      blocks.push(`<blockquote><p>${renderInlineMarkdown(quoteMatch[1].trim())}</p></blockquote>`);
+      index = flushBlockquote(index);
       continue;
     }
 
@@ -1781,6 +1925,10 @@ async function loadDocumentsData(): Promise<DocumentsData> {
     htmlUrl: page.htmlUrl,
     markdownUrl: page.markdownUrl,
     headings: getDocumentHeadings(page.body),
+    updated: page.updated,
+    docType: page.docType,
+    isFolderIndex: page.isFolderIndex,
+    status: page.status,
   }));
 
   return {

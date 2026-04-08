@@ -851,3 +851,70 @@
 [2m22:49:00[22m [34m[200][39m /documents/ [2m2ms[22m
 [2m22:49:02[22m [34m[200][39m /documents/gvillarroel-pi-extensions/docs/dashboard/ [2m2ms[22m
 [2m22:49:04[22m [34m[200][39m /documents/gvillarroel-technology/docs/architecture/system-overview/ [2m2ms[22m
+[2m22:52:59[22m [34m[200][39m / [2m466ms[22m
+[2m22:53:02[22m [34m[200][39m /tech-radar/ [2m34ms[22m
+[2m22:53:03[22m [34m[200][39m /documents/ [2m1ms[22m
+[2m22:53:27[22m [34m[200][39m /documents/gvillarroel-technology/ [2m2ms[22m
+[2m22:53:32[22m [34m[200][39m /documents/gvillarroel-technology/docs/ [2m3ms[22m
+[2m22:53:36[22m [34m[200][39m /documents/gvillarroel-technology/docs/documentation/ [2m1ms[22m
+[2m22:53:37[22m [34m[200][39m /documents/gvillarroel-technology/docs/documentation/strategy/ [2m1ms[22m
+[2m22:53:42[22m [34m[200][39m /documents/ [2m2ms[22m
+[2m22:53:45[22m [34m[200][39m /documents/gvillarroel-hooks-adapter/ [2m2ms[22m
+[2m22:53:46[22m [34m[200][39m /documents/gvillarroel-hooks-adapter/docs/ [2m1ms[22m
+[2m22:53:48[22m [34m[200][39m /documents/gvillarroel-hooks-adapter/docs/policies/ [2m2ms[22m
+[2m22:53:49[22m [34m[200][39m /documents/gvillarroel-hooks-adapter/docs/policies/ [2m2ms[22m
+[2m22:53:49[22m [34m[200][39m /documents/gvillarroel-hooks-adapter/docs/policies/ [2m1ms[22m
+[2m22:53:50[22m [34m[200][39m /documents/gvillarroel-hooks-adapter/docs/policies/ [2m2ms[22m
+[2m22:53:51[22m [34m[200][39m /documents/gvillarroel-hooks-adapter/docs/ [2m1ms[22m
+[2m22:53:52[22m [34m[200][39m /documents/ [2m1ms[22m
+[2m22:54:26[22m [34m[200][39m /documents/gvillarroel-hooks-adapter/ [2m2ms[22m
+[2m22:54:28[22m [34m[200][39m /documents/gvillarroel-hooks-adapter/docs/ [2m1ms[22m
+[2m22:54:29[22m [34m[200][39m /documents/gvillarroel-hooks-adapter/docs/policies/ [2m1ms[22m
+[2m22:54:30[22m [34m[200][39m /documents/gvillarroel-hooks-adapter/docs/policies/ [2m1ms[22m
+[2m22:54:33[22m [34m[200][39m /documents/ [2m1ms[22m
+[2m22:54:42[22m [34m[200][39m /documents/gvillarroel-technology/ [2m2ms[22m
+[2m22:54:44[22m [34m[200][39m /documents/gvillarroel-technology/docs/ [2m2ms[22m
+[2m22:54:45[22m [34m[200][39m /documents/gvillarroel-technology/docs/documentation/ [2m1ms[22m
+[2m22:54:46[22m [34m[200][39m /documents/gvillarroel-technology/docs/documentation/strategy/ [2m1ms[22m
+[2m22:54:47[22m [34m[200][39m /documents/gvillarroel-technology/docs/documentation/repository-scanning/ [2m1ms[22m
+[2m22:54:48[22m [34m[200][39m /documents/gvillarroel-technology/docs/configuration/ [2m2ms[22m
+[2m22:54:49[22m [34m[200][39m /documents/gvillarroel-technology/docs/configuration/data-sources-and-build/ [2m2ms[22m
+[2m22:54:55[22m [34m[200][39m /documents/gvillarroel-technology/docs/documentation/ [2m2ms[22m
+[2m22:54:57[22m [34m[200][39m /documents/gvillarroel-technology/docs/documentation/strategy/ [2m2ms[22m
+[2m22:54:59[22m [34m[200][39m /documents/gvillarroel-technology/docs/documentation/repository-scanning/ [2m2ms[22m
+[33m[1m22:55:00[22m [WARN] [router][39m A `getStaticPaths()` route pattern was matched, but no matching static path was found for requested path `/documents/gvillarroel-technology/docs/use-cases/`.
+
+Possible dynamic routes being matched: src/pages/documents/[...slug].astro.
+[2m22:55:00[22m [33m[404][39m /documents/gvillarroel-technology/docs/use-cases/ [2m1ms[22m
+[33m[1m22:55:05[22m [WARN] [router][39m A `getStaticPaths()` route pattern was matched, but no matching static path was found for requested path `/documents/gvillarroel-technology/docs/use-cases/`.
+
+Possible dynamic routes being matched: src/pages/documents/[...slug].astro.
+[2m22:55:05[22m [33m[404][39m /documents/gvillarroel-technology/docs/use-cases/ [2m0ms[22m
+[33m[1m22:55:07[22m [WARN] [router][39m A `getStaticPaths()` route pattern was matched, but no matching static path was found for requested path `/documents/gvillarroel-technology/docs/use-cases/`.
+
+Possible dynamic routes being matched: src/pages/documents/[...slug].astro.
+[2m22:55:07[22m [33m[404][39m /documents/gvillarroel-technology/docs/use-cases/ [2m0ms[22m
+[33m[1m22:55:07[22m [WARN] [router][39m A `getStaticPaths()` route pattern was matched, but no matching static path was found for requested path `/documents/gvillarroel-technology/docs/use-cases/`.
+
+Possible dynamic routes being matched: src/pages/documents/[...slug].astro.
+[2m22:55:07[22m [33m[404][39m /documents/gvillarroel-technology/docs/use-cases/ [2m0ms[22m
+[33m[1m22:55:07[22m [WARN] [router][39m A `getStaticPaths()` route pattern was matched, but no matching static path was found for requested path `/documents/gvillarroel-technology/docs/use-cases/`.
+
+Possible dynamic routes being matched: src/pages/documents/[...slug].astro.
+[2m22:55:07[22m [33m[404][39m /documents/gvillarroel-technology/docs/use-cases/ [2m0ms[22m
+[33m[1m22:55:07[22m [WARN] [router][39m A `getStaticPaths()` route pattern was matched, but no matching static path was found for requested path `/documents/gvillarroel-technology/docs/use-cases/`.
+
+Possible dynamic routes being matched: src/pages/documents/[...slug].astro.
+[2m22:55:07[22m [33m[404][39m /documents/gvillarroel-technology/docs/use-cases/ [2m0ms[22m
+[33m[1m22:55:08[22m [WARN] [router][39m A `getStaticPaths()` route pattern was matched, but no matching static path was found for requested path `/documents/gvillarroel-technology/docs/use-cases/`.
+
+Possible dynamic routes being matched: src/pages/documents/[...slug].astro.
+[2m22:55:08[22m [33m[404][39m /documents/gvillarroel-technology/docs/use-cases/ [2m0ms[22m
+[2m22:55:23[22m [34m[200][39m /documents/gvillarroel-adk-conn/docs/runtime-and-configuration/ [2m2ms[22m
+[2m23:02:57[22m [34m[watch][39m /src/styles/global.css
+[2m23:02:57[22m [34m[watch][39m src/styles/global.css
+[vite] program reload
+[2m23:03:12[22m [34m[watch][39m /src/styles/global.css
+[2m23:03:12[22m [34m[watch][39m src/styles/global.css
+[vite] program reload
+[2m23:03:42[22m [34m[200][39m /documents/gvillarroel-technology/docs/use-cases/markdown-first-navigation/ [2m765ms[22m

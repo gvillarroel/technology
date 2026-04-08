@@ -19,11 +19,14 @@ if (!page) {
 const tree = await getDocumentTree(page.repositorySlug, page.slugSegments);
 const sidebarTree = page.pageType === "repository" ? tree : (tree[0]?.children ?? tree);
 const repositoryPages = (await getDocumentPages()).filter((entry) => entry.repositorySlug === page.repositorySlug);
-const pageTitleBySlug = new Map(repositoryPages.map((entry) => [entry.slugSegments.join("/"), entry.title]));
+const pageBySlug = new Map(repositoryPages.map((entry) => [entry.slugSegments.join("/"), entry] as const));
 const breadcrumbItems = page.slugSegments.map((segment, index) => {
   const breadcrumbSlug = page.slugSegments.slice(0, index + 1);
+  const breadcrumbPage = pageBySlug.get(breadcrumbSlug.join("/"));
+
   return {
-    label: pageTitleBySlug.get(breadcrumbSlug.join("/")) ?? (index === 0 ? page.repository : segment),
+    label: breadcrumbPage?.title ?? (index === 0 ? page.repository : segment),
+    kind: index === 0 ? "repository" : breadcrumbPage?.isFolderIndex ? "section" : "page",
     href: withBasePath(`/documents/${breadcrumbSlug.join("/")}/`),
     isCurrent: index === page.slugSegments.length - 1,
   };
@@ -71,6 +74,14 @@ const siblingDocuments =
         .sort((left, right) => left.title.localeCompare(right.title))
     : [];
 const relatedDocuments = (siblingDocuments.length > 0 ? siblingDocuments : childDocuments).slice(0, 8);
+const rightRailDocuments = siblingDocuments.slice(0, 6);
+const currentPageContextLabel =
+  page.pageType === "repository"
+    ? "Repository index"
+    : page.isFolderIndex
+      ? "Section overview"
+      : "Document";
+const pageOriginLabel = page.status === "Generated" ? "Generated structure" : "Curated content";
 type OrderedFolderNode = {
   page?: typeof repositoryPages[number];
   documents: typeof repositoryPages;
@@ -228,18 +239,21 @@ const hasDatedRepositoryDocuments = (page.datedDocumentCount ?? 0) > 0;
 
       <div class="docs-reference-main">
         {page.pageType !== "repository" ? (
-          <nav class="docs-reference-breadcrumbs" aria-label="Document path">
-            {breadcrumbItems.map((item, index) => (
-              <>
-                {index > 0 ? <span class="docs-reference-breadcrumb-separator">/</span> : null}
-                {item.isCurrent ? (
-                  <span class="docs-reference-breadcrumb-current">{item.label}</span>
-                ) : (
-                  <a class="docs-reference-breadcrumb-link" href={item.href}>{item.label}</a>
-                )}
-              </>
-            ))}
-          </nav>
+          <div class="docs-reference-breadcrumb-block">
+            <p class="docs-reference-breadcrumb-context">{currentPageContextLabel}</p>
+            <nav class="docs-reference-breadcrumbs" aria-label="Document path">
+              {breadcrumbItems.map((item, index) => (
+                <>
+                  {index > 0 ? <span class="docs-reference-breadcrumb-separator">/</span> : null}
+                  {item.isCurrent ? (
+                    <span class:list={["docs-reference-breadcrumb-current", `is-${item.kind}`]}>{item.label}</span>
+                  ) : (
+                    <a class:list={["docs-reference-breadcrumb-link", `is-${item.kind}`]} href={item.href}>{item.label}</a>
+                  )}
+                </>
+              ))}
+            </nav>
+          </div>
         ) : null}
 
         {page.pageType === "repository" ? (
@@ -399,6 +413,9 @@ const hasDatedRepositoryDocuments = (page.datedDocumentCount ?? 0) > 0;
                 <span class:list={["docs-reference-status", `is-${page.status.toLowerCase().replace(/\s+/g, "-")}`]}>
                   {page.status}
                 </span>
+                <span class:list={["docs-origin-pill", page.status === "Generated" ? "is-generated" : "is-curated"]}>
+                  {pageOriginLabel}
+                </span>
               </div>
               {!bodyStartsWithPageTitle ? <h1 class="docs-reference-title">{page.title}</h1> : null}
               {!summaryDuplicatesOpeningParagraph ? <p class="docs-reference-summary">{page.summary}</p> : null}
@@ -456,11 +473,11 @@ const hasDatedRepositoryDocuments = (page.datedDocumentCount ?? 0) > 0;
           </section>
         ) : null}
 
-        {relatedDocuments.length > 0 && page.pageType === "document" ? (
+        {rightRailDocuments.length > 0 && page.pageType === "document" && !page.isFolderIndex ? (
           <section class="docs-reference-toc-card">
-            <p class="docs-reference-toc-title">This section</p>
+            <p class="docs-reference-toc-title">Nearby pages</p>
             <nav class="docs-related-list" aria-label="This section">
-              {relatedDocuments.map((entry) => (
+              {rightRailDocuments.map((entry) => (
                 <a class="docs-related-link" href={entry.htmlUrl}>
                   <span>{entry.title}</span>
                   <small>{entry.docType}</small>
@@ -555,6 +572,7 @@ const hasDatedRepositoryDocuments = (page.datedDocumentCount ?? 0) > 0;
   }
 
   const outlineLinks = Array.from(document.querySelectorAll(".docs-outline-list a"));
+  const outlineList = document.querySelector(".docs-outline-list");
   const outlineTargets = outlineLinks
     .map((link) => {
       const id = link.getAttribute("href")?.replace(/^#/, "") ?? "";
@@ -580,6 +598,13 @@ const hasDatedRepositoryDocuments = (page.datedDocumentCount ?? 0) > 0;
 
       for (const candidate of outlineTargets) {
         candidate.link.classList.toggle("is-active", candidate === active);
+      }
+
+      if (outlineList && active?.link) {
+        active.link.scrollIntoView({
+          block: "nearest",
+          inline: "nearest",
+        });
       }
     };
 

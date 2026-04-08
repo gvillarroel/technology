@@ -1433,6 +1433,92 @@ code {
   gap: 0.95rem;
 }
 
+.docs-search-results[hidden],
+.docs-recent-section[hidden] {
+  display: none;
+}
+
+.docs-recent-section {
+  display: grid;
+  gap: 0.95rem;
+}
+
+.docs-recent-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.docs-recent-card {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.95rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(51, 62, 72, 0.1);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 18px 44px rgba(22, 32, 40, 0.05);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.docs-recent-card:hover,
+.docs-recent-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: rgba(0, 114, 152, 0.16);
+  box-shadow: 0 22px 52px rgba(22, 32, 40, 0.08);
+}
+
+.docs-recent-card-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.docs-recent-card-repository,
+.docs-recent-card-date,
+.docs-recent-card-title,
+.docs-recent-card-path,
+.docs-recent-card-copy {
+  margin: 0;
+}
+
+.docs-recent-card-repository {
+  color: var(--primary-blue);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.docs-recent-card-date {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.docs-recent-card-title {
+  color: var(--heading);
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.docs-recent-card-path {
+  color: var(--muted);
+  font-family: "Cascadia Code", "Fira Code", monospace;
+  font-size: 0.8rem;
+}
+
+.docs-recent-card-copy {
+  color: var(--brand-gray);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
 .docs-search-results-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1514,6 +1600,13 @@ code {
   color: var(--muted);
   font-size: 0.8rem;
   line-height: 1.5;
+}
+
+.docs-search-highlight {
+  padding: 0.02rem 0.22rem;
+  border-radius: 0.35rem;
+  background: rgba(0, 114, 152, 0.12);
+  color: inherit;
 }
 
 .docs-index-metric-card {
@@ -2285,11 +2378,25 @@ code {
   gap: 1rem;
 }
 
+.docs-reference-breadcrumb-block {
+  display: grid;
+  gap: 0.18rem;
+  margin-top: -0.55rem;
+}
+
+.docs-reference-breadcrumb-context {
+  margin: 0;
+  color: var(--primary-blue);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .docs-reference-breadcrumbs {
   display: flex;
   flex-wrap: wrap;
   gap: 0.42rem;
-  margin-top: -0.55rem;
   color: var(--muted);
   font-size: 0.84rem;
   font-weight: 600;
@@ -2300,6 +2407,14 @@ code {
   text-decoration: none;
 }
 
+.docs-reference-breadcrumb-link.is-repository {
+  color: var(--heading);
+}
+
+.docs-reference-breadcrumb-link.is-section {
+  color: var(--brand-gray);
+}
+
 .docs-reference-breadcrumb-link:hover,
 .docs-reference-breadcrumb-link:focus-visible {
   color: var(--primary-blue);
@@ -2307,6 +2422,10 @@ code {
 
 .docs-reference-breadcrumb-current {
   color: var(--heading);
+}
+
+.docs-reference-breadcrumb-current.is-section {
+  color: var(--brand-gray);
 }
 
 .docs-reference-breadcrumb-separator {
@@ -2672,11 +2791,36 @@ code {
   padding-left: 1.2rem;
 }
 
+.docs-markdown li > ul,
+.docs-markdown li > ol {
+  margin-top: 0.45rem;
+}
+
+.docs-markdown ul ul,
+.docs-markdown ul ol,
+.docs-markdown ol ul,
+.docs-markdown ol ol {
+  padding-left: 1.1rem;
+}
+
 .docs-markdown blockquote {
   padding: 1rem 1.1rem;
   border-left: 3px solid rgba(0, 114, 152, 0.2);
   background: rgba(0, 114, 152, 0.04);
   border-radius: 0 1rem 1rem 0;
+}
+
+.docs-markdown blockquote > :first-child {
+  margin-top: 0;
+}
+
+.docs-markdown blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+.docs-markdown blockquote p,
+.docs-markdown blockquote li {
+  color: var(--brand-gray);
 }
 
 .docs-markdown code {
@@ -5055,6 +5199,7 @@ h3 {
   }
 
   .docs-index-strip,
+  .docs-recent-grid,
   .docs-search-results-list {
     grid-template-columns: 1fr;
   }
@@ -5183,6 +5328,10 @@ h3 {
   }
 
   .docs-search-results-list {
+    grid-template-columns: 1fr;
+  }
+
+  .docs-recent-grid {
     grid-template-columns: 1fr;
   }
 
