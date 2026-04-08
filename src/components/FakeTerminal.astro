@@ -8,6 +8,7 @@ export interface CommandLink {
 export interface DomainLink {
   label: string;
   href: string;
+  priority?: "primary" | "secondary";
 }
 
 export interface Props {
@@ -55,10 +56,17 @@ const summary =
   props.summary ??
   "Use this workspace to understand what the company runs, what teams should adopt next, and where standards already exist.";
 const domains = props.domains ?? [];
+const primaryDomains = domains.filter((domain) => domain.priority === "primary");
+const secondaryDomains = domains.filter((domain) => domain.priority !== "primary");
 const shellClass = props.shellClass ?? "";
 const shellStyle = props.shellStyle ?? "";
 const commandConfigs = props.commandConfigs ?? [];
 const searchNamespaces = props.searchNamespaces ?? [];
+const quickCommands = [
+  { label: "/help", description: "List the terminal commands." },
+  { label: "/documents", description: "Open the documentation library." },
+  { label: "/search python", description: "Search across tracked pages." },
+];
 ---
 
 <div
@@ -88,6 +96,21 @@ const searchNamespaces = props.searchNamespaces ?? [];
         <p class="terminal-subtitle">## Welcome, team.</p>
         <p class="terminal-copy">{intro}</p>
         <p class="terminal-copy terminal-copy-strong">{summary}</p>
+        <section class="terminal-quickstart" aria-label="Suggested commands">
+          <p class="terminal-sidebar-label">Suggested commands</p>
+          <div class="terminal-quickstart-list">
+            {quickCommands.map((command) => (
+              <button
+                class="terminal-quickstart-card"
+                type="button"
+                data-terminal-command={command.label}
+              >
+                <span class="terminal-quickstart-command">{command.label}</span>
+                <span class="terminal-quickstart-copy">{command.description}</span>
+              </button>
+            ))}
+          </div>
+        </section>
         <div class="terminal-block terminal-runtime-block" id="terminal-runtime-block" hidden>
           <p class="terminal-subtitle">## Command output</p>
           <div class="terminal-runtime-output" id="terminal-runtime-output"></div>
@@ -95,14 +118,33 @@ const searchNamespaces = props.searchNamespaces ?? [];
       </section>
 
       <nav class="terminal-sidebar" aria-label="Main navigation">
-        <div class="terminal-domain-list" aria-label="Technology domains">
-          {domains.map((domain) => (
-            <a class="terminal-domain-chip" href={domain.href}>
-              <span class="terminal-domain-prefix">&gt;</span>
-              {domain.label}
-            </a>
-          ))}
-        </div>
+        {primaryDomains.length > 0 ? (
+          <section class="terminal-nav-section" aria-label="Recommended starting points">
+            <p class="terminal-sidebar-label">Start here</p>
+            <div class="terminal-domain-list terminal-domain-list-priority">
+              {primaryDomains.map((domain) => (
+                <a class="terminal-domain-chip is-priority" href={domain.href}>
+                  <span class="terminal-domain-prefix">&gt;</span>
+                  {domain.label}
+                </a>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {secondaryDomains.length > 0 ? (
+          <section class="terminal-nav-section" aria-label="Technology domains">
+            <p class="terminal-sidebar-label">Browse all areas</p>
+            <div class="terminal-domain-list" aria-label="Technology domains">
+              {secondaryDomains.map((domain) => (
+                <a class="terminal-domain-chip" href={domain.href}>
+                  <span class="terminal-domain-prefix">&gt;</span>
+                  {domain.label}
+                </a>
+              ))}
+            </div>
+          </section>
+        ) : null}
       </nav>
     </div>
   </div>
@@ -747,7 +789,8 @@ const searchNamespaces = props.searchNamespaces ?? [];
         return;
       }
 
-      runtimeBlock.hidden = false;
+      runtimeBlock.removeAttribute("hidden");
+      runtimeBlock.classList.add("is-active");
       try {
         const { baseCommand, grepQuery } = parseCommandPipeline(prompt);
         const command = normalizeCommand(baseCommand);

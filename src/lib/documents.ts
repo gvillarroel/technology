@@ -1,6 +1,7 @@
 import { posix } from "node:path";
 import { readFile, readdir } from "node:fs/promises";
 import { parse as parseYaml } from "yaml";
+import { codeToHtml } from "shiki";
 import { createMarkdownDocument, markdownLink, type MarkdownDocument } from "./markdown";
 import { withBasePath } from "./site-url";
 
@@ -187,6 +188,23 @@ const githubTextCache = new Map<string, string>();
 const githubCommitDateCache = new Map<string, string>();
 const githubAccountRepositoriesCache = new Map<string, ResolvedDocumentRepository[]>();
 let documentsDataPromise: Promise<DocumentsData> | undefined;
+
+const codeLanguageAliases = new Map<string, string>([
+  ["shell", "bash"],
+  ["sh", "bash"],
+  ["zsh", "bash"],
+  ["ps", "powershell"],
+  ["ps1", "powershell"],
+  ["cmd", "bat"],
+  ["yml", "yaml"],
+  ["md", "markdown"],
+  ["rs", "rust"],
+  ["cs", "csharp"],
+  ["ts", "typescript"],
+  ["tsx", "tsx"],
+  ["js", "javascript"],
+  ["jsx", "jsx"],
+]);
 
 function toScalar(value: unknown, fallback = "") {
   return String(value ?? fallback).trim();
@@ -907,7 +925,24 @@ function parseCodeFenceInfo(info: string) {
   };
 }
 
-function renderMarkdownToHtml(markdown: string) {
+async function renderCodeFenceToHtml(code: string, language: string) {
+  const normalizedLanguage = codeLanguageAliases.get(language.toLowerCase()) ?? language.toLowerCase() ?? "text";
+  const resolvedLanguage = normalizedLanguage || "text";
+
+  try {
+    return await codeToHtml(code, {
+      lang: resolvedLanguage,
+      theme: "github-light",
+    });
+  } catch {
+    return await codeToHtml(code, {
+      lang: "text",
+      theme: "github-light",
+    });
+  }
+}
+
+async function renderMarkdownToHtml(markdown: string) {
   const lines = markdown.replace(/\r\n/g, "\n").split("\n");
   const blocks: string[] = [];
   const paragraphBuffer: string[] = [];
@@ -986,7 +1021,7 @@ function renderMarkdownToHtml(markdown: string) {
     currentList.items.push(html);
   };
 
-  const flushBlockquote = (startIndex: number) => {
+  const flushBlockquote = async (startIndex: number) => {
     const quoteLines: string[] = [];
     let cursor = startIndex;
 
@@ -1012,13 +1047,13 @@ function renderMarkdownToHtml(markdown: string) {
     const quoteBody = quoteLines.join("\n").trim();
 
     if (quoteBody) {
-      blocks.push(`<blockquote>${renderMarkdownToHtml(quoteBody)}</blockquote>`);
+      blocks.push(`<blockquote>${await renderMarkdownToHtml(quoteBody)}</blockquote>`);
     }
 
     return cursor - 1;
   };
 
-  const flushCodeFence = () => {
+  const flushCodeFence = async () => {
     if (!isInCodeFence) {
       return;
     }
@@ -1030,7 +1065,6 @@ function renderMarkdownToHtml(markdown: string) {
         `<div class="bat-mermaid-diagram" aria-label="Documentation diagram"><div class="mermaid">${escapeHtml(codeBuffer.join("\n"))}</div></div>`,
       );
     } else {
-      const languageClass = codeFenceInfo.language ? ` class="language-${escapeHtml(codeFenceInfo.language)}"` : "";
       const headerFragments = [
         codeFenceInfo.title ? `<span class="docs-code-block-title">${escapeHtml(codeFenceInfo.title)}</span>` : "",
         codeFenceInfo.language ? `<span class="docs-code-block-badge">${escapeHtml(codeFenceInfo.language)}</span>` : "",
@@ -1040,8 +1074,9 @@ function renderMarkdownToHtml(markdown: string) {
         headerFragments.length > 0
           ? `<figcaption class="docs-code-block-header">${headerFragments.join("")}</figcaption>`
           : "";
+      const codeHtml = await renderCodeFenceToHtml(codeBuffer.join("\n"), codeFenceInfo.language);
       blocks.push(
-        `<figure class="docs-code-block">${headerHtml}<pre><code${languageClass}>${escapeHtml(codeBuffer.join("\n"))}</code></pre></figure>`,
+        `<figure class="docs-code-block">${headerHtml}${codeHtml}</figure>`,
       );
     }
 
@@ -1108,7 +1143,7 @@ function renderMarkdownToHtml(markdown: string) {
 
     if (codeFenceMatch) {
       if (isInCodeFence) {
-        flushCodeFence();
+        await flushCodeFence();
       } else {
         flushParagraph();
         flushList();
@@ -1163,7 +1198,7 @@ function renderMarkdownToHtml(markdown: string) {
     if (quoteMatch) {
       flushParagraph();
       flushList();
-      index = flushBlockquote(index);
+      index = await flushBlockquote(index);
       continue;
     }
 
@@ -1172,7 +1207,7 @@ function renderMarkdownToHtml(markdown: string) {
 
   flushParagraph();
   flushList();
-  flushCodeFence();
+  await flushCodeFence();
 
   return blocks.join("\n");
 }
@@ -1389,7 +1424,7 @@ async function buildDocumentPage(
     updated,
     docType: toScalar(data.doc_type, match.rules[0]?.name || "Markdown Document"),
     body,
-    bodyHtml: renderMarkdownToHtml(body),
+    bodyHtml: await renderMarkdownToHtml(body),
     relativePath: match.path,
     slugSegments,
     htmlUrl,
@@ -1601,7 +1636,7 @@ function buildSyntheticFolderOverviewMarkdown(
   return lines.join("\n");
 }
 
-function createSyntheticFolderPages(repository: ResolvedDocumentRepository, pages: DocumentPage[]) {
+async function createSyntheticFolderPages(repository: ResolvedDocumentRepository, pages: DocumentPage[]) {
   const existingBySlug = new Map(pages.map((page) => [page.slugSegments.join("/"), page] as const));
   const targetFolders = new Set<string>();
 
@@ -1679,7 +1714,7 @@ function createSyntheticFolderPages(repository: ResolvedDocumentRepository, page
       updated,
       docType: "Folder Index",
       body,
-      bodyHtml: renderMarkdownToHtml(body),
+      bodyHtml: await renderMarkdownToHtml(body),
       relativePath: folderPath,
       slugSegments,
       htmlUrl,
@@ -1735,11 +1770,11 @@ function buildRepositoryOverviewMarkdown(
   return lines.join("\n");
 }
 
-function buildRepositoryPage(
+async function buildRepositoryPage(
   repository: ResolvedDocumentRepository,
   pages: DocumentPage[],
   scanGeneratedAt: string,
-): DocumentPage {
+): Promise<DocumentPage> {
   const slugSegments = [repository.repositorySlug];
   const { htmlUrl, markdownUrl } = getDocumentsUrls(slugSegments);
   const folderCount = new Set(
@@ -1762,7 +1797,7 @@ function buildRepositoryPage(
     updated: getLatestDocumentDate(pages),
     docType: "Repository Index",
     body,
-    bodyHtml: renderMarkdownToHtml(body),
+    bodyHtml: await renderMarkdownToHtml(body),
     relativePath: "",
     slugSegments,
     htmlUrl,
@@ -1838,7 +1873,7 @@ async function loadDocumentsData(): Promise<DocumentsData> {
       const basePages = dedupeDocumentPages((
         await Promise.all(matches.map((match) => buildDocumentPage(repository, match, remotePathSet)))
       ).filter((page): page is DocumentPage => Boolean(page)));
-      const syntheticPages = createSyntheticFolderPages(repository, basePages);
+      const syntheticPages = await createSyntheticFolderPages(repository, basePages);
       const pages = [...basePages, ...syntheticPages].sort((left, right) =>
         left.relativePath.localeCompare(right.relativePath) || left.title.localeCompare(right.title),
       );
@@ -1866,7 +1901,7 @@ async function loadDocumentsData(): Promise<DocumentsData> {
         repositoryPaths,
         "markdown",
       );
-      page.bodyHtml = renderMarkdownToHtml(
+      page.bodyHtml = await renderMarkdownToHtml(
         rewriteDocumentBodyLinks(
           sourceBody,
           page.relativePath,
@@ -1884,10 +1919,13 @@ async function loadDocumentsData(): Promise<DocumentsData> {
     .map((entry) => entry.repository)
     .sort((left, right) => left.repository.localeCompare(right.repository));
 
-  const repositoryPages = documentPagesByRepository
-    .filter((entry) => entry.pages.length > 0)
-    .map((entry) => buildRepositoryPage(entry.repository, entry.pages, scanGeneratedAt))
-    .sort((left, right) => left.title.localeCompare(right.title));
+  const repositoryPages = (
+    await Promise.all(
+      documentPagesByRepository
+        .filter((entry) => entry.pages.length > 0)
+        .map((entry) => buildRepositoryPage(entry.repository, entry.pages, scanGeneratedAt)),
+    )
+  ).sort((left, right) => left.title.localeCompare(right.title));
 
   const documentPages = documentPagesByRepository
     .flatMap((entry) => entry.pages)

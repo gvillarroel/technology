@@ -135,73 +135,7 @@ class Retired retired
       </div>
 
       <div class="tech-radar-top-content">
-        <section class="bat-grid bat-grid-hero">
-          <article class="bat-card bat-card-wide">
-            <div class="bat-card-bar">
-              <span class="bat-card-file">tech-radar.yaml</span>
-              <span class="bat-card-lang">yaml</span>
-            </div>
-
-            <div class="bat-card-body">
-              <div class="bat-line">
-                <span class="bat-gutter">1</span>
-                <div class="bat-code">
-                  <p class="bat-heading">entries:</p>
-                </div>
-              </div>
-              <div class="bat-line">
-                <span class="bat-gutter">2</span>
-                <div class="bat-code">
-                  <p class="bat-copy">
-                    Source of truth for lifecycle state, primary scope, ownership, and operational
-                    guidance. The diagram is driven by `ring` and `primary_scope` from YAML.
-                  </p>
-                </div>
-              </div>
-              <div class="bat-line">
-                <span class="bat-gutter">3</span>
-                <div class="bat-code bat-tag-row">
-                  {ringCounts.map((item) => (
-                    <span
-                      class={`radar-ring-pill radar-ring-pill-${getRadarRingToken(item.ring)}`}
-                      data-ring-count={item.ring}
-                    >
-                      {item.ring}: {item.total}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div class="bat-line">
-                <span class="bat-gutter">4</span>
-                <div class="bat-code">
-                  <p class="bat-meta" id="radar-scope-meta">
-                    Primary scopes in the current dataset: {primaryScopes.join(", ")}.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </article>
-
-          <article class="bat-card">
-            <div class="bat-card-bar">
-              <span class="bat-card-file">states.mmd</span>
-              <span class="bat-card-lang">mmd</span>
-            </div>
-
-            <div class="bat-card-body bat-card-body-stack">
-              <div class="bat-line">
-                <span class="bat-gutter">1</span>
-                <div class="bat-code">
-                  <pre class="bat-mermaid-diagram mermaid" aria-label="Technology lifecycle flow">
-{lifecycleMermaid}
-                  </pre>
-                </div>
-              </div>
-            </div>
-          </article>
-        </section>
-
-        <section class="bat-grid bat-grid-radar">
+        <section class="bat-grid bat-grid-radar bat-grid-radar-priority">
           <article class="bat-card bat-card-wide">
         <div class="bat-card-bar">
           <span class="bat-card-file">radar-view.svg</span>
@@ -299,6 +233,7 @@ class Retired retired
                         y={entry.point?.labelY ?? 0}
                         text-anchor={entry.point?.labelAnchor ?? "start"}
                         class="radar-blip-label radar-blip-label-light"
+                        data-blip-label={entry.slug}
                       >
                         {entry.name}
                       </text>
@@ -310,6 +245,72 @@ class Retired retired
           </div>
         </div>
           </article>
+
+          <div class="radar-top-support">
+            <article class="bat-card bat-card-wide">
+            <div class="bat-card-bar">
+              <span class="bat-card-file">tech-radar.yaml</span>
+              <span class="bat-card-lang">yaml</span>
+            </div>
+
+            <div class="bat-card-body">
+              <div class="bat-line">
+                <span class="bat-gutter">1</span>
+                <div class="bat-code">
+                  <p class="bat-heading">entries:</p>
+                </div>
+              </div>
+              <div class="bat-line">
+                <span class="bat-gutter">2</span>
+                <div class="bat-code">
+                  <p class="bat-copy">
+                    Source of truth for lifecycle state, primary scope, ownership, and operational
+                    guidance. The diagram is driven by `ring` and `primary_scope` from YAML.
+                  </p>
+                </div>
+              </div>
+              <div class="bat-line">
+                <span class="bat-gutter">3</span>
+                <div class="bat-code bat-tag-row">
+                  {ringCounts.map((item) => (
+                    <span
+                      class={`radar-ring-pill radar-ring-pill-${getRadarRingToken(item.ring)}`}
+                      data-ring-count={item.ring}
+                    >
+                      {item.ring}: {item.total}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div class="bat-line">
+                <span class="bat-gutter">4</span>
+                <div class="bat-code">
+                  <p class="bat-meta" id="radar-scope-meta">
+                    Primary scopes in the current dataset: {primaryScopes.join(", ")}.
+                  </p>
+                </div>
+              </div>
+            </div>
+            </article>
+
+            <article class="bat-card">
+              <div class="bat-card-bar">
+                <span class="bat-card-file">states.mmd</span>
+                <span class="bat-card-lang">mmd</span>
+              </div>
+
+              <div class="bat-card-body bat-card-body-stack">
+                <div class="bat-line">
+                  <span class="bat-gutter">1</span>
+                  <div class="bat-code">
+                    <pre class="bat-mermaid-diagram mermaid" aria-label="Technology lifecycle flow">
+{lifecycleMermaid}
+                  </pre>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </div>
         </section>
 
         <div class="radar-floating-rail-dock" id="source-floating-rail-dock" aria-hidden="true"></div>
@@ -427,6 +428,7 @@ class Retired retired
   const radarSvgWrap = document.querySelector("#radar-svg-wrap");
   const radarRingCircles = [...document.querySelectorAll("[data-ring-circle]")];
   const radarRingLabels = [...document.querySelectorAll("[data-ring-label]")];
+  const radarBlipLabels = [...document.querySelectorAll("[data-blip-label]")];
   const params = new URLSearchParams(window.location.search);
   const pageRoot = document.querySelector(".standard-page");
   const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -452,6 +454,48 @@ class Retired retired
       .split(/[ ,]+/)
       .map((item) => Number(item));
   const formatViewBox = (value) => value.map((item) => Number(item.toFixed(2))).join(" ");
+  const collapseOverlappingLabels = () => {
+    if (!(radarSvg instanceof SVGElement)) {
+      return;
+    }
+
+    radarBlipLabels.forEach((label) => {
+      label.classList.remove("radar-blip-label-collapsed");
+    });
+
+    const occupied = [];
+
+    radarBlipLabels.forEach((label) => {
+      const anchor = label.closest("[data-blip]");
+
+      if (!(label instanceof SVGTextElement) || !(anchor instanceof SVGAElement)) {
+        return;
+      }
+
+      if (anchor.classList.contains("radar-blip-hidden")) {
+        return;
+      }
+
+      const box = label.getBBox();
+      const padding = 1.5;
+      const nextBox = {
+        left: box.x - padding,
+        top: box.y - padding,
+        right: box.x + box.width + padding,
+        bottom: box.y + box.height + padding,
+      };
+      const intersects = occupied.some((current) =>
+        !(nextBox.right < current.left || nextBox.left > current.right || nextBox.bottom < current.top || nextBox.top > current.bottom)
+      );
+
+      if (intersects) {
+        label.classList.add("radar-blip-label-collapsed");
+        return;
+      }
+
+      occupied.push(nextBox);
+    });
+  };
 
   const getFilterState = () => ({
     search: searchInput instanceof HTMLInputElement ? normalize(searchInput.value) : "",
@@ -687,6 +731,7 @@ class Retired retired
     });
 
     updateRadarViewport(visibleEntries);
+    requestAnimationFrame(collapseOverlappingLabels);
 
     if (countLabel) {
       countLabel.textContent = `${visible} technologies visible`;
@@ -750,6 +795,9 @@ class Retired retired
   }
 
   updateResults();
+  window.addEventListener("resize", () => {
+    requestAnimationFrame(collapseOverlappingLabels);
+  });
 
   if (params.get("debug-scroll") === "dock" && sourceFloatingRailDock instanceof HTMLElement) {
     window.setTimeout(() => {

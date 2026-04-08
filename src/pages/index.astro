@@ -57,9 +57,13 @@ const sections = [
   },
 ];
 
-const terminalDomains = sections.map((section) => ({
+const terminalDomains: Array<{ label: string; href: string; priority: "primary" | "secondary" }> = sections.map((section) => ({
   label: section.title,
   href: section.href,
+  priority:
+    section.id === "delivery-systems" || section.id === "documents"
+      ? "primary"
+      : "secondary",
 }));
 
 const commandConfigs = await getTerminalCommandConfigs();

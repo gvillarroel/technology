@@ -14,7 +14,7 @@ const latestRepositoryUpdate =
     .at(-1) ?? "";
 const formatDisplayDate = (value?: string) => {
   if (!value) {
-    return "Unknown";
+    return "Timestamp unavailable";
   }
 
   const date = new Date(value);
@@ -29,15 +29,49 @@ const formatDisplayDate = (value?: string) => {
     year: "numeric",
   }).format(date);
 };
+const formatRepositoryUpdatedLabel = (value?: string) =>
+  value ? formatDisplayDate(value) : "timestamp unavailable";
 const configFilesPreview = [
   "data/document-repositories.yaml",
   "src/lib/documents.ts",
   "src/pages/documents.astro",
   "src/pages/documents/[...slug].astro",
 ].join("\n");
+const getEntryTimestamp = (value?: string) => {
+  if (!value) {
+    return 0;
+  }
+
+  const timestamp = Date.parse(value);
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+};
+const comparePageEntries = (
+  left: (typeof searchEntries)[number],
+  right: (typeof searchEntries)[number],
+) => {
+  const timestampDifference = getEntryTimestamp(right.updated) - getEntryTimestamp(left.updated);
+
+  if (timestampDifference !== 0) {
+    return timestampDifference;
+  }
+
+  if (left.status !== right.status) {
+    return left.status === "Generated" ? 1 : -1;
+  }
+
+  if (left.isFolderIndex !== right.isFolderIndex) {
+    return left.isFolderIndex ? -1 : 1;
+  }
+
+  return (
+    left.repository.localeCompare(right.repository) ||
+    left.title.localeCompare(right.title) ||
+    left.relativePath.localeCompare(right.relativePath)
+  );
+};
 const documentEntries = searchEntries
   .filter((entry) => entry.pageType === "document")
-  .sort((left, right) => left.title.localeCompare(right.title));
+  .sort(comparePageEntries);
 const recentlyUpdatedEntries = [...searchEntries]
   .filter((entry) => entry.updated)
   .sort((left, right) => right.updated.localeCompare(left.updated))
@@ -96,6 +130,32 @@ const recentlyUpdatedEntries = [...searchEntries]
       </article>
     </section>
 
+    {recentlyUpdatedEntries.length > 0 ? (
+      <section class="docs-recent-section docs-recent-section-compact">
+        <div class="standard-section-heading">
+          <div>
+            <p class="eyebrow">Freshness</p>
+            <h2>Recently updated documents</h2>
+          </div>
+          <p class="standard-section-meta">Latest verified timestamps in the scanned library</p>
+        </div>
+
+        <div class="docs-recent-grid docs-recent-grid-compact">
+          {recentlyUpdatedEntries.slice(0, 3).map((entry) => (
+            <a class="docs-recent-card" href={entry.htmlUrl}>
+              <div class="docs-recent-card-topline">
+                <span class="docs-recent-card-repository">{entry.repository}</span>
+                <span class="docs-recent-card-date">{formatDisplayDate(entry.updated)}</span>
+              </div>
+              <h3 class="docs-recent-card-title">{entry.title}</h3>
+              <p class="docs-recent-card-path">{entry.relativePath}</p>
+              <p class="docs-recent-card-copy">{entry.summary}</p>
+            </a>
+          ))}
+        </div>
+      </section>
+    ) : null}
+
     <section class="docs-search-results" id="docs-search-results" hidden>
       <div class="standard-section-heading">
         <div>
@@ -110,32 +170,6 @@ const recentlyUpdatedEntries = [...searchEntries]
         No repository pages or document headings matched that query.
       </p>
     </section>
-
-    {recentlyUpdatedEntries.length > 0 ? (
-      <section class="docs-recent-section">
-        <div class="standard-section-heading">
-          <div>
-            <p class="eyebrow">Freshness</p>
-            <h2>Recently updated documents</h2>
-          </div>
-          <p class="standard-section-meta">Latest verified timestamps in the scanned library</p>
-        </div>
-
-        <div class="docs-recent-grid">
-          {recentlyUpdatedEntries.map((entry) => (
-            <a class="docs-recent-card" href={entry.htmlUrl}>
-              <div class="docs-recent-card-topline">
-                <span class="docs-recent-card-repository">{entry.repository}</span>
-                <span class="docs-recent-card-date">{formatDisplayDate(entry.updated)}</span>
-              </div>
-              <h3 class="docs-recent-card-title">{entry.title}</h3>
-              <p class="docs-recent-card-path">{entry.relativePath}</p>
-              <p class="docs-recent-card-copy">{entry.summary}</p>
-            </a>
-          ))}
-        </div>
-      </section>
-    ) : null}
 
     <section class="standard-section-heading">
       <div>
@@ -175,7 +209,7 @@ const recentlyUpdatedEntries = [...searchEntries]
             <p class="docs-library-copy">{repository.summary}</p>
             <div class="docs-library-meta">
               <span>owner: {repository.owner}</span>
-              <span>updated: {repository.updated || "Unknown"}</span>
+              <span>updated: {formatRepositoryUpdatedLabel(repository.updated)}</span>
               <span>files: {repository.fileCount}</span>
               <span>folders: {repository.folderCount}</span>
               <span>rules: {repository.ruleCount}</span>
@@ -201,6 +235,13 @@ const recentlyUpdatedEntries = [...searchEntries]
             entry.relativePath,
             ...entry.headings,
           ].join(" ").toLowerCase()}
+          data-page-title={entry.title}
+          data-page-summary={entry.summary}
+          data-page-path={entry.relativePath}
+          data-page-repository={entry.repository}
+          data-page-updated={entry.updated}
+          data-page-status={entry.status}
+          data-page-folder-index={entry.isFolderIndex ? "true" : "false"}
         >
           <div class="docs-page-card-topline">
             <span class="docs-page-card-repository">{entry.repository}</span>
@@ -214,6 +255,11 @@ const recentlyUpdatedEntries = [...searchEntries]
           <h3 class="docs-page-card-title">{entry.title}</h3>
           <p class="docs-page-card-path">{entry.relativePath}</p>
           <p class="docs-page-card-copy">{entry.summary}</p>
+          {entry.status === "Generated" ? (
+            <p class="docs-page-card-note">
+              Generated section overview because this folder did not expose a <code>README.md</code> or <code>index.md</code> page during the scan.
+            </p>
+          ) : null}
         </a>
       ))}
     </section>
@@ -238,6 +284,18 @@ const recentlyUpdatedEntries = [...searchEntries]
   const viewPanels = Array.from(document.querySelectorAll("[data-docs-view-panel]"));
   const recentSection = document.querySelector(".docs-recent-section");
   const searchEntries = searchIndexNode ? JSON.parse(searchIndexNode.textContent || "[]") : [];
+  const pageCardsGrid = document.getElementById("docs-pages-grid");
+  const pageCardMeta = pageCards.map((card) => ({
+    card,
+    href: card.getAttribute("href") || "",
+    title: card.getAttribute("data-page-title") || "",
+    summary: card.getAttribute("data-page-summary") || "",
+    relativePath: card.getAttribute("data-page-path") || "",
+    repository: card.getAttribute("data-page-repository") || "",
+    updated: card.getAttribute("data-page-updated") || "",
+    status: card.getAttribute("data-page-status") || "",
+    isFolderIndex: card.getAttribute("data-page-folder-index") === "true",
+  }));
   let activeView = "repositories";
 
   const escapeHtml = (value) =>
@@ -261,6 +319,171 @@ const recentlyUpdatedEntries = [...searchEntries]
   };
   const getMatchingHeading = (headings, query) =>
     headings.find((heading) => heading.toLowerCase().includes(query.toLowerCase())) || "";
+  const getTimestamp = (value) => {
+    const timestamp = Date.parse(value || "");
+    return Number.isNaN(timestamp) ? 0 : timestamp;
+  };
+  const compareDefaultPageOrder = (left, right) => {
+    const timestampDifference = getTimestamp(right.updated) - getTimestamp(left.updated);
+
+    if (timestampDifference !== 0) {
+      return timestampDifference;
+    }
+
+    if (left.status !== right.status) {
+      return left.status === "Generated" ? 1 : -1;
+    }
+
+    if (left.isFolderIndex !== right.isFolderIndex) {
+      return left.isFolderIndex ? -1 : 1;
+    }
+
+    return (
+      left.repository.localeCompare(right.repository) ||
+      left.title.localeCompare(right.title) ||
+      left.relativePath.localeCompare(right.relativePath)
+    );
+  };
+  const getSearchScore = (entry, query) => {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    if (!normalizedQuery) {
+      return 0;
+    }
+
+    let score = 0;
+    const title = entry.title.toLowerCase();
+    const path = entry.relativePath.toLowerCase();
+    const summary = (entry.summary || "").toLowerCase();
+    const repository = entry.repository.toLowerCase();
+    const headings = entry.headings.map((heading) => heading.toLowerCase());
+
+    if (title === normalizedQuery) {
+      score += 140;
+    } else if (title.includes(normalizedQuery)) {
+      score += 70;
+    }
+
+    if (headings.some((heading) => heading === normalizedQuery)) {
+      score += 120;
+    } else if (headings.some((heading) => heading.includes(normalizedQuery))) {
+      score += 52;
+    }
+
+    if (path.includes(normalizedQuery)) {
+      score += 46;
+    }
+
+    if (summary.includes(normalizedQuery)) {
+      score += 24;
+    }
+
+    if (repository.includes(normalizedQuery)) {
+      score += 12;
+    }
+
+    if (entry.status !== "Generated") {
+      score += 6;
+    }
+
+    if (entry.isFolderIndex) {
+      score += 4;
+    }
+
+    score += Math.min(getTimestamp(entry.updated) / 1000000000000, 10);
+
+    return score;
+  };
+  const getMatchIndex = (value, query) => value.toLowerCase().indexOf(query.toLowerCase());
+  const buildMatchSnippet = (value, query, radius = 72) => {
+    const text = (value || "").replace(/\s+/g, " ").trim();
+
+    if (!text) {
+      return "";
+    }
+
+    const matchIndex = getMatchIndex(text, query);
+
+    if (matchIndex === -1) {
+      return highlight(text, query);
+    }
+
+    const start = Math.max(0, matchIndex - radius);
+    const end = Math.min(text.length, matchIndex + query.length + radius);
+    const prefix = start > 0 ? "…" : "";
+    const suffix = end < text.length ? "…" : "";
+
+    return `${prefix}${highlight(text.slice(start, end), query)}${suffix}`;
+  };
+  const getBestMatchSnippet = (entry, query) => {
+    const matchingHeading = getMatchingHeading(entry.headings, query);
+
+    if (matchingHeading) {
+      return {
+        label: "Heading",
+        html: buildMatchSnippet(matchingHeading, query, 56),
+      };
+    }
+
+    if (entry.summary && entry.summary.toLowerCase().includes(query.toLowerCase())) {
+      return {
+        label: "Summary",
+        html: buildMatchSnippet(entry.summary, query),
+      };
+    }
+
+    if (entry.relativePath && entry.relativePath.toLowerCase().includes(query.toLowerCase())) {
+      return {
+        label: "Path",
+        html: buildMatchSnippet(entry.relativePath, query, 46),
+      };
+    }
+
+    return {
+      label: entry.status === "Generated" ? "Generated overview" : "Summary",
+      html: highlight(entry.summary || entry.relativePath || entry.repository, query),
+    };
+  };
+  const sortSearchResults = (entries, query) =>
+    [...entries].sort((left, right) => {
+      const scoreDifference = getSearchScore(right, query) - getSearchScore(left, query);
+
+      if (scoreDifference !== 0) {
+        return scoreDifference;
+      }
+
+      return compareDefaultPageOrder(left, right);
+    });
+  const reorderPageCards = (query) => {
+    if (!pageCardsGrid) {
+      return;
+    }
+
+    const normalizedQuery = query.trim().toLowerCase();
+    const orderedCards = [...pageCardMeta].sort((left, right) => {
+      if (normalizedQuery) {
+        const leftEntry = {
+          ...left,
+          headings: [],
+        };
+        const rightEntry = {
+          ...right,
+          headings: [],
+        };
+        const scoreDifference = getSearchScore(rightEntry, normalizedQuery) - getSearchScore(leftEntry, normalizedQuery);
+
+        if (scoreDifference !== 0) {
+          return scoreDifference;
+        }
+      }
+
+      return compareDefaultPageOrder(left, right);
+    });
+
+    for (const entry of orderedCards) {
+      pageCardsGrid.append(entry.card);
+    }
+  };
 
   const updateUrl = (query, view) => {
     const url = new URL(window.location.href);
@@ -311,6 +534,8 @@ const recentlyUpdatedEntries = [...searchEntries]
       card.hidden = Boolean(normalizedQuery) && !matchingPages.includes(card);
     }
 
+    reorderPageCards(normalizedQuery);
+
     visibleMeta.textContent =
       activeView === "pages"
         ? `${normalizedQuery ? matchingPages.length : pageCards.length} pages visible`
@@ -327,7 +552,8 @@ const recentlyUpdatedEntries = [...searchEntries]
       return;
     }
 
-    const results = searchEntries
+    const results = sortSearchResults(
+      searchEntries
       .filter((entry) =>
         [
           entry.repository,
@@ -339,7 +565,9 @@ const recentlyUpdatedEntries = [...searchEntries]
           .join(" ")
           .toLowerCase()
           .includes(normalizedQuery),
-      )
+      ),
+      normalizedQuery,
+    )
       .slice(0, 24);
 
     resultsSection.hidden = false;
@@ -355,7 +583,11 @@ const recentlyUpdatedEntries = [...searchEntries]
     resultsEmpty.hidden = true;
     resultsList.innerHTML = results
       .map((entry) => {
-        const matchingHeading = getMatchingHeading(entry.headings, query);
+        const snippet = getBestMatchSnippet(entry, query);
+        const shouldRenderSummary =
+          entry.summary &&
+          snippet.label !== "Summary" &&
+          entry.summary.trim().toLowerCase() !== (entry.relativePath || "").trim().toLowerCase();
         return `
           <a class="docs-search-result-card" href="${entry.htmlUrl}">
             <div class="docs-search-result-topline">
@@ -364,8 +596,8 @@ const recentlyUpdatedEntries = [...searchEntries]
             </div>
             <h3 class="docs-search-result-title">${highlight(entry.title, query)}</h3>
             <p class="docs-search-result-path">${highlight(entry.relativePath || entry.repository, query)}</p>
-            <p class="docs-search-result-copy">${highlight(entry.summary, query)}</p>
-            ${matchingHeading ? `<p class="docs-search-result-heading">Matching heading: ${highlight(matchingHeading, query)}</p>` : ""}
+            ${shouldRenderSummary ? `<p class="docs-search-result-copy">${escapeHtml(entry.summary)}</p>` : ""}
+            <p class="docs-search-result-snippet"><span class="docs-search-result-snippet-label">${snippet.label}</span>${snippet.html}</p>
           </a>
         `;
       })

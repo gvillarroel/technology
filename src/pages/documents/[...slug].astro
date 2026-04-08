@@ -82,6 +82,10 @@ const currentPageContextLabel =
       ? "Section overview"
       : "Document";
 const pageOriginLabel = page.status === "Generated" ? "Generated structure" : "Curated content";
+const pageOriginCopy =
+  page.status === "Generated"
+    ? "Generated from folder structure because this section did not expose a README.md or index.md page during the scan."
+    : "Published directly from a scanned Markdown source file.";
 type OrderedFolderNode = {
   page?: typeof repositoryPages[number];
   documents: typeof repositoryPages;
@@ -419,7 +423,82 @@ const hasDatedRepositoryDocuments = (page.datedDocumentCount ?? 0) > 0;
               </div>
               {!bodyStartsWithPageTitle ? <h1 class="docs-reference-title">{page.title}</h1> : null}
               {!summaryDuplicatesOpeningParagraph ? <p class="docs-reference-summary">{page.summary}</p> : null}
+              {page.status === "Generated" ? (
+                <p class="docs-reference-generated-note">{pageOriginCopy}</p>
+              ) : null}
             </header>
+
+            {(outlineItems.length > 0 || rightRailDocuments.length > 0 || page.pageType === "document") ? (
+              <section class="docs-mobile-tools" aria-label="Document tools">
+                {outlineItems.length > 0 ? (
+                  <details class="docs-mobile-tool" data-mobile-tool="outline">
+                    <summary>On this page</summary>
+                    <nav class="docs-mobile-tool-list" aria-label="On this page">
+                      {outlineItems.map((item) => (
+                        <a href={item.href}>{item.label}</a>
+                      ))}
+                    </nav>
+                  </details>
+                ) : null}
+
+                {rightRailDocuments.length > 0 && page.pageType === "document" && !page.isFolderIndex ? (
+                  <details class="docs-mobile-tool" data-mobile-tool="nearby">
+                    <summary>Nearby pages</summary>
+                    <nav class="docs-mobile-tool-list" aria-label="Nearby pages">
+                      {rightRailDocuments.map((entry) => (
+                        <a href={entry.htmlUrl}>
+                          <span>{entry.title}</span>
+                          <small>{entry.docType}</small>
+                        </a>
+                      ))}
+                    </nav>
+                  </details>
+                ) : null}
+
+                <details class="docs-mobile-tool" data-mobile-tool="info">
+                  <summary>Document info</summary>
+                  <div class="docs-mobile-tool-meta">
+                    <dl class="docs-reference-definition-list">
+                      <div>
+                        <dt>Repository</dt>
+                        <dd>{page.repository}</dd>
+                      </div>
+                      <div>
+                        <dt>Updated</dt>
+                        <dd>{page.updated || "Updated date unknown"}</dd>
+                      </div>
+                      <div>
+                        <dt>Owner</dt>
+                        <dd>{page.owner}</dd>
+                      </div>
+                      {page.pageType === "document" ? (
+                        <div>
+                          <dt>Path</dt>
+                          <dd>{page.relativePath}</dd>
+                        </div>
+                      ) : null}
+                      <div>
+                        <dt>Status</dt>
+                        <dd>{page.status}</dd>
+                      </div>
+                      <div>
+                        <dt>Type</dt>
+                        <dd>{page.docType}</dd>
+                      </div>
+                    </dl>
+                    {page.pageType === "document" ? (
+                      <p class="docs-mobile-tool-copy">{pageOriginCopy}</p>
+                    ) : null}
+                    <div class="docs-reference-card-actions">
+                      <a href={page.repositoryUrl} target="_blank" rel="noreferrer">Repository</a>
+                      {page.sourceUrl ? <a href={page.sourceUrl} target="_blank" rel="noreferrer">Source</a> : null}
+                      {page.rawUrl ? <a href={page.rawUrl} target="_blank" rel="noreferrer">Raw</a> : null}
+                      <a href={page.markdownUrl}>Markdown</a>
+                    </div>
+                  </div>
+                </details>
+              </section>
+            ) : null}
 
             <article class="docs-reference-article">
               <div class="docs-markdown docs-reference-markdown" set:html={page.bodyHtml} />
@@ -489,6 +568,7 @@ const hasDatedRepositoryDocuments = (page.datedDocumentCount ?? 0) > 0;
 
         <section class="docs-reference-toc-card">
           <p class="docs-reference-toc-title">Document</p>
+          {page.pageType === "document" ? <p class="docs-reference-card-copy">{pageOriginCopy}</p> : null}
           <dl class="docs-reference-definition-list">
             <div>
               <dt>Repository</dt>
@@ -573,6 +653,8 @@ const hasDatedRepositoryDocuments = (page.datedDocumentCount ?? 0) > 0;
 
   const outlineLinks = Array.from(document.querySelectorAll(".docs-outline-list a"));
   const outlineList = document.querySelector(".docs-outline-list");
+  const mobileTools = Array.from(document.querySelectorAll(".docs-mobile-tool[data-mobile-tool]"));
+  const mobileToolStorageKey = `docs-mobile-tool:${window.location.pathname}`;
   const outlineTargets = outlineLinks
     .map((link) => {
       const id = link.getAttribute("href")?.replace(/^#/, "") ?? "";
@@ -610,5 +692,48 @@ const hasDatedRepositoryDocuments = (page.datedDocumentCount ?? 0) > 0;
 
     setActiveOutlineLink();
     document.addEventListener("scroll", setActiveOutlineLink, { passive: true });
+  }
+
+  if (mobileTools.length > 0) {
+    const restoreMobileToolState = () => {
+      const savedTool = window.localStorage.getItem(mobileToolStorageKey);
+
+      if (!savedTool) {
+        return;
+      }
+
+      for (const tool of mobileTools) {
+        tool.open = tool.getAttribute("data-mobile-tool") === savedTool;
+      }
+    };
+
+    restoreMobileToolState();
+
+    for (const tool of mobileTools) {
+      tool.addEventListener("toggle", () => {
+        const toolId = tool.getAttribute("data-mobile-tool");
+
+        if (!toolId) {
+          return;
+        }
+
+        if (tool.open) {
+          for (const siblingTool of mobileTools) {
+            if (siblingTool !== tool) {
+              siblingTool.open = false;
+            }
+          }
+
+          window.localStorage.setItem(mobileToolStorageKey, toolId);
+          return;
+        }
+
+        const hasOpenTool = mobileTools.some((candidate) => candidate.open);
+
+        if (!hasOpenTool) {
+          window.localStorage.removeItem(mobileToolStorageKey);
+        }
+      });
+    }
   }
 </script>
