@@ -1,4 +1,4 @@
-generated_at: 2026-04-08T03:49:12.512Z
+generated_at: 2026-04-08T23:38:37.174Z
 repositories:
   - slug: agent-marketplace
     skills:
@@ -183,11 +183,9 @@ repositories:
       - id: anthropic-skills:claude-api
         slug: claude-api
         name: claude-api
-        description: "Build apps with the Claude API or Anthropic SDK. TRIGGER when:
-          code imports `anthropic`/`@anthropic-ai/sdk`/`claude_agent_sdk`, or
-          user asks to use Claude API, Anthropic SDKs, or Agent SDK. DO NOT
-          TRIGGER when: code imports `openai`/other AI SDK, general programming,
-          or ML/data-science tasks."
+        description: This skill helps you build LLM-powered applications with Claude.
+          Choose the right surface based on your needs, detect the project
+          language, then read the relevant language-specific documentation.
         repositorySlug: anthropic-skills
         repositoryName: Anthropic Skills
         repositorySource: github
@@ -202,23 +200,18 @@ repositories:
         sourcePath: skills/claude-api
         sourceUrl: https://github.com/anthropics/skills/tree/main/skills/claude-api
         tags: []
-        metadata:
-          license: Complete terms in LICENSE.txt
-        metadataPairs:
-          - key: license
-            value: Complete terms in LICENSE.txt
+        metadata: {}
+        metadataPairs: []
         installSnippet: >-
           /plugin marketplace add anthropics/skills
 
           # Skill source:
           https://github.com/anthropics/skills/tree/main/skills/claude-api
         installAvailable: true
-        searchText: "claude-api build apps with the claude api or anthropic sdk. trigger
-          when: code imports `anthropic`/`@anthropic-ai/sdk`/`claude_agent_sdk`,
-          or user asks to use claude api, anthropic sdks, or agent sdk. do not
-          trigger when: code imports `openai`/other ai sdk, general programming,
-          or ml/data-science tasks.  anthropic skills anthropics/skills
-          skills/claude-api license complete terms in license.txt"
+        searchText: "claude-api this skill helps you build llm-powered applications with
+          claude. choose the right surface based on your needs, detect the
+          project language, then read the relevant language-specific
+          documentation.  anthropic skills anthropics/skills skills/claude-api "
       - id: anthropic-skills:doc-coauthoring
         slug: doc-coauthoring
         name: doc-coauthoring
@@ -251,14 +244,14 @@ repositories:
           # Skill source:
           https://github.com/anthropics/skills/tree/main/skills/doc-coauthoring
         installAvailable: true
-        searchText: doc-coauthoring guide users through a structured workflow for
+        searchText: "doc-coauthoring guide users through a structured workflow for
           co-authoring documentation. use when user wants to write
           documentation, proposals, technical specs, decision docs, or similar
           structured content. this workflow helps users efficiently transfer
           context, refine content through iteration, and verify the doc works
           for readers. trigger when user mentions writing docs, creating
           proposals, drafting specs, or similar documentation tasks.  anthropic
-          skills anthropics/skills skills/doc-coauthoring
+          skills anthropics/skills skills/doc-coauthoring "
       - id: anthropic-skills:docx
         slug: docx
         name: docx
@@ -560,12 +553,12 @@ repositories:
           # Skill source:
           https://github.com/anthropics/skills/tree/main/skills/skill-creator
         installAvailable: true
-        searchText: skill-creator create new skills, modify and improve existing skills,
-          and measure skill performance. use when users want to create a skill
-          from scratch, edit, or optimize an existing skill, run evals to test a
-          skill, benchmark skill performance with variance analysis, or optimize
-          a skill's description for better triggering accuracy.  anthropic
-          skills anthropics/skills skills/skill-creator
+        searchText: "skill-creator create new skills, modify and improve existing
+          skills, and measure skill performance. use when users want to create a
+          skill from scratch, edit, or optimize an existing skill, run evals to
+          test a skill, benchmark skill performance with variance analysis, or
+          optimize a skill's description for better triggering
+          accuracy.  anthropic skills anthropics/skills skills/skill-creator "
       - id: anthropic-skills:slack-gif-creator
         slug: slack-gif-creator
         name: slack-gif-creator
@@ -1038,38 +1031,6 @@ repositories:
           matters; prefer `python-docx` plus the bundled
           `scripts/render_docx.py` for visual checks. curated openai curated
           skills openai/skills skills/.curated/doc "
-      - id: openai-curated-skills:figma
-        slug: figma
-        name: figma
-        description: Use the Figma MCP server to fetch design context, screenshots,
-          variables, and assets from Figma, and to translate Figma nodes into
-          production code. Trigger when a task involves Figma URLs, node IDs,
-          design-to-code implementation, or Figma MCP setup and troubleshooting.
-        repositorySlug: openai-curated-skills
-        repositoryName: OpenAI Curated Skills
-        repositorySource: github
-        repositoryPurpose: Curated Codex skills approved for explicit installation from
-          the OpenAI skills catalog
-        repositoryLabel: openai/skills
-        repositoryUrl: https://github.com/openai/skills
-        repositoryRef: main
-        localPath: ""
-        relativePath: figma
-        installPath: skills/.curated/figma
-        sourcePath: skills/.curated/figma
-        sourceUrl: https://github.com/openai/skills/tree/main/skills/.curated/figma
-        tags:
-          - curated
-        metadata: {}
-        metadataPairs: []
-        installSnippet: npx skills add openai/skills@figma
-        installAvailable: true
-        searchText: "figma use the figma mcp server to fetch design context,
-          screenshots, variables, and assets from figma, and to translate figma
-          nodes into production code. trigger when a task involves figma urls,
-          node ids, design-to-code implementation, or figma mcp setup and
-          troubleshooting. curated openai curated skills openai/skills
-          skills/.curated/figma "
       - id: openai-curated-skills:figma-code-connect-components
         slug: figma-code-connect-components
         name: figma-code-connect-components
@@ -1332,6 +1293,38 @@ repositories:
           auto-layout or fills, bind variables to properties, or inspect file
           structure programmatically. curated openai curated skills
           openai/skills skills/.curated/figma-use "
+      - id: openai-curated-skills:figma
+        slug: figma
+        name: figma
+        description: Use the Figma MCP server to fetch design context, screenshots,
+          variables, and assets from Figma, and to translate Figma nodes into
+          production code. Trigger when a task involves Figma URLs, node IDs,
+          design-to-code implementation, or Figma MCP setup and troubleshooting.
+        repositorySlug: openai-curated-skills
+        repositoryName: OpenAI Curated Skills
+        repositorySource: github
+        repositoryPurpose: Curated Codex skills approved for explicit installation from
+          the OpenAI skills catalog
+        repositoryLabel: openai/skills
+        repositoryUrl: https://github.com/openai/skills
+        repositoryRef: main
+        localPath: ""
+        relativePath: figma
+        installPath: skills/.curated/figma
+        sourcePath: skills/.curated/figma
+        sourceUrl: https://github.com/openai/skills/tree/main/skills/.curated/figma
+        tags:
+          - curated
+        metadata: {}
+        metadataPairs: []
+        installSnippet: npx skills add openai/skills@figma
+        installAvailable: true
+        searchText: "figma use the figma mcp server to fetch design context,
+          screenshots, variables, and assets from figma, and to translate figma
+          nodes into production code. trigger when a task involves figma urls,
+          node ids, design-to-code implementation, or figma mcp setup and
+          troubleshooting. curated openai curated skills openai/skills
+          skills/.curated/figma "
       - id: openai-curated-skills:frontend-skill
         slug: frontend-skill
         name: frontend-skill
@@ -1769,6 +1762,33 @@ repositories:
           rendering pages (poppler) and use python tools such as `reportlab`,
           `pdfplumber`, and `pypdf` for generation and extraction. curated
           openai curated skills openai/skills skills/.curated/pdf "
+      - id: openai-curated-skills:playwright-interactive
+        slug: playwright-interactive
+        name: playwright-interactive
+        description: Persistent browser and Electron interaction through `js_repl` for
+          fast iterative UI debugging.
+        repositorySlug: openai-curated-skills
+        repositoryName: OpenAI Curated Skills
+        repositorySource: github
+        repositoryPurpose: Curated Codex skills approved for explicit installation from
+          the OpenAI skills catalog
+        repositoryLabel: openai/skills
+        repositoryUrl: https://github.com/openai/skills
+        repositoryRef: main
+        localPath: ""
+        relativePath: playwright-interactive
+        installPath: skills/.curated/playwright-interactive
+        sourcePath: skills/.curated/playwright-interactive
+        sourceUrl: https://github.com/openai/skills/tree/main/skills/.curated/playwright-interactive
+        tags:
+          - curated
+        metadata: {}
+        metadataPairs: []
+        installSnippet: npx skills add openai/skills@playwright-interactive
+        installAvailable: true
+        searchText: "playwright-interactive persistent browser and electron interaction
+          through `js_repl` for fast iterative ui debugging. curated openai
+          curated skills openai/skills skills/.curated/playwright-interactive "
       - id: openai-curated-skills:playwright
         slug: playwright
         name: playwright
@@ -1800,33 +1820,6 @@ repositories:
           data extraction, ui-flow debugging) via `playwright-cli` or the
           bundled wrapper script. curated openai curated skills openai/skills
           skills/.curated/playwright "
-      - id: openai-curated-skills:playwright-interactive
-        slug: playwright-interactive
-        name: playwright-interactive
-        description: Persistent browser and Electron interaction through `js_repl` for
-          fast iterative UI debugging.
-        repositorySlug: openai-curated-skills
-        repositoryName: OpenAI Curated Skills
-        repositorySource: github
-        repositoryPurpose: Curated Codex skills approved for explicit installation from
-          the OpenAI skills catalog
-        repositoryLabel: openai/skills
-        repositoryUrl: https://github.com/openai/skills
-        repositoryRef: main
-        localPath: ""
-        relativePath: playwright-interactive
-        installPath: skills/.curated/playwright-interactive
-        sourcePath: skills/.curated/playwright-interactive
-        sourceUrl: https://github.com/openai/skills/tree/main/skills/.curated/playwright-interactive
-        tags:
-          - curated
-        metadata: {}
-        metadataPairs: []
-        installSnippet: npx skills add openai/skills@playwright-interactive
-        installAvailable: true
-        searchText: "playwright-interactive persistent browser and electron interaction
-          through `js_repl` for fast iterative ui debugging. curated openai
-          curated skills openai/skills skills/.curated/playwright-interactive "
       - id: openai-curated-skills:render-deploy
         slug: render-deploy
         name: render-deploy
@@ -2304,51 +2297,6 @@ repositories:
           skills/.curated/yeet "
   - slug: openai-system-skills
     skills:
-      - id: openai-system-skills:imagegen
-        slug: imagegen
-        name: imagegen
-        description: Generate or edit raster images when the task benefits from
-          AI-created bitmap visuals such as photos, illustrations, textures,
-          sprites, mockups, or transparent-background cutouts. Use when Codex
-          should create a brand-new image, transform an existing image, or
-          derive visual variants from references, and the output should be a
-          bitmap asset rather than repo-native code or vector. Do not use when
-          the task is better handled by editing existing SVG/vector/code-native
-          assets, extending an established icon or logo system, or building the
-          visual directly in HTML/CSS/canvas.
-        repositorySlug: openai-system-skills
-        repositoryName: OpenAI System Skills
-        repositorySource: github
-        repositoryPurpose: Built-in Codex system skills approved as reference
-          capabilities from the OpenAI catalog
-        repositoryLabel: openai/skills
-        repositoryUrl: https://github.com/openai/skills
-        repositoryRef: main
-        localPath: ""
-        relativePath: imagegen
-        installPath: skills/.system/imagegen
-        sourcePath: skills/.system/imagegen
-        sourceUrl: https://github.com/openai/skills/tree/main/skills/.system/imagegen
-        tags:
-          - system
-        metadata: {}
-        metadataPairs: []
-        installSnippet: >-
-          # Included with recent Codex releases
-
-          # Source:
-          https://github.com/openai/skills/tree/main/skills/.system/imagegen
-        installAvailable: true
-        searchText: "imagegen generate or edit raster images when the task benefits from
-          ai-created bitmap visuals such as photos, illustrations, textures,
-          sprites, mockups, or transparent-background cutouts. use when codex
-          should create a brand-new image, transform an existing image, or
-          derive visual variants from references, and the output should be a
-          bitmap asset rather than repo-native code or vector. do not use when
-          the task is better handled by editing existing svg/vector/code-native
-          assets, extending an established icon or logo system, or building the
-          visual directly in html/css/canvas. system openai system skills
-          openai/skills skills/.system/imagegen "
       - id: openai-system-skills:openai-docs
         slug: openai-docs
         name: openai-docs
@@ -2388,45 +2336,6 @@ repositories:
           mcp tools, use bundled references only as helper context, and restrict
           any fallback browsing to official openai domains. system openai system
           skills openai/skills skills/.system/openai-docs "
-      - id: openai-system-skills:plugin-creator
-        slug: plugin-creator
-        name: plugin-creator
-        description: Create and scaffold plugin directories for Codex with a required
-          `.codex-plugin/plugin.json`, optional plugin folders/files, and
-          baseline placeholders you can edit before publishing or testing. Use
-          when Codex needs to create a new local plugin, add optional plugin
-          structure, or generate or update repo-root
-          `.agents/plugins/marketplace.json` entries for plugin ordering and
-          availability metadata.
-        repositorySlug: openai-system-skills
-        repositoryName: OpenAI System Skills
-        repositorySource: github
-        repositoryPurpose: Built-in Codex system skills approved as reference
-          capabilities from the OpenAI catalog
-        repositoryLabel: openai/skills
-        repositoryUrl: https://github.com/openai/skills
-        repositoryRef: main
-        localPath: ""
-        relativePath: plugin-creator
-        installPath: skills/.system/plugin-creator
-        sourcePath: skills/.system/plugin-creator
-        sourceUrl: https://github.com/openai/skills/tree/main/skills/.system/plugin-creator
-        tags:
-          - system
-        metadata: {}
-        metadataPairs: []
-        installSnippet: |-
-          # Included with recent Codex releases
-          # Source: https://github.com/openai/skills/tree/main/skills/.system/plugin-creator
-        installAvailable: true
-        searchText: "plugin-creator create and scaffold plugin directories for codex
-          with a required `.codex-plugin/plugin.json`, optional plugin
-          folders/files, and baseline placeholders you can edit before
-          publishing or testing. use when codex needs to create a new local
-          plugin, add optional plugin structure, or generate or update repo-root
-          `.agents/plugins/marketplace.json` entries for plugin ordering and
-          availability metadata. system openai system skills openai/skills
-          skills/.system/plugin-creator "
       - id: openai-system-skills:skill-creator
         slug: skill-creator
         name: skill-creator

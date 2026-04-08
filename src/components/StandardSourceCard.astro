@@ -1,0 +1,47 @@
+---
+export interface SourceMetaItem {
+  label: string;
+  value: string;
+}
+
+export interface Props {
+  file: string;
+  lang?: string;
+  title: string;
+  summary: string;
+  meta?: SourceMetaItem[];
+}
+
+const {
+  file,
+  lang = "yaml",
+  title,
+  summary,
+  meta = [],
+} = Astro.props;
+---
+
+<article class="bat-card bat-card-wide">
+  <div class="bat-card-bar">
+    <span class="bat-card-file">{file}</span>
+    <span class="bat-card-lang">{lang}</span>
+  </div>
+
+  <div class="bat-card-body bat-card-body-stack">
+    <div class="bat-line">
+      <span class="bat-gutter">1</span>
+      <div class="bat-code">
+        <p class="bat-heading">{title}</p>
+        <p class="bat-copy">{summary}</p>
+      </div>
+    </div>
+    {meta.length > 0 ? (
+      <div class="bat-line">
+        <span class="bat-gutter">2</span>
+        <div class="bat-code bat-meta-row">
+          {meta.map((item) => <span>{item.label}: {item.value}</span>)}
+        </div>
+      </div>
+    ) : null}
+  </div>
+</article>

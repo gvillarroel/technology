@@ -1,26 +1,16 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import StandardPageHeader from "../components/StandardPageHeader.astro";
+import StandardPageIntro from "../components/StandardPageIntro.astro";
+import StandardSourceCard from "../components/StandardSourceCard.astro";
 import { getAdrIndexData } from "../lib/adrs";
+import { getStandardPageIntro } from "../lib/page-intros";
+import { getStandardPageSource } from "../lib/page-sources";
 import { withBasePath } from "../lib/site-url";
 
 const { pages, repositories } = await getAdrIndexData();
-const yamlPreview = [
-  "repositories:",
-  ...repositories.flatMap((repository) => [
-    `  - slug: ${repository.slug}`,
-    `    account: ${repository.account}`,
-    ...(repository.repository ? [`    repository: ${repository.repository}`] : []),
-    ...(repository.ref ? [`    ref: ${repository.ref}`] : []),
-    "    domains:",
-    ...repository.domains.map((domain) => `      - ${domain}`),
-    "    include:",
-    ...repository.include.map((pattern) => `      - ${pattern}`),
-    ...(repository.exclude.length > 0
-      ? ["    exclude:", ...repository.exclude.map((pattern) => `      - ${pattern}`)]
-      : ["    exclude: []"]),
-  ]),
-].join("\n");
+const intro = await getStandardPageIntro("adrs");
+const sourceCard = await getStandardPageSource("adrs");
 const normalizeCompactLabel = (value: string) => value.toLowerCase().replace(/[\s_-]+/g, "");
 ---
 
@@ -35,16 +25,29 @@ const normalizeCompactLabel = (value: string) => value.toLowerCase().replace(/[\
       searchPlaceholder="Search ADRs, products, or tags"
     />
 
-    <section class="standard-page-intro">
-      <div>
-        <p class="eyebrow">Practice</p>
-        <h1 class="standard-page-title">Architecture decision records.</h1>
-        <p class="copy standard-copy-wide">
-          This page indexes ADRs fetched directly from GitHub repositories declared in
-          `data/adr-repositories.yaml`. Start with the source summary, then filter the catalog by
-          product, status, year, and area before opening the decision record you need.
-        </p>
-      </div>
+    <StandardPageIntro
+      eyebrow={intro.eyebrow}
+      title={intro.title}
+      summary={intro.summary}
+      pills={[
+        { label: "Records", value: String(pages.length) },
+        { label: "Repos", value: String(repositories.length) },
+        { label: "Source", value: "GitHub" },
+      ]}
+    />
+
+    <section class="bat-grid bat-grid-radar">
+      <StandardSourceCard
+        file={sourceCard.file}
+        lang={sourceCard.lang}
+        title={sourceCard.title}
+        summary={sourceCard.summary}
+        meta={[
+          { label: "adrs", value: String(pages.length) },
+          { label: "repos", value: String(repositories.length) },
+          { label: "products", value: String(new Set(pages.map((page) => page.product)).size) },
+        ]}
+      />
     </section>
 
     <section class="bat-grid bat-grid-detail">
@@ -60,10 +63,8 @@ const normalizeCompactLabel = (value: string) => value.toLowerCase().replace(/[\
             <div class="bat-code">
               <p class="bat-heading">How ADR auto-discovery works</p>
               <p class="bat-copy">
-                The site reads an internal repository catalog, expands each configured GitHub
-                account into its repositories, and looks inside the declared ADR folder or domain.
-                Every Markdown file that matches that filter is treated as an ADR and fetched
-                directly from GitHub raw at render time.
+                The page reads repository rules from `data/adr-repositories.yaml` and indexes every
+                matching Markdown file under the configured ADR paths.
               </p>
             </div>
           </div>
@@ -72,10 +73,8 @@ const normalizeCompactLabel = (value: string) => value.toLowerCase().replace(/[\
             <div class="bat-code">
               <p class="bat-heading bat-heading-inline">What teams need to do</p>
               <ul class="bat-list adrs-guidance-list">
-                <li class="bat-copy">Keep ADRs as Markdown files in the agreed folder, such as `.specs/adr/`.</li>
-                <li class="bat-copy">Follow the current naming convention, for example `0001-some-decision.md`.</li>
-                <li class="bat-copy">Add optional frontmatter when you want better summary, product, owner, area, tags, or date metadata.</li>
-                <li class="bat-copy">Once a repository belongs to the configured GitHub account and contains that folder, every matching Markdown file is discovered automatically.</li>
+                <li class="bat-copy">Keep ADRs in the agreed Markdown folder, such as `.specs/adr/`.</li>
+                <li class="bat-copy">Add frontmatter only when teams need richer metadata in the index.</li>
               </ul>
             </div>
           </div>
@@ -88,32 +87,6 @@ const normalizeCompactLabel = (value: string) => value.toLowerCase().replace(/[\
               <span>products: {new Set(pages.map((page) => page.product)).size}</span>
               <span>statuses: {new Set(pages.map((page) => page.status)).size}</span>
               <span>areas: {new Set(pages.map((page) => page.area)).size}</span>
-            </div>
-          </div>
-        </div>
-      </article>
-
-      <article class="bat-card">
-        <div class="bat-card-bar">
-          <span class="bat-card-file">data/adr-repositories.yaml</span>
-          <span class="bat-card-lang">yaml</span>
-        </div>
-        <div class="bat-card-body bat-card-body-stack">
-          <div class="bat-line">
-            <span class="bat-gutter">1</span>
-            <div class="bat-code">
-              <p class="bat-heading">Current scan filter</p>
-              <p class="bat-copy">
-                This is the active repository configuration the page uses to discover ADR Markdown
-                files across GitHub. In this example, discovery is configured at the account level
-                for all repositories under `gvillarroel`.
-              </p>
-            </div>
-          </div>
-          <div class="bat-line">
-            <span class="bat-gutter">2</span>
-            <div class="bat-code">
-              <pre class="adrs-yaml-preview"><code>{yamlPreview}</code></pre>
             </div>
           </div>
         </div>

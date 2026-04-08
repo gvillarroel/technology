@@ -1,6 +1,10 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import StandardPageHeader from "../components/StandardPageHeader.astro";
+import StandardPageIntro from "../components/StandardPageIntro.astro";
+import StandardSourceCard from "../components/StandardSourceCard.astro";
+import { getStandardPageIntro } from "../lib/page-intros";
+import { getStandardPageSource } from "../lib/page-sources";
 import {
   defaultVisibleRings,
   getRadarBlipLayouts,
@@ -13,6 +17,8 @@ import {
 } from "../lib/tech-radar";
 
 const entries = await getRadarEntries();
+const intro = await getStandardPageIntro("tech-radar");
+const sourceCard = await getStandardPageSource("tech-radar");
 const radarLayouts = getRadarBlipLayouts(entries);
 const radarGroupSizes = entries.reduce((groups, entry) => {
   const key = `${entry.ring}:${entry.primaryScope}`;
@@ -22,16 +28,12 @@ const radarGroupSizes = entries.reduce((groups, entry) => {
 const maxRadarGroupSize = Math.max(...radarGroupSizes.values(), 1);
 const radarDensityScore = Math.max(entries.length / 24, maxRadarGroupSize / 6);
 const radarVisualScale = Math.max(0.62, Math.min(1, 1 - (radarDensityScore - 1) * 0.12));
-const radarBlipRadius = Number((4.2 * radarVisualScale).toFixed(2));
-const radarBlipHoverRadius = Number((5.6 * radarVisualScale).toFixed(2));
-const radarLabelSize = Number((4.3 * radarVisualScale).toFixed(2));
-const radarAxisLabelSize = Number((5.5 * radarVisualScale).toFixed(2));
+const radarBlipRadius = Number((4.55 * radarVisualScale).toFixed(2));
+const radarBlipHoverRadius = Number((6.05 * radarVisualScale).toFixed(2));
+const radarLabelSize = Number((4.85 * radarVisualScale).toFixed(2));
+const radarAxisLabelSize = Number((6.15 * radarVisualScale).toFixed(2));
 const lifecycleDisplayOrder = ["To evaluate", "Explore", "Adopt", "Endure", "Retired"] as const;
 const primaryScopes = [...new Set(entries.map((entry) => entry.primaryScope))];
-const ringCounts = lifecycleDisplayOrder.map((ring) => ({
-  ring,
-  total: entries.filter((entry) => entry.ring === ring).length,
-}));
 const radarEntries = entries.map((entry) => ({
   ...entry,
   point: radarLayouts.get(entry.slug),
@@ -82,16 +84,16 @@ class Retired retired
       searchPlaceholder="Search by technology or capability"
     />
 
-    <section class="standard-page-intro">
-      <div>
-        <p class="eyebrow">Technology Radar</p>
-        <h1 class="standard-page-title">Lifecycle decisions across technology scopes.</h1>
-        <p class="copy standard-copy-wide">
-          The radar combines lifecycle state with a primary scope dimension. Use the radial map
-          for posture, then narrow by lifecycle, software archetype, source, and free-text matching in the index.
-        </p>
-      </div>
-    </section>
+    <StandardPageIntro
+      eyebrow={intro.eyebrow}
+      title={intro.title}
+      summary={intro.summary}
+      pills={[
+        { label: "Entries", value: String(entries.length) },
+        { label: "Scopes", value: String(primaryScopes.length) },
+        { label: "States", value: String(lifecycleDisplayOrder.length) },
+      ]}
+    />
 
     <section class="tech-radar-top" id="tech-radar-top">
       <div class="radar-floating-rail-anchor" id="source-floating-rail-anchor">
@@ -247,51 +249,17 @@ class Retired retired
           </article>
 
           <div class="radar-top-support">
-            <article class="bat-card bat-card-wide">
-            <div class="bat-card-bar">
-              <span class="bat-card-file">tech-radar.yaml</span>
-              <span class="bat-card-lang">yaml</span>
-            </div>
-
-            <div class="bat-card-body">
-              <div class="bat-line">
-                <span class="bat-gutter">1</span>
-                <div class="bat-code">
-                  <p class="bat-heading">entries:</p>
-                </div>
-              </div>
-              <div class="bat-line">
-                <span class="bat-gutter">2</span>
-                <div class="bat-code">
-                  <p class="bat-copy">
-                    Source of truth for lifecycle state, primary scope, ownership, and operational
-                    guidance. The diagram is driven by `ring` and `primary_scope` from YAML.
-                  </p>
-                </div>
-              </div>
-              <div class="bat-line">
-                <span class="bat-gutter">3</span>
-                <div class="bat-code bat-tag-row">
-                  {ringCounts.map((item) => (
-                    <span
-                      class={`radar-ring-pill radar-ring-pill-${getRadarRingToken(item.ring)}`}
-                      data-ring-count={item.ring}
-                    >
-                      {item.ring}: {item.total}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div class="bat-line">
-                <span class="bat-gutter">4</span>
-                <div class="bat-code">
-                  <p class="bat-meta" id="radar-scope-meta">
-                    Primary scopes in the current dataset: {primaryScopes.join(", ")}.
-                  </p>
-                </div>
-              </div>
-            </div>
-            </article>
+            <StandardSourceCard
+              file={sourceCard.file}
+              lang={sourceCard.lang}
+              title={sourceCard.title}
+              summary={sourceCard.summary}
+              meta={[
+                { label: "entries", value: String(entries.length) },
+                { label: "scopes", value: String(primaryScopes.length) },
+                { label: "states", value: String(lifecycleDisplayOrder.length) },
+              ]}
+            />
 
             <article class="bat-card">
               <div class="bat-card-bar">
@@ -420,8 +388,6 @@ class Retired retired
   const sourceFloatingRailDock = document.querySelector("#source-floating-rail-dock");
   const countLabel = document.querySelector("#radar-results-count");
   const emptyState = document.querySelector("#radar-empty-state");
-  const ringCountPills = [...document.querySelectorAll("[data-ring-count]")];
-  const scopeMeta = document.querySelector("#radar-scope-meta");
   const visualMeta = document.querySelector("#radar-visual-meta");
   const extendedToggle = document.querySelector("#radar-extended-toggle");
   const radarSvg = document.querySelector("#radar-svg");
@@ -439,7 +405,6 @@ class Retired retired
   let radarViewBoxAnimationFrame = 0;
 
   const normalize = (value) => value.trim().toLowerCase();
-  const ringOrder = ["Adopt", "Explore", "To evaluate", "Endure", "Retired"];
   const ringRadius = new Map([
     ["Adopt", 18],
     ["Explore", 34],
@@ -535,28 +500,6 @@ class Retired retired
   };
 
   const updateSummaries = (visibleEntries, filters) => {
-    const ringCounts = new Map(ringOrder.map((ring) => [ring, 0]));
-    const visibleScopes = [...new Set(visibleEntries.map((entry) => entry.dataset.primaryScope).filter(Boolean))];
-
-    visibleEntries.forEach((entry) => {
-      const ring = entry.dataset.ring;
-
-      if (ring && ringCounts.has(ring)) {
-        ringCounts.set(ring, (ringCounts.get(ring) ?? 0) + 1);
-      }
-    });
-
-    ringCountPills.forEach((pill) => {
-      const ring = pill.getAttribute("data-ring-count") ?? "";
-      pill.textContent = `${ring}: ${ringCounts.get(ring) ?? 0}`;
-    });
-
-    if (scopeMeta) {
-      scopeMeta.textContent = visibleScopes.length
-        ? `Primary scopes in the current view: ${visibleScopes.join(", ")}.`
-        : "Primary scopes in the current view: none.";
-    }
-
     if (visualMeta) {
       const archetypeLabel = filters.archetype ? filters.archetype : "All archetypes";
       const sourceLabel = filters.source

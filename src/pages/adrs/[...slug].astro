@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import StandardPageIntro from "../../components/StandardPageIntro.astro";
 import StandardPageHeader from "../../components/StandardPageHeader.astro";
 import { getAdrPageBySlug, getAdrStaticPaths } from "../../lib/adrs";
 import { withBasePath } from "../../lib/site-url";
@@ -10,6 +11,11 @@ export async function getStaticPaths() {
 
 const slugSegments = Astro.params.slug?.split("/").filter(Boolean) ?? [];
 const page = await getAdrPageBySlug(slugSegments);
+const introPills = [
+  { label: "Status", value: page?.status ?? "" },
+  { label: "Owner", value: page?.owner ?? "" },
+  { label: "Date", value: page?.date || "Not set" },
+].filter((item) => item.value);
 
 if (!page) {
   return Astro.redirect(withBasePath("/adrs/"));
@@ -28,13 +34,13 @@ if (!page) {
       searchQuery={page.title}
     />
 
-    <section class="standard-page-intro standard-page-intro-detail">
-      <div>
-        <p class="eyebrow">{page.product} / {page.status}</p>
-        <h1 class="standard-page-title">{page.adrNumber ? `ADR ${page.adrNumber}: ` : ""}{page.title}</h1>
-        <p class="copy standard-copy-wide">{page.summary}</p>
-      </div>
-    </section>
+    <StandardPageIntro
+      eyebrow={`${page.product} / ${page.status}`}
+      title={`${page.adrNumber ? `ADR ${page.adrNumber}: ` : ""}${page.title}`}
+      summary={page.summary}
+      pills={introPills}
+      className="standard-page-intro-detail"
+    />
 
     <article class="docs-article">
       <div class="docs-article-bar">

@@ -1,7 +1,9 @@
 ---
 import BaseLayout from "../../../layouts/BaseLayout.astro";
+import SpikePageFrame from "../../../components/SpikePageFrame.astro";
 import { getCollection, render } from "astro:content";
 import { getHtmlPageUrl, getMarkdownPageUrl } from "../../../lib/dual-format";
+import { getSpikePageContent, getSpikeSectionNavItems } from "../../../lib/spikes";
 
 export async function getStaticPaths() {
   const pages = await getCollection("dual-format-pages");
@@ -14,14 +16,25 @@ export async function getStaticPaths() {
 
 const { page } = Astro.props;
 const { Content } = await render(page);
+const spikePage = await getSpikePageContent("dual-format");
+const spikeSectionNavItems = await getSpikeSectionNavItems("dual-format");
 ---
 
 <BaseLayout title={`${page.data.title} | Dual Format Spike`} description={page.data.description}>
-  <main class="shell shell-narrow">
-    <section class="page-hero page-hero-compact">
-      <p class="eyebrow">Dual Format Spike</p>
-      <h1>{page.data.title}</h1>
-      <p class="copy">
+  <main>
+    <SpikePageFrame
+      eyebrow={spikePage.eyebrow}
+      title={page.data.title}
+      summary={page.data.description ?? spikePage.summary}
+      pills={spikePage.pills}
+      sectionNavItems={spikeSectionNavItems}
+      sectionTrailItems={[
+        { href: spikePage.href, label: spikePage.label, current: false },
+        { label: page.data.title, current: true },
+      ]}
+    >
+    <section class="section-block prose-block">
+      <p class="copy standard-copy-wide">
         HTML URL: <a href={getHtmlPageUrl(page.data.slug)}>{getHtmlPageUrl(page.data.slug)}</a><br />
         Markdown URL: <a href={getMarkdownPageUrl(page.data.slug)}>{getMarkdownPageUrl(page.data.slug)}</a>
       </p>
@@ -30,5 +43,6 @@ const { Content } = await render(page);
     <article class="section-block prose-block">
       <Content />
     </article>
+    </SpikePageFrame>
   </main>
 </BaseLayout>

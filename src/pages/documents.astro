@@ -1,10 +1,16 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import StandardPageHeader from "../components/StandardPageHeader.astro";
+import StandardPageIntro from "../components/StandardPageIntro.astro";
+import StandardSourceCard from "../components/StandardSourceCard.astro";
 import { getDocumentIndexData } from "../lib/documents";
+import { getStandardPageIntro } from "../lib/page-intros";
+import { getStandardPageSource } from "../lib/page-sources";
 import { withBasePath } from "../lib/site-url";
 
 const searchQuery = "";
+const intro = await getStandardPageIntro("documents");
+const sourceCard = await getStandardPageSource("documents");
 const { repositorySummaries, sourceConfigs, scannedRepositories, documentCount, searchEntries } = await getDocumentIndexData();
 const latestRepositoryUpdate =
   [...repositorySummaries]
@@ -90,20 +96,30 @@ const recentlyUpdatedEntries = [...searchEntries]
       searchQuery={searchQuery}
     />
 
-    <section class="standard-page-intro docs-index-hero">
-      <div class="docs-index-hero-copy">
-        <p class="eyebrow">Documentation</p>
-        <h1 class="standard-page-title">Repository-driven documentation.</h1>
-        <p class="copy standard-copy-wide">
-          Browse repository docs as a single library, with one page per repository and folder-aware
-          navigation for every Markdown section that was discovered during the build.
-        </p>
-      </div>
-      <div class="docs-index-hero-trust" aria-label="Documentation library summary">
-        <span>{repositorySummaries.length} repositories</span>
-        <span>{documentCount} pages</span>
-        <span>last update: {formatDisplayDate(latestRepositoryUpdate)}</span>
-      </div>
+    <StandardPageIntro
+      className="docs-index-hero"
+      eyebrow={intro.eyebrow}
+      title={intro.title}
+      summary={intro.summary}
+      pills={[
+        { label: "Repositories", value: String(repositorySummaries.length) },
+        { label: "Pages", value: String(documentCount) },
+        { label: "Updated", value: formatDisplayDate(latestRepositoryUpdate) },
+      ]}
+    />
+
+    <section class="bat-grid bat-grid-radar">
+      <StandardSourceCard
+        file={sourceCard.file}
+        lang={sourceCard.lang}
+        title={sourceCard.title}
+        summary="Configured repository rules discover Markdown from external GitHub sources, normalize it, and publish it through one shared documentation library."
+        meta={[
+          { label: "repositories", value: String(repositorySummaries.length) },
+          { label: "pages", value: String(documentCount) },
+          { label: "rules", value: String(sourceConfigs.length) },
+        ]}
+      />
     </section>
 
     <section class="docs-index-strip" aria-label="Library scan summary">

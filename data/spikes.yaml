@@ -1,0 +1,71 @@
+pages:
+  format-architecture:
+    label: Architecture
+    href: /spikes/format-architecture/
+    eyebrow: Spikes
+    title: HTML + Markdown page strategy.
+    summary: Compare route and content-source alternatives without dropping into a separate visual system.
+    pills:
+      - label: Scope
+        value: Route design
+      - label: Canonical
+        value: HTML + .md
+      - label: Sources
+        value: Markdown, JSON, CSV, GitHub
+  terminal-colors:
+    label: Terminal Colors
+    href: /spikes/terminal-colors/
+    eyebrow: Spikes
+    title: Terminal palette variations.
+    summary: Review palette experiments against the same terminal shell, hierarchy, and interaction model.
+    pills:
+      - label: Variants
+        value: 3 mappings
+      - label: Surface
+        value: Shared shell
+      - label: Goal
+        value: Closer to brand
+  dual-format:
+    label: Dual Format
+    href: /spikes/dual-format/overview/
+    eyebrow: Dual Format Spike
+    title: Markdown collection output.
+    summary: Validate twin HTML and Markdown routes from a shared content collection model.
+    pills:
+      - label: Source
+        value: Markdown
+      - label: Output
+        value: HTML + .md
+  json-format:
+    label: JSON Format
+    href: /spikes/json-format/overview/
+    eyebrow: JSON Format Spike
+    title: JSON-backed output.
+    summary: Validate the same page contract when metadata is normalized through a JSON loader first.
+    pills:
+      - label: Source
+        value: JSON
+      - label: Output
+        value: HTML + .md
+  csv-format:
+    label: CSV Format
+    href: /spikes/csv-format/overview/
+    eyebrow: CSV Format Spike
+    title: CSV-backed output.
+    summary: Validate route parity when the page model starts from CSV-backed metadata.
+    pills:
+      - label: Source
+        value: CSV
+      - label: Output
+        value: HTML + .md
+  github-format:
+    label: GitHub Format
+    href: /spikes/github-format/overview/
+    eyebrow: GitHub Format Spike
+    title: Remote Markdown output.
+    summary: Validate build-time remote collection while preserving the same twin-route contract.
+    pills:
+      - label: Source
+        value: GitHub
+      - label: Output
+        value: HTML + .md

@@ -1,6 +1,8 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import FakeTerminal from "../../components/FakeTerminal.astro";
+import SpikePageFrame from "../../components/SpikePageFrame.astro";
+import { getSpikePageContent, getSpikeSectionNavItems } from "../../lib/spikes";
 
 const rights = [
   "Know which technologies are approved for enterprise use",
@@ -38,21 +40,24 @@ const variants = [
       "--terminal-shell-bg:#161d26;--terminal-shell-surface:#263544;--terminal-shell-border:rgba(0,114,152,0.26);--terminal-shell-text:#eef5f7;--terminal-shell-muted:#96a9b3;--terminal-shell-blue:#00ace6;--terminal-shell-accent:#f1c319;--terminal-shell-green:#45842a;--terminal-shell-warm:#e77204;--terminal-shell-cyan:#cdf3ff;--terminal-shell-input:#8fa6b5;",
   },
 ];
+
+const spikePage = await getSpikePageContent("terminal-colors");
+const spikeSectionNavItems = await getSpikeSectionNavItems("terminal-colors");
 ---
 
 <BaseLayout
   title="Terminal Color Spike | e*f(x) Technology"
   description="Color exploration spike for the e*f(x) terminal landing page."
 >
-  <main class="shell shell-spike">
-    <section class="page-hero page-hero-compact">
-      <p class="eyebrow">Color Spike</p>
-      <h1>Terminal palette variations closer to the official brand colors.</h1>
-      <p class="copy">
-        This spike compares three color mappings for the landing page terminal while
-        keeping the same layout and interaction model.
-      </p>
-    </section>
+  <main>
+    <SpikePageFrame
+      eyebrow={spikePage.eyebrow}
+      title={spikePage.title}
+      summary={spikePage.summary}
+      pills={spikePage.pills}
+      sectionNavItems={spikeSectionNavItems}
+      sectionTrailItems={[{ label: spikePage.label, current: true }]}
+    >
 
     <section class="spike-grid">
       {variants.map((variant) => (
@@ -69,5 +74,6 @@ const variants = [
         </article>
       ))}
     </section>
+    </SpikePageFrame>
   </main>
 </BaseLayout>

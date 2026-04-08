@@ -1,0 +1,44 @@
+---
+import StandardPageHeader, { type HeaderNavItem } from "./StandardPageHeader.astro";
+import StandardPageIntro, { type IntroPill } from "./StandardPageIntro.astro";
+import { withBasePath } from "../lib/site-url";
+
+export interface Props {
+  eyebrow: string;
+  title: string;
+  summary: string;
+  pills?: IntroPill[];
+  sectionNavItems?: HeaderNavItem[];
+  sectionTrailItems?: HeaderNavItem[];
+}
+
+const {
+  eyebrow,
+  title,
+  summary,
+  pills = [],
+  sectionNavItems = [],
+  sectionTrailItems = [],
+} = Astro.props;
+---
+
+<div class="shell shell-narrow standard-page shell-spike">
+  <StandardPageHeader
+    searchAction={withBasePath("/tech-radar/")}
+    searchPlaceholder="Search technologies"
+    sectionNavItems={sectionNavItems}
+    sectionNavLabel="Spike sections"
+    sectionTrailItems={sectionTrailItems}
+    sectionTrailLabel="Spike path"
+  />
+
+  <StandardPageIntro
+    eyebrow={eyebrow}
+    title={title}
+    summary={summary}
+    pills={pills}
+    className="standard-page-intro-detail"
+  />
+
+  <slot />
+</div>

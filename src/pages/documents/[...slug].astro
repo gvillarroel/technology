@@ -2,6 +2,7 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import DocumentsTree from "../../components/DocumentsTree.astro";
 import StandardPageHeader from "../../components/StandardPageHeader.astro";
+import StandardPageIntro from "../../components/StandardPageIntro.astro";
 import { getDocumentPageBySlug, getDocumentPages, getDocumentStaticPaths, getDocumentTree } from "../../lib/documents";
 import { withBasePath } from "../../lib/site-url";
 
@@ -75,12 +76,6 @@ const siblingDocuments =
     : [];
 const relatedDocuments = (siblingDocuments.length > 0 ? siblingDocuments : childDocuments).slice(0, 8);
 const rightRailDocuments = siblingDocuments.slice(0, 6);
-const currentPageContextLabel =
-  page.pageType === "repository"
-    ? "Repository index"
-    : page.isFolderIndex
-      ? "Section overview"
-      : "Document";
 const pageOriginLabel = page.status === "Generated" ? "Generated structure" : "Curated content";
 const pageOriginCopy =
   page.status === "Generated"
@@ -168,6 +163,19 @@ const summaryDuplicatesOpeningParagraph =
   !!firstBodyParagraph &&
   normalizeDocumentText(page.summary) === normalizeDocumentText(firstBodyParagraph);
 const compactHeader = bodyStartsWithPageTitle && summaryDuplicatesOpeningParagraph;
+const renderedBodyHtml = (() => {
+  let html = page.bodyHtml;
+
+  if (bodyStartsWithPageTitle) {
+    html = html.replace(/^\s*<h1\b[^>]*>[\s\S]*?<\/h1>\s*/i, "");
+  }
+
+  if (summaryDuplicatesOpeningParagraph) {
+    html = html.replace(/^\s*<p\b[^>]*>[\s\S]*?<\/p>\s*/i, "");
+  }
+
+  return html;
+})();
 const formatDisplayDate = (value?: string) => {
   if (!value) {
     return "Unknown";
@@ -207,6 +215,21 @@ const formatDisplayDateTime = (value?: string) => {
   }).format(date);
 };
 const hasDatedRepositoryDocuments = (page.datedDocumentCount ?? 0) > 0;
+const repositoryRootsLabel = page.domainRoots.join(", ") || "None";
+const repositoryRulesLabel = page.ruleLabels.join(", ") || "None";
+const repositorySourcesLabel = page.sourceNames.join(", ") || "None";
+const repositoryIntroPills = [
+  { label: "Owner", value: page.owner },
+  { label: "Updated", value: hasDatedRepositoryDocuments ? formatDisplayDate(page.updated) : "No dated docs" },
+  { label: "Pages", value: String(page.fileCount ?? 0) },
+];
+const documentIntroPills = [
+  { label: "Status", value: page.status },
+  { label: "Source", value: pageOriginLabel },
+  { label: "Owner", value: page.owner },
+  { label: "Updated", value: page.updated || "Timestamp unavailable" },
+];
+const documentEyebrow = page.pageType === "document" ? "Documentation" : "Section";
 ---
 
 <BaseLayout
@@ -228,11 +251,15 @@ const hasDatedRepositoryDocuments = (page.datedDocumentCount ?? 0) > 0;
         <div class="docs-reference-sidebar-shell">
           <div class="docs-reference-sidebar-top">
             <p class="docs-reference-sidebar-label">Documentation</p>
-            <a class="docs-reference-sidebar-repo" href={withBasePath(`/documents/${page.repositorySlug}/`)}>
-              {page.repository}
-            </a>
+            {page.pageType === "repository" ? (
+              <p class="docs-reference-sidebar-repo">Navigation tree</p>
+            ) : (
+              <a class="docs-reference-sidebar-repo" href={withBasePath(`/documents/${page.repositorySlug}/`)}>
+                {page.repository}
+              </a>
+            )}
             <p class="docs-reference-sidebar-copy">
-              Structured navigation for the scanned repository tree.
+              External repository content normalized into a stable navigation tree for this site.
             </p>
           </div>
           <div class="docs-reference-sidebar-tree">
@@ -244,7 +271,6 @@ const hasDatedRepositoryDocuments = (page.datedDocumentCount ?? 0) > 0;
       <div class="docs-reference-main">
         {page.pageType !== "repository" ? (
           <div class="docs-reference-breadcrumb-block">
-            <p class="docs-reference-breadcrumb-context">{currentPageContextLabel}</p>
             <nav class="docs-reference-breadcrumbs" aria-label="Document path">
               {breadcrumbItems.map((item, index) => (
                 <>
@@ -263,23 +289,13 @@ const hasDatedRepositoryDocuments = (page.datedDocumentCount ?? 0) > 0;
         {page.pageType === "repository" ? (
           <>
             <section class="docs-repo-intro">
-              <p class="eyebrow">Documentation</p>
-              <div class="docs-reference-topline docs-repo-topline">
-                <p class="docs-reference-kicker">{page.docType}</p>
-                <span class:list={["docs-reference-status", `is-${page.status.toLowerCase().replace(/\s+/g, "-")}`]}>
-                  {page.status}
-                </span>
-              </div>
-              <h1 class="standard-page-title docs-repo-page-title">{page.repository}</h1>
-              <p class="copy standard-copy-wide docs-repo-summary">{page.summary}</p>
-              <div class="docs-repo-meta">
-                <span>owner: {page.owner}</span>
-                <span>updated: {hasDatedRepositoryDocuments ? formatDisplayDate(page.updated) : "No dated docs"}</span>
-                <span>files: {page.fileCount ?? 0}</span>
-                <span>folders: {page.folderCount ?? 0}</span>
-                <span>rules: {page.ruleLabels.length}</span>
-                <span>roots: {page.domainRoots.join(", ") || "None"}</span>
-              </div>
+              <StandardPageIntro
+                eyebrow="Documentation"
+                title={page.repository}
+                summary={page.summary}
+                pills={repositoryIntroPills}
+                className="standard-page-intro-detail docs-repo-intro-panel"
+              />
               <div class="docs-repo-actions" aria-label="Repository actions">
                 <a class="docs-repo-action" href={page.repositoryUrl} target="_blank" rel="noreferrer">Repository</a>
                 {page.sourceUrl ? <a class="docs-repo-action" href={page.sourceUrl} target="_blank" rel="noreferrer">Source</a> : null}
@@ -288,108 +304,50 @@ const hasDatedRepositoryDocuments = (page.datedDocumentCount ?? 0) > 0;
               </div>
             </section>
 
-            <section class="docs-repo-trust-strip" aria-label="Repository scan metadata">
-              <article class="docs-repo-trust-card">
-                <p class="docs-repo-trust-label">Last scan</p>
-                <p class="docs-repo-trust-value">{formatDisplayDateTime(page.lastScannedAt)}</p>
-                <p class="docs-repo-trust-copy">
-                  Static snapshot generated during site build from the configured GitHub scan rules.
-                </p>
-              </article>
-              <article class="docs-repo-trust-card">
-                <p class="docs-repo-trust-label">Latest document update</p>
-                <p class="docs-repo-trust-value">
-                  {hasDatedRepositoryDocuments ? formatDisplayDate(page.latestDocumentUpdated || page.updated) : "No dated pages found"}
-                </p>
-                <p class="docs-repo-trust-copy">
-                  {hasDatedRepositoryDocuments
-                    ? "Most recent document timestamp found in the scanned repository content."
-                    : "The scan found Markdown pages, but none exposed a usable timestamp from source metadata or commit history."}
-                </p>
-              </article>
-              <article class="docs-repo-trust-card">
-                <p class="docs-repo-trust-label">Most recently changed page</p>
-                {hasDatedRepositoryDocuments && page.latestDocumentHtmlUrl ? (
-                  <p class="docs-repo-trust-value">
-                    <a href={page.latestDocumentHtmlUrl}>{page.latestDocumentTitle}</a>
-                  </p>
-                ) : (
-                  <p class="docs-repo-trust-value">No dated page identified</p>
-                )}
-                <p class="docs-repo-trust-copy">
-                  {hasDatedRepositoryDocuments
-                    ? page.latestDocumentPath
-                    : "No document path with a confirmed update date was found in this snapshot."}
-                </p>
-              </article>
-              <article class="docs-repo-trust-card">
-                <p class="docs-repo-trust-label">Confidence signal</p>
-                <p class="docs-repo-trust-value">
-                  {page.datedDocumentCount ?? 0} of {page.fileCount ?? 0} pages dated
-                </p>
-                <p class="docs-repo-trust-copy">
-                  Use this to gauge how complete the freshness metadata is for this repository snapshot.
-                </p>
-              </article>
-            </section>
-
             <section class="bat-grid bat-grid-detail docs-repo-grid">
               <article class="bat-card bat-card-wide" id="repository-metadata">
                 <div class="bat-card-bar">
-                  <span class="bat-card-file">Repository metadata</span>
+                  <span class="bat-card-file">Repository snapshot</span>
                   <span class="bat-card-lang">scan</span>
                 </div>
                 <div class="bat-card-body bat-card-body-stack">
-                  <p class="bat-heading">Repository profile</p>
+                  <p class="bat-heading">External source normalized for site navigation</p>
                   <p class="bat-copy">
-                    Documentation discovered from GitHub using configured repository filters and
-                    document scan rules for <code>{page.repository}</code>.
+                    Markdown content is discovered from GitHub, filtered through the configured
+                    rules, and published here as a stable repository library.
                   </p>
                   <div class="bat-meta-row">
                     <span>owner: {page.owner}</span>
                     <span>branch: {page.repositoryRef}</span>
-                    <span>files discovered: {page.fileCount ?? 0}</span>
-                    <span>folders discovered: {page.folderCount ?? 0}</span>
+                    <span>last scan: {formatDisplayDateTime(page.lastScannedAt)}</span>
                   </div>
                   <div class="bat-meta-row">
-                    <span>scan rules: {page.ruleLabels.join(", ") || "None"}</span>
-                    <span>roots: {page.domainRoots.join(", ") || "None"}</span>
+                    <span>freshness: {hasDatedRepositoryDocuments ? `${page.datedDocumentCount ?? 0} of ${page.fileCount ?? 0} pages dated` : "No dated pages found"}</span>
+                    <span>roots: {repositoryRootsLabel}</span>
                   </div>
-                </div>
-              </article>
-
-              <article class="bat-card" id="discovery-model">
-                <div class="bat-card-bar">
-                  <span class="bat-card-file">Discovery model</span>
-                  <span class="bat-card-lang">flow</span>
-                </div>
-                <div class="bat-card-body bat-card-body-stack">
-                  <p class="bat-heading">Static repository landing page</p>
-                  <p class="bat-copy">
-                    Each repository page is generated after the site expands the configured
-                    repository filters, scans the GitHub tree for Markdown files that match the
-                    declared document rules, and maps the surviving files into a folder-aware
-                    navigation tree.
-                  </p>
-                </div>
-              </article>
-
-              <article class="bat-card" id="source-configs">
-                <div class="bat-card-bar">
-                  <span class="bat-card-file">Source configs</span>
-                  <span class="bat-card-lang">yaml</span>
-                </div>
-                <div class="bat-card-body bat-card-body-stack">
-                  <p class="bat-heading">Configuration sources</p>
-                  <div class="bat-list">
-                    {page.sourceNames.map((sourceName) => (
-                      <p class="bat-copy">{sourceName}</p>
-                    ))}
+                  <div class="bat-meta-row">
+                    <span>scan rules: {repositoryRulesLabel}</span>
+                    <span>sources: {repositorySourcesLabel}</span>
                   </div>
+                  {hasDatedRepositoryDocuments ? (
+                    <p class="bat-copy">
+                      Latest dated page:{" "}
+                      {page.latestDocumentHtmlUrl ? (
+                        <a href={page.latestDocumentHtmlUrl}>{page.latestDocumentTitle}</a>
+                      ) : (
+                        page.latestDocumentTitle
+                      )}{" "}
+                      <span class="docs-inline-muted">({formatDisplayDate(page.latestDocumentUpdated || page.updated)})</span>
+                    </p>
+                  ) : (
+                    <p class="bat-copy">
+                      No scanned page in this repository exposed a reliable update timestamp.
+                    </p>
+                  )}
                 </div>
               </article>
 
-              {relatedDocuments.length > 0 ? (
+              {relatedDocuments.length > 0 && (page.pageType !== "repository" || relatedDocuments.length > 1) ? (
                 <article class="bat-card" id="pages-in-section">
                   <div class="bat-card-bar">
                     <span class="bat-card-file">Pages in this section</span>
@@ -413,19 +371,21 @@ const hasDatedRepositoryDocuments = (page.datedDocumentCount ?? 0) > 0;
           <>
             <header class:list={["docs-reference-header", compactHeader && "is-compact"]}>
               <div class="docs-reference-topline">
-                <p class="docs-reference-kicker">{page.docType}</p>
-                <span class:list={["docs-reference-status", `is-${page.status.toLowerCase().replace(/\s+/g, "-")}`]}>
-                  {page.status}
-                </span>
-                <span class:list={["docs-origin-pill", page.status === "Generated" ? "is-generated" : "is-curated"]}>
-                  {pageOriginLabel}
-                </span>
+                <p class="docs-reference-kicker">{documentEyebrow}</p>
               </div>
-              {!bodyStartsWithPageTitle ? <h1 class="docs-reference-title">{page.title}</h1> : null}
+              <h1 class="docs-reference-title">{page.title}</h1>
               {!summaryDuplicatesOpeningParagraph ? <p class="docs-reference-summary">{page.summary}</p> : null}
               {page.status === "Generated" ? (
                 <p class="docs-reference-generated-note">{pageOriginCopy}</p>
               ) : null}
+              <div class="standard-page-intro-pills docs-reference-intro-pills" aria-label="Document summary">
+                {documentIntroPills.map((pill) => (
+                  <span class="standard-page-intro-pill">
+                    <strong>{pill.label}</strong>
+                    {pill.value}
+                  </span>
+                ))}
+              </div>
             </header>
 
             {(outlineItems.length > 0 || rightRailDocuments.length > 0 || page.pageType === "document") ? (
@@ -463,24 +423,12 @@ const hasDatedRepositoryDocuments = (page.datedDocumentCount ?? 0) > 0;
                         <dt>Repository</dt>
                         <dd>{page.repository}</dd>
                       </div>
-                      <div>
-                        <dt>Updated</dt>
-                        <dd>{page.updated || "Updated date unknown"}</dd>
-                      </div>
-                      <div>
-                        <dt>Owner</dt>
-                        <dd>{page.owner}</dd>
-                      </div>
                       {page.pageType === "document" ? (
                         <div>
                           <dt>Path</dt>
                           <dd>{page.relativePath}</dd>
                         </div>
                       ) : null}
-                      <div>
-                        <dt>Status</dt>
-                        <dd>{page.status}</dd>
-                      </div>
                       <div>
                         <dt>Type</dt>
                         <dd>{page.docType}</dd>
@@ -501,7 +449,7 @@ const hasDatedRepositoryDocuments = (page.datedDocumentCount ?? 0) > 0;
             ) : null}
 
             <article class="docs-reference-article">
-              <div class="docs-markdown docs-reference-markdown" set:html={page.bodyHtml} />
+              <div class="docs-markdown docs-reference-markdown" set:html={renderedBodyHtml} />
             </article>
           </>
         )}
@@ -567,55 +515,32 @@ const hasDatedRepositoryDocuments = (page.datedDocumentCount ?? 0) > 0;
         ) : null}
 
         <section class="docs-reference-toc-card">
-          <p class="docs-reference-toc-title">Document</p>
+          <p class="docs-reference-toc-title">{page.pageType === "repository" ? "Repository links" : "Document"}</p>
           {page.pageType === "document" ? <p class="docs-reference-card-copy">{pageOriginCopy}</p> : null}
-          <dl class="docs-reference-definition-list">
-            <div>
-              <dt>Repository</dt>
-              <dd>{page.repository}</dd>
-            </div>
-            <div>
-              <dt>Updated</dt>
-              <dd>{page.updated || "Updated date unknown"}</dd>
-            </div>
-            <div>
-              <dt>Owner</dt>
-              <dd>{page.owner}</dd>
-            </div>
-            {page.pageType === "document" ? (
+          {page.pageType === "document" ? (
+            <dl class="docs-reference-definition-list">
+              <div>
+                <dt>Repository</dt>
+                <dd>{page.repository}</dd>
+              </div>
               <div>
                 <dt>Path</dt>
                 <dd>{page.relativePath}</dd>
               </div>
-            ) : null}
-            <div>
-              <dt>Status</dt>
-              <dd>{page.status}</dd>
-            </div>
-            {page.pageType === "repository" ? (
-              <>
-                <div>
-                  <dt>Pages</dt>
-                  <dd>{page.fileCount ?? 0}</dd>
-                </div>
-                <div>
-                  <dt>Roots</dt>
-                  <dd>{page.domainRoots.join(", ") || "None"}</dd>
-                </div>
-              </>
-            ) : (
-              <>
-                <div>
-                  <dt>Type</dt>
-                  <dd>{page.docType}</dd>
-                </div>
-                <div>
-                  <dt>Roots</dt>
-                  <dd>{page.domainRoots.join(", ") || "None"}</dd>
-                </div>
-              </>
-            )}
-          </dl>
+              <div>
+                <dt>Type</dt>
+                <dd>{page.docType}</dd>
+              </div>
+              <div>
+                <dt>Roots</dt>
+                <dd>{repositoryRootsLabel}</dd>
+              </div>
+            </dl>
+          ) : (
+            <p class="docs-reference-card-copy">
+              Open the upstream repository or the normalized exports for this snapshot.
+            </p>
+          )}
           <div class="docs-reference-card-actions">
             <a href={page.repositoryUrl} target="_blank" rel="noreferrer">Repository</a>
             {page.sourceUrl ? <a href={page.sourceUrl} target="_blank" rel="noreferrer">Source</a> : null}
@@ -626,7 +551,7 @@ const hasDatedRepositoryDocuments = (page.datedDocumentCount ?? 0) > 0;
       </aside>
     </section>
 
-    <section class="shell shell-narrow standard-footer-actions">
+    <section class="shell docs-shell standard-footer-actions docs-footer-actions">
       <a class="button button-secondary" href={withBasePath("/documents/")}>
         Back to documentation
       </a>

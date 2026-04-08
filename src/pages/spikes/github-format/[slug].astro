@@ -1,7 +1,9 @@
 ---
 import BaseLayout from "../../../layouts/BaseLayout.astro";
+import SpikePageFrame from "../../../components/SpikePageFrame.astro";
 import { getCollection, render } from "astro:content";
 import { getScopedHtmlPageUrl, getScopedMarkdownPageUrl } from "../../../lib/dual-format";
+import { getSpikePageContent, getSpikeSectionNavItems } from "../../../lib/spikes";
 
 export async function getStaticPaths() {
   const pages = await getCollection("github-format-pages");
@@ -16,14 +18,25 @@ const { page } = Astro.props as { page: any };
 const { Content } = await render(page);
 const htmlUrl = getScopedHtmlPageUrl("/spikes/github-format", page.data.slug);
 const markdownUrl = getScopedMarkdownPageUrl("/spikes/github-format", page.data.slug);
+const spikePage = await getSpikePageContent("github-format");
+const spikeSectionNavItems = await getSpikeSectionNavItems("github-format");
 ---
 
 <BaseLayout title={`${page.data.title} | GitHub Format Spike`} description={page.data.description}>
-  <main class="shell shell-narrow">
-    <section class="page-hero page-hero-compact">
-      <p class="eyebrow">GitHub Format Spike</p>
-      <h1>{page.data.title}</h1>
-      <p class="copy">
+  <main>
+    <SpikePageFrame
+      eyebrow={spikePage.eyebrow}
+      title={page.data.title}
+      summary={page.data.description ?? spikePage.summary}
+      pills={spikePage.pills}
+      sectionNavItems={spikeSectionNavItems}
+      sectionTrailItems={[
+        { href: spikePage.href, label: spikePage.label, current: false },
+        { label: page.data.title, current: true },
+      ]}
+    >
+    <section class="section-block prose-block">
+      <p class="copy standard-copy-wide">
         HTML URL: <a href={htmlUrl}>{htmlUrl}</a><br />
         Markdown URL: <a href={markdownUrl}>{markdownUrl}</a>
       </p>
@@ -32,5 +45,6 @@ const markdownUrl = getScopedMarkdownPageUrl("/spikes/github-format", page.data.
     <article class="section-block prose-block">
       <Content />
     </article>
+    </SpikePageFrame>
   </main>
 </BaseLayout>

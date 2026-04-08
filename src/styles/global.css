@@ -448,20 +448,59 @@ code {
 }
 
 .standard-page-intro {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 1.5rem;
+  display: grid;
+  justify-items: start;
+  gap: 0.85rem;
   padding: 0.2rem 0 0.4rem;
 }
 
+.standard-page-intro-hero {
+  gap: 1rem;
+  padding-bottom: 0.2rem;
+}
+
+.standard-page-intro-copy {
+  display: grid;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
 .standard-page-intro-detail {
-  align-items: center;
+  justify-items: start;
 }
 
 .standard-page-title {
   max-width: 12ch;
   font-size: clamp(2.7rem, 5vw, 4.5rem);
+}
+
+.standard-page-intro-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.55rem;
+  width: 100%;
+}
+
+.standard-page-intro-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  min-height: 1.85rem;
+  padding: 0.18rem 0.58rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(51, 62, 72, 0.08);
+  color: var(--muted);
+  font-family: "Cascadia Code", "Fira Code", monospace;
+  font-size: 0.74rem;
+  line-height: 1.3;
+}
+
+.standard-page-intro-pill strong {
+  color: var(--heading);
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .docs-index-hero .standard-page-title {
@@ -715,7 +754,7 @@ code {
 }
 
 .bat-grid-radar-priority {
-  grid-template-columns: minmax(0, 1.72fr) minmax(16rem, 0.78fr);
+  grid-template-columns: minmax(0, 1.92fr) minmax(14rem, 0.62fr);
   align-items: start;
 }
 
@@ -835,7 +874,7 @@ code {
 
 .radar-top-support {
   display: grid;
-  gap: 0.85rem;
+  gap: 2.1rem;
 }
 
 .metrics-demo-top {
@@ -1095,7 +1134,24 @@ code {
   align-items: start;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 0.45rem;
+  margin-bottom: 0.7rem;
+}
+
+.radar-visual-toolbar .bat-heading {
+  font-size: 1.12rem;
+  line-height: 1.3;
+}
+
+.radar-visual-toolbar .bat-meta {
+  max-width: 32rem;
+  font-size: 0.92rem;
+  line-height: 1.65;
+}
+
+.radar-extended-toggle {
+  padding: 0.42rem 0.68rem;
+  font-size: 0.78rem;
+  line-height: 1.2;
 }
 
 .bat-card-body-stack {
@@ -1298,14 +1354,42 @@ code {
   color: var(--brand-gray);
   font-size: 0.95rem;
   line-height: 1.7;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .community-card-meta {
-  display: grid;
-  gap: 0.45rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.45rem;
   color: var(--muted);
   font-size: 0.84rem;
   line-height: 1.6;
+}
+
+.community-card-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 1.7rem;
+  padding: 0.16rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(51, 62, 72, 0.08);
+  color: var(--muted);
+}
+
+.community-card-meta-pill strong {
+  color: var(--heading);
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.community-card-meta-pill.is-wide {
+  max-width: 100%;
 }
 
 .community-card-tags {
@@ -1415,30 +1499,6 @@ code {
   display: grid;
   gap: 0.65rem;
   padding-bottom: 0;
-}
-
-.docs-index-hero-copy {
-  display: grid;
-  gap: 0.65rem;
-}
-
-.docs-index-hero-trust {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem 0.55rem;
-  color: var(--muted);
-  font-family: "Cascadia Code", "Fira Code", monospace;
-  font-size: 0.76rem;
-}
-
-.docs-index-hero-trust span {
-  display: inline-flex;
-  align-items: center;
-  min-height: 1.7rem;
-  padding: 0.18rem 0.58rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.74);
-  border: 1px solid rgba(51, 62, 72, 0.08);
 }
 
 .docs-index-strip {
@@ -2033,6 +2093,7 @@ code {
   display: grid;
   gap: 0.85rem;
   padding: 1.05rem;
+  min-height: 100%;
 }
 
 .docs-library-card-link {
@@ -2101,6 +2162,7 @@ code {
 .docs-library-body {
   display: grid;
   gap: 0.72rem;
+  align-content: start;
 }
 
 .docs-library-type,
@@ -2170,7 +2232,7 @@ code {
 }
 
 .docs-library-cta {
-  margin-top: 0.15rem;
+  margin-top: auto;
   padding: 0.42rem 0.72rem;
   border-radius: 999px;
   background: rgba(0, 114, 152, 0.08);
@@ -2241,6 +2303,11 @@ code {
 
 .docs-reference-layout.shell {
   padding-top: 0;
+}
+
+.docs-footer-actions {
+  padding-top: 0.5rem;
+  padding-bottom: 4rem;
 }
 
 .docs-breadcrumb-link {
@@ -2405,8 +2472,17 @@ code {
   padding: 0.1rem 0 0.45rem;
 }
 
-.docs-repo-topline {
-  gap: 0.5rem;
+.docs-repo-intro-panel {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 0.85rem;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.docs-repo-intro-panel .standard-page-intro-pills {
+  width: 100%;
 }
 
 .docs-repo-page-title {
@@ -2434,61 +2510,6 @@ code {
   display: flex;
   flex-wrap: wrap;
   gap: 0.6rem;
-}
-
-.docs-repo-trust-strip {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.9rem;
-}
-
-.docs-repo-trust-card {
-  display: grid;
-  gap: 0.32rem;
-  min-width: 0;
-  padding: 0.95rem 1rem;
-  border: 1px solid rgba(51, 62, 72, 0.08);
-  border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.78);
-  box-shadow: 0 16px 40px rgba(22, 32, 40, 0.05);
-}
-
-.docs-repo-trust-label,
-.docs-repo-trust-value,
-.docs-repo-trust-copy {
-  margin: 0;
-}
-
-.docs-repo-trust-label {
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-}
-
-.docs-repo-trust-value {
-  color: var(--heading);
-  font-size: 1rem;
-  font-weight: 700;
-  line-height: 1.35;
-}
-
-.docs-repo-trust-value a {
-  color: inherit;
-  text-decoration: none;
-}
-
-.docs-repo-trust-value a:hover,
-.docs-repo-trust-value a:focus-visible {
-  color: var(--primary-blue);
-  text-decoration: underline;
-}
-
-.docs-repo-trust-copy {
-  color: var(--muted);
-  font-size: 0.82rem;
-  line-height: 1.55;
 }
 
 .docs-repo-action {
@@ -2524,6 +2545,10 @@ code {
 .docs-repo-grid .bat-card {
   background: rgba(255, 255, 255, 0.82);
   box-shadow: 0 24px 60px rgba(22, 32, 40, 0.08);
+}
+
+.docs-repo-grid .bat-card-body {
+  padding: 0.95rem 1rem 1rem;
 }
 
 .docs-repo-grid .bat-card-wide {
@@ -2568,6 +2593,10 @@ code {
   font-size: 0.8rem;
 }
 
+.docs-inline-muted {
+  color: var(--muted);
+}
+
 .docs-reference-sidebar,
 .docs-reference-toc {
   position: sticky;
@@ -2588,7 +2617,7 @@ code {
 
 .docs-reference-sidebar-label {
   margin: 0;
-  color: var(--muted);
+  color: var(--brand-red);
   font-size: 0.74rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -2633,7 +2662,7 @@ code {
 
 .docs-reference-breadcrumb-context {
   margin: 0;
-  color: var(--primary-blue);
+  color: var(--muted);
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -2698,7 +2727,7 @@ code {
 
 .docs-reference-kicker {
   margin: 0;
-  color: var(--primary-blue);
+  color: var(--brand-red);
   font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -4888,6 +4917,10 @@ code {
   gap: 1rem;
 }
 
+.spike-page-frame .standard-page-title {
+  max-width: 13ch;
+}
+
 .spike-verdict {
   display: inline-flex;
   align-items: center;
@@ -5685,10 +5718,6 @@ h3 {
     grid-template-columns: minmax(13rem, 16rem) minmax(0, 1fr);
   }
 
-  .docs-repo-trust-strip {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .docs-index-strip,
   .docs-recent-grid,
   .docs-search-results-list,
@@ -5742,6 +5771,47 @@ h3 {
   .standard-section-heading {
     flex-direction: column;
     align-items: start;
+  }
+
+  .standard-page-intro-hero {
+    gap: 0.75rem;
+  }
+
+  .standard-page-intro-pills {
+    width: 100%;
+  }
+
+  .standard-header {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+
+  .brand {
+    width: 100%;
+  }
+
+  .standard-header-actions {
+    display: grid;
+    gap: 0.7rem;
+    justify-items: stretch;
+  }
+
+  .standard-nav {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 0.45rem;
+    order: 2;
+  }
+
+  .standard-nav-link,
+  .standard-nav-group-summary {
+    min-height: 2.4rem;
+  }
+
+  .standard-search {
+    order: 1;
+    width: 100%;
   }
 
   h1 {
@@ -5874,10 +5944,6 @@ h3 {
   .docs-reference-layout {
     grid-template-columns: 1fr;
     gap: 1.1rem;
-  }
-
-  .docs-repo-trust-strip {
-    grid-template-columns: 1fr;
   }
 
   .docs-search-results-list {

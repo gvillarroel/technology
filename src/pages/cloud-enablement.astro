@@ -1,9 +1,15 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import StandardPageHeader from "../components/StandardPageHeader.astro";
+import StandardPageIntro from "../components/StandardPageIntro.astro";
+import StandardSourceCard from "../components/StandardSourceCard.astro";
 import { getCloudEnablementProviders } from "../lib/cloud-enablement";
+import { getStandardPageIntro } from "../lib/page-intros";
+import { getStandardPageSource } from "../lib/page-sources";
 
 const providers = await getCloudEnablementProviders();
+const intro = await getStandardPageIntro("cloud-enablement");
+const sourceCard = await getStandardPageSource("cloud-enablement");
 const archetypes = ["Infrastructure", "Tool", "Product"] as const;
 const entries = providers.flatMap((provider) =>
   provider.products.map((product) => ({
@@ -28,15 +34,29 @@ const entries = providers.flatMap((provider) =>
       searchPlaceholder="Search product, feature, or category"
     />
 
-    <section class="standard-page-intro">
-      <div>
-        <p class="eyebrow">Cloud Enablement</p>
-        <h1 class="standard-page-title">Google Cloud first, AWS alongside it.</h1>
-        <p class="copy standard-copy-wide">
-          Review cloud products through the same operational lens as the radar: start with
-          archetype and cloud filters, then search and scan the seeded product index.
-        </p>
-      </div>
+    <StandardPageIntro
+      eyebrow={intro.eyebrow}
+      title={intro.title}
+      summary={intro.summary}
+      pills={[
+        { label: "Providers", value: String(providers.length) },
+        { label: "Products", value: String(entries.length) },
+        { label: "Archetypes", value: String(archetypes.length) },
+      ]}
+    />
+
+    <section class="bat-grid bat-grid-radar">
+      <StandardSourceCard
+        file={sourceCard.file}
+        lang={sourceCard.lang}
+        title={sourceCard.title}
+        summary={sourceCard.summary}
+        meta={[
+          { label: "providers", value: String(providers.length) },
+          { label: "products", value: String(entries.length) },
+          { label: "updated", value: providers.map((provider) => provider.updated).filter(Boolean).sort().at(-1) ?? "Unknown" },
+        ]}
+      />
     </section>
 
     <section class="tech-radar-top" id="cloud-enablement-top">

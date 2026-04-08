@@ -1,15 +1,21 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import StandardPageHeader from "../components/StandardPageHeader.astro";
+import StandardPageIntro from "../components/StandardPageIntro.astro";
+import StandardSourceCard from "../components/StandardSourceCard.astro";
 import { getTechCommunities } from "../lib/tech-communities";
+import { getStandardPageIntro } from "../lib/page-intros";
+import { getStandardPageSource } from "../lib/page-sources";
 
 const communities = await getTechCommunities();
+const intro = await getStandardPageIntro("communities");
+const sourceCard = await getStandardPageSource("communities");
 const tracks = ["Software", "AI", "Products"];
 ---
 
 <BaseLayout
-  title="Tech Communities | Berkeley Facts"
-  description="Directory of Berkeley Facts technology communities across AI, InnerSource, product, data, and related practices."
+  title="Tech Communities | e*f(x) Technology"
+  description="Directory of technology communities across AI, software, product, data, and adjacent practices."
 >
   <main class="shell shell-narrow standard-page">
     <StandardPageHeader
@@ -18,16 +24,29 @@ const tracks = ["Software", "AI", "Products"];
       searchPlaceholder="Search communities or audience"
     />
 
-    <section class="standard-page-intro">
-      <div>
-        <p class="eyebrow">Berkeley Facts</p>
-        <h1 class="standard-page-title">Technology communities for shared practice.</h1>
-        <p class="copy standard-copy-wide">
-          This page lists Berkeley Facts communities for artificial intelligence, InnerSource,
-          product, and adjacent technology practices. Read the summary first, filter by category,
-          then open the external community link that best matches the work you are doing.
-        </p>
-      </div>
+    <StandardPageIntro
+      eyebrow={intro.eyebrow}
+      title={intro.title}
+      summary={intro.summary}
+      pills={[
+        { label: "Communities", value: String(communities.length) },
+        { label: "Tracks", value: String(tracks.length) },
+        { label: "Mode", value: "External links" },
+      ]}
+    />
+
+    <section class="bat-grid bat-grid-radar">
+      <StandardSourceCard
+        file={sourceCard.file}
+        lang={sourceCard.lang}
+        title={sourceCard.title}
+        summary={sourceCard.summary}
+        meta={[
+          { label: "communities", value: String(communities.length) },
+          { label: "tracks", value: String(tracks.length) },
+          { label: "mode", value: "External links" },
+        ]}
+      />
     </section>
 
     <section class="standard-toggle-row" aria-label="Technology community track filters">
@@ -70,9 +89,9 @@ const tracks = ["Software", "AI", "Products"];
           <div class="community-card-body">
             <h3 class="community-card-title">{community.name}</h3>
             <p class="community-card-copy">{community.summary}</p>
-            <div class="community-card-meta">
-              <span>cadence: {community.cadence}</span>
-              <span>audience: {community.audience.join(", ")}</span>
+            <div class="community-card-meta" aria-label="Community metadata">
+              <span class="community-card-meta-pill"><strong>Cadence</strong>{community.cadence}</span>
+              <span class="community-card-meta-pill is-wide"><strong>Audience</strong>{community.audience.join(", ")}</span>
             </div>
             <div class="community-card-tags" aria-label="Community tags">
               {community.tags.map((tag) => (

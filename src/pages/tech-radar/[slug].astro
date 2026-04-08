@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import StandardPageIntro from "../../components/StandardPageIntro.astro";
 import StandardPageHeader from "../../components/StandardPageHeader.astro";
 import { getRadarEntries, getRadarEntryBySlug } from "../../lib/tech-radar";
 import { withBasePath } from "../../lib/site-url";
@@ -14,6 +15,11 @@ export async function getStaticPaths() {
 
 const { slug } = Astro.params;
 const entry = slug ? await getRadarEntryBySlug(slug) : undefined;
+const introPills = [
+  { label: "Ring", value: entry?.ring ?? "" },
+  { label: "Scope", value: entry?.primaryScope ?? "" },
+  { label: "Owner", value: entry?.owner ?? "" },
+].filter((item) => item.value);
 
 if (!entry) {
   return Astro.redirect(withBasePath("/tech-radar/"));
@@ -32,13 +38,13 @@ if (!entry) {
       searchQuery={entry.name}
     />
 
-    <section class="standard-page-intro standard-page-intro-detail">
-      <div>
-        <p class="eyebrow">{entry.ring} / {entry.primaryScope}</p>
-        <h1 class="standard-page-title">{entry.name}</h1>
-        <p class="copy standard-copy-wide">{entry.summary}</p>
-      </div>
-    </section>
+    <StandardPageIntro
+      eyebrow={`${entry.ring} / ${entry.primaryScope}`}
+      title={entry.name}
+      summary={entry.summary}
+      pills={introPills}
+      className="standard-page-intro-detail"
+    />
 
     <section class="bat-grid bat-grid-detail">
       <article class="bat-card bat-card-wide">

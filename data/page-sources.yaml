@@ -1,0 +1,36 @@
+pages:
+  adrs:
+    file: data/adr-repositories.yaml
+    lang: yaml
+    title: Source of truth
+    summary: Repository scan rules define where ADR Markdown is discovered, normalized, and exposed in the index.
+  ai-sdlc:
+    file: data/ai-sdlc.yaml
+    lang: yaml
+    title: Source of truth
+    summary: Governed lifecycle topics, copy, and topic metadata live in one shared AI SDLC dataset.
+  cloud-enablement:
+    file: data/cloud-enablement.yaml
+    lang: yaml
+    title: Source of truth
+    summary: Governed provider inventory with official links, coverage notes, and seeded product entries for the cloud catalog.
+  communities:
+    file: data/tech-communities.yaml
+    lang: yaml
+    title: Source of truth
+    summary: Shared community metadata defines tracks, audiences, tags, cadence, and the external home for each group.
+  documents:
+    file: data/document-repositories.yaml
+    lang: yaml
+    title: Source of truth
+    summary: Repository scan rules and Markdown normalization drive the documentation index and folder-aware detail pages.
+  models:
+    file: data/models.yaml
+    lang: yaml
+    title: Source of truth
+    summary: Governed model-family entries define status, regions, pricing references, and source-specific delivery metadata.
+  tech-radar:
+    file: data/tech-radar.yaml
+    lang: yaml
+    title: Source of truth
+    summary: Lifecycle state, scope, ownership, and guidance come from the shared radar dataset that powers both the radial and the list.

@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../../../layouts/BaseLayout.astro";
+import StandardPageIntro from "../../../components/StandardPageIntro.astro";
 import StandardPageHeader from "../../../components/StandardPageHeader.astro";
 import {
   getCloudEnablementEntries,
@@ -20,6 +21,11 @@ export async function getStaticPaths() {
 
 const { provider, slug } = Astro.params;
 const entry = provider && slug ? await getCloudEnablementEntryBySlug(provider, slug) : undefined;
+const introPills = [
+  { label: "Provider", value: entry?.providerShortName ?? "" },
+  { label: "Archetype", value: entry?.archetype ?? "" },
+  { label: "Coverage", value: entry?.featureCoverage ?? "" },
+].filter((item) => item.value);
 
 if (!entry) {
   return Astro.redirect(withBasePath("/cloud-enablement/"));
@@ -38,13 +44,13 @@ if (!entry) {
       searchQuery={entry.name}
     />
 
-    <section class="standard-page-intro standard-page-intro-detail">
-      <div>
-        <p class="eyebrow">{entry.providerShortName} / {entry.archetype}</p>
-        <h1 class="standard-page-title">{entry.name}</h1>
-        <p class="copy standard-copy-wide">{entry.summary}</p>
-      </div>
-    </section>
+    <StandardPageIntro
+      eyebrow={`${entry.providerShortName} / ${entry.archetype}`}
+      title={entry.name}
+      summary={entry.summary}
+      pills={introPills}
+      className="standard-page-intro-detail"
+    />
 
     <section class="bat-grid bat-grid-detail">
       <article class="bat-card bat-card-wide">

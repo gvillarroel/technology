@@ -1,9 +1,15 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import StandardPageHeader from "../components/StandardPageHeader.astro";
+import StandardPageIntro from "../components/StandardPageIntro.astro";
+import StandardSourceCard from "../components/StandardSourceCard.astro";
 import { getModelCatalogData } from "../lib/models";
+import { getStandardPageIntro } from "../lib/page-intros";
+import { getStandardPageSource } from "../lib/page-sources";
 
 const catalog = await getModelCatalogData();
+const intro = await getStandardPageIntro("models");
+const sourceCard = await getStandardPageSource("models");
 const statusFilters = ["approved", "explore", "blacklisted"] as const;
 ---
 
@@ -18,34 +24,29 @@ const statusFilters = ["approved", "explore", "blacklisted"] as const;
       searchPlaceholder="Search family, provider, model, or region"
     />
 
-    <section class="standard-page-intro">
-      <div>
-        <p class="eyebrow">Models</p>
-        <h1 class="standard-page-title">Model families, not ad hoc picks.</h1>
-        <p class="copy standard-copy-wide">
-          This catalog is driven entirely from <code>data/models.yaml</code>. It tracks approved,
-          exploratory, and blocked model families across managed Vertex AI Model Garden access and
-          local Ollama runtimes.
-        </p>
-      </div>
-    </section>
+    <StandardPageIntro
+      eyebrow={intro.eyebrow}
+      title={intro.title}
+      summary={intro.summary}
+      pills={[
+        { label: "Families", value: String(catalog.families.length) },
+        { label: "Sources", value: String(catalog.sources.length) },
+        { label: "Updated", value: catalog.updated },
+      ]}
+    />
 
-    <section class="models-summary-grid" aria-label="Catalog summary">
-      <article class="info-card models-summary-card">
-        <p class="eyebrow">Updated</p>
-        <h2>{catalog.updated}</h2>
-        <p>{catalog.summary}</p>
-      </article>
-      <article class="info-card models-summary-card">
-        <p class="eyebrow">Families</p>
-        <h2>{catalog.families.length}</h2>
-        <p>Each card shows regions available, price reference, and governance status.</p>
-      </article>
-      <article class="info-card models-summary-card">
-        <p class="eyebrow">Sources</p>
-        <h2>{catalog.sources.length}</h2>
-        <p>Managed access and local runtime options stay in one governed inventory.</p>
-      </article>
+    <section class="bat-grid bat-grid-radar">
+      <StandardSourceCard
+        file={sourceCard.file}
+        lang={sourceCard.lang}
+        title={sourceCard.title}
+        summary={sourceCard.summary}
+        meta={[
+          { label: "families", value: String(catalog.families.length) },
+          { label: "sources", value: String(catalog.sources.length) },
+          { label: "updated", value: catalog.updated },
+        ]}
+      />
     </section>
 
     <section class="tech-radar-top" id="models-top">

@@ -1,0 +1,41 @@
+---
+export interface IntroPill {
+  label: string;
+  value: string;
+}
+
+export interface Props {
+  eyebrow: string;
+  title: string;
+  summary: string;
+  pills?: IntroPill[];
+  className?: string;
+}
+
+const {
+  eyebrow,
+  title,
+  summary,
+  pills = [],
+  className = "",
+} = Astro.props;
+---
+
+<section class:list={["standard-page-intro", "standard-page-intro-hero", className]}>
+  <div class="standard-page-intro-copy">
+    <p class="eyebrow">{eyebrow}</p>
+    <h1 class="standard-page-title">{title}</h1>
+    <p class="copy standard-copy-wide">{summary}</p>
+  </div>
+
+  {pills.length > 0 ? (
+    <div class="standard-page-intro-pills" aria-label="Page summary">
+      {pills.map((pill) => (
+        <span class="standard-page-intro-pill">
+          <strong>{pill.label}</strong>
+          {pill.value}
+        </span>
+      ))}
+    </div>
+  ) : null}
+</section>

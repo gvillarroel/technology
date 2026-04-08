@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../../../../layouts/BaseLayout.astro";
+import StandardPageIntro from "../../../../components/StandardPageIntro.astro";
 import StandardPageHeader from "../../../../components/StandardPageHeader.astro";
 import { getAiSdlcData, getAiSdlcDetailHtmlUrl, getAiSdlcTopicBySlug, getAiSdlcTopics } from "../../../../lib/ai-sdlc";
 import { withBasePath } from "../../../../lib/site-url";
@@ -56,6 +57,17 @@ const aiSdlcTrailItems = [
     current: true,
   },
 ];
+const introPills = [
+  { label: "Repository", value: skill?.repositoryName ?? "" },
+  {
+    label: "Evaluation",
+    value: skill?.evaluationSummary.evaluated ? detailCopy?.statusEvaluated ?? "" : detailCopy?.statusNotEvaluated ?? "",
+  },
+  {
+    label: "Install",
+    value: skill?.installAvailable ? "Available" : "Unavailable",
+  },
+].filter((item) => item.value);
 
 function toPercentLabel(value: number) {
   return `${Math.round(value * 100)}%`;
@@ -127,13 +139,13 @@ function getEvaluationMatrix(evaluation: NonNullable<typeof skill>["evaluations"
       sectionTrailLabel="AI SDLC skill path"
     />
 
-    <section class="standard-page-intro standard-page-intro-detail">
-      <div>
-        <p class="eyebrow">{detailCopy.breadcrumbPrefix} / {skill.repositoryName}</p>
-        <h1 class="standard-page-title">{skill.name}</h1>
-        <p class="copy standard-copy-wide">{skill.description}</p>
-      </div>
-    </section>
+    <StandardPageIntro
+      eyebrow={`${detailCopy.breadcrumbPrefix} / ${skill.repositoryName}`}
+      title={skill.name}
+      summary={skill.description}
+      pills={introPills}
+      className="standard-page-intro-detail"
+    />
 
     <section class="bat-list">
       <article class="bat-card bat-card-wide">

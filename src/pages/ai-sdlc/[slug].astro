@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import StandardPageIntro from "../../components/StandardPageIntro.astro";
 import StandardPageHeader from "../../components/StandardPageHeader.astro";
 import { getAiMetricsDemoDataset } from "../../lib/ai-metrics-demo";
 import {
@@ -32,6 +33,20 @@ const metricsDataset = topic?.slug === "metrics" ? await getAiMetricsDemoDataset
 const skillsPageCopy = topic?.skillsPage;
 const harnessToolGroups = topic?.slug === "harness-tools" ? await getAiSdlcResolvedToolGroups(topic) : undefined;
 const harnessTools = harnessToolGroups?.flatMap((group) => group.tools) ?? [];
+const introPills = [
+  { label: "Status", value: topic?.status ?? "" },
+  {
+    label: "Artifacts",
+    value:
+      topic?.slug === "skills"
+        ? `${skillsCatalog?.skills.length ?? 0} approved skills`
+        : topic?.slug === "harness-tools"
+          ? `${harnessTools.length} radar tools`
+          : topic?.slug === "metrics"
+            ? `${metricsDataset?.teams.length ?? 0} teams`
+            : "",
+  },
+].filter((item) => item.value);
 const harnessCycleMermaid = `
 flowchart LR
   A["Generate Code"] --> B["Validate Changes"]
@@ -90,13 +105,13 @@ const aiSdlcSectionNavItems = [
       sectionNavLabel="AI SDLC sections"
     />
 
-    <section class="standard-page-intro standard-page-intro-detail">
-      <div>
-        <p class="eyebrow">{overview.copy.detailEyebrowPrefix} / {topic.status}</p>
-        <h1 class="standard-page-title">{topic.name}</h1>
-        <p class="copy standard-copy-wide">{topic.summary}</p>
-      </div>
-    </section>
+    <StandardPageIntro
+      eyebrow={`${overview.copy.detailEyebrowPrefix} / ${topic.status}`}
+      title={topic.name}
+      summary={topic.summary}
+      pills={introPills}
+      className="standard-page-intro-detail"
+    />
 
     {topic.slug === "skills" && skillsCatalog ? (
       <>

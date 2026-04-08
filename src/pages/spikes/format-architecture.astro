@@ -1,5 +1,7 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import SpikePageFrame from "../../components/SpikePageFrame.astro";
+import { getSpikePageContent, getSpikeSectionNavItems } from "../../lib/spikes";
 
 const alternatives = [
   {
@@ -51,23 +53,28 @@ const alternatives = [
     href: "/spikes/github-format/overview/",
   },
 ];
+
+const spikePage = await getSpikePageContent("format-architecture");
+const spikeSectionNavItems = await getSpikeSectionNavItems("format-architecture");
 ---
 
 <BaseLayout
   title="Format Architecture Spike"
   description="Comparison of route and content-source alternatives for HTML and Markdown versions of every page."
 >
-  <main class="shell shell-narrow shell-spike">
-    <section class="page-hero page-hero-compact">
-      <p class="eyebrow">Format Architecture Spike</p>
-      <h1>HTML + Markdown page strategy</h1>
-      <p class="copy">
-        Goal: one repeatable pattern for all pages, regardless of whether the content starts in
-        Markdown, JSON, CSV, or a remote collector.
-      </p>
-      <p class="copy">
-        Recommendation: keep HTML as the canonical route, expose Markdown as the same route with
-        a <code>.md</code> suffix, and normalize every source into a shared page model.
+  <main>
+    <SpikePageFrame
+      eyebrow={spikePage.eyebrow}
+      title={spikePage.title}
+      summary={spikePage.summary}
+      pills={spikePage.pills}
+      sectionNavItems={spikeSectionNavItems}
+      sectionTrailItems={[{ label: spikePage.label, current: true }]}
+    >
+    <section class="section-block prose-block">
+      <p class="copy standard-copy-wide">
+        Recommendation: keep HTML as the canonical route, expose Markdown as the same route with a
+        <code>.md</code> suffix, and normalize every source into a shared page model.
       </p>
     </section>
 
@@ -98,5 +105,6 @@ const alternatives = [
         ))}
       </div>
     </section>
+    </SpikePageFrame>
   </main>
 </BaseLayout>

@@ -1,0 +1,25 @@
+pages:
+  adrs:
+    eyebrow: Practice
+    title: Architecture decision records.
+    summary: Browse repository-backed ADRs with a consistent index for status, product, year, and area.
+  cloud-enablement:
+    eyebrow: Cloud Enablement
+    title: Google Cloud first, AWS alongside it.
+    summary: Review cloud products through the same operational lens as the radar, then narrow by archetype, provider, and search.
+  communities:
+    eyebrow: Communities
+    title: Shared practice, not scattered channels.
+    summary: Find technology communities by track, audience, and category, then open the external home for the group that fits the work.
+  documents:
+    eyebrow: Documentation
+    title: Repository-driven documentation.
+    summary: Browse repository docs as one governed library with repository landing pages and folder-aware Markdown navigation.
+  models:
+    eyebrow: Models
+    title: Model families, not ad hoc picks.
+    summary: Use a governed catalog of approved, exploratory, and blocked model families across managed and local runtimes.
+  tech-radar:
+    eyebrow: Technology Radar
+    title: Lifecycle decisions across technology scopes.
+    summary: Start with posture in the radial, then narrow the index by lifecycle, archetype, source, and free-text search.
