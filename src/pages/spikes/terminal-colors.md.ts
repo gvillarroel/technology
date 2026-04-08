@@ -42,5 +42,7 @@ export function GET() {
     doc.paragraph(variant.description);
   }
 
+  doc.paragraph(markdownLink("Back to home", withBasePath("/index.md")));
+
   return markdownResponse(doc.finish());
 }

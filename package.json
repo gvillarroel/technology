@@ -9,10 +9,11 @@
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",
-    "build": "npm run check:markdown-pages && astro build",
+    "build": "npm run check:markdown-pages && astro build && npm run check:markdown-pages:dist",
     "preview": "astro preview",
     "check": "npm run check:markdown-pages && astro check",
     "check:markdown-pages": "node ./scripts/verify-markdown-page-pairs.mjs",
+    "check:markdown-pages:dist": "node ./scripts/verify-markdown-page-pairs.mjs --dist",
     "prepare": "node ./scripts/install-git-hooks.mjs"
   },
   "devDependencies": {

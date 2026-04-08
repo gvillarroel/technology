@@ -4,6 +4,7 @@ export type StandardPageKey =
   | "home"
   | "tech-radar"
   | "cloud-enablement"
+  | "models"
   | "ai-sdlc"
   | "adrs"
   | "communities"
@@ -32,6 +33,10 @@ const standardPageNavConfig: Record<StandardPageKey, Omit<StandardNavItem, "curr
     label: "Cloud Enablement",
     compactLabel: "Cloud",
   },
+  models: {
+    href: withBasePath("/models/"),
+    label: "Models",
+  },
   "ai-sdlc": {
     href: withBasePath("/ai-sdlc/"),
     label: "AI SDLC",
@@ -57,7 +62,7 @@ export function getStandardPageNavGroups(currentPage?: StandardPageKey): Standar
       id: "platform",
       label: "Platform",
       compactLabel: "Platform",
-      pageKeys: ["tech-radar", "cloud-enablement"],
+      pageKeys: ["tech-radar", "cloud-enablement", "models"],
     },
     {
       id: "practice",

@@ -4,18 +4,69 @@ import StandardPageHeader from "../components/StandardPageHeader.astro";
 import { getDocumentIndexData } from "../lib/documents";
 import { withBasePath } from "../lib/site-url";
 
-const { repositorySummaries, sourceConfigs, scannedRepositories, documentCount } = await getDocumentIndexData();
+const searchQuery = Astro.url.searchParams.get("q")?.trim() ?? "";
+const normalizedSearchQuery = searchQuery.toLowerCase();
+const { repositorySummaries, sourceConfigs, scannedRepositories, documentCount, searchEntries } = await getDocumentIndexData();
+const latestRepositoryUpdate =
+  [...repositorySummaries]
+    .map((entry) => entry.updated)
+    .filter(Boolean)
+    .sort()
+    .at(-1) ?? "";
+const formatDisplayDate = (value?: string) => {
+  if (!value) {
+    return "Unknown";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+};
 const configFilesPreview = [
-  "data/",
-  "  document-repositories.yaml",
-  "src/lib/",
-  "  documents.ts",
-  "src/pages/",
-  "  documents.astro",
-  "  documents.md.ts",
-  "  documents/[...slug].astro",
-  "  documents/[...slug].md.ts",
+  "data/document-repositories.yaml",
+  "src/lib/documents.ts",
+  "src/pages/documents.astro",
+  "src/pages/documents/[...slug].astro",
 ].join("\n");
+const filteredRepositorySummaries = normalizedSearchQuery
+  ? repositorySummaries.filter((repository) =>
+      [
+        repository.repository,
+        repository.summary,
+        repository.owner,
+        repository.roots.join(" "),
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedSearchQuery),
+    )
+  : repositorySummaries;
+const searchResults = normalizedSearchQuery
+  ? searchEntries
+      .filter((entry) =>
+        [
+          entry.repository,
+          entry.title,
+          entry.summary,
+          entry.relativePath,
+          ...entry.headings,
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(normalizedSearchQuery),
+      )
+      .slice(0, 24)
+  : [];
+const getMatchingHeading = (headings: string[]) =>
+  headings.find((heading) => heading.toLowerCase().includes(normalizedSearchQuery)) ?? "";
 ---
 
 <BaseLayout
@@ -27,89 +78,92 @@ const configFilesPreview = [
       currentPage="documents"
       searchAction={withBasePath("/documents/")}
       searchPlaceholder="Search repositories or document paths"
+      searchQuery={searchQuery}
     />
 
-    <section class="standard-page-intro">
-      <div>
+    <section class="standard-page-intro docs-index-hero">
+      <div class="docs-index-hero-copy">
         <p class="eyebrow">Documentation</p>
         <h1 class="standard-page-title">Repository-driven documentation.</h1>
         <p class="copy standard-copy-wide">
-          This section expands configured GitHub repository filters, scans Markdown files that match
-          each repository's document rules, and turns every matching repository into a content page
-          with a folder-aware navigation tree.
+          Browse repository docs as a single library, with one page per repository and folder-aware
+          navigation for every Markdown section that was discovered during the build.
         </p>
+      </div>
+      <div class="docs-index-hero-trust" aria-label="Documentation library summary">
+        <span>{repositorySummaries.length} repositories</span>
+        <span>{documentCount} pages</span>
+        <span>last update: {formatDisplayDate(latestRepositoryUpdate)}</span>
       </div>
     </section>
 
-    <section class="bat-grid bat-grid-detail">
-      <article class="bat-card bat-card-wide">
-        <div class="bat-card-bar">
-          <span class="bat-card-file">GitHub repositories</span>
-          <span class="bat-card-lang">scan</span>
-        </div>
-
-        <div class="bat-card-body bat-card-body-stack">
-          <div class="bat-line">
-            <span class="bat-gutter">1</span>
-            <div class="bat-code">
-              <p class="bat-heading">GitHub repository system</p>
-              <p class="bat-copy">
-                The Documentation section is driven from one central GitHub repository scan. During
-                build, the site expands the configured account, inspects each repository tree
-                offline, and promotes any matching `docs/**/*.md` files into static repository and
-                document pages.
-              </p>
-            </div>
-          </div>
-          <div class="bat-line">
-            <span class="bat-gutter">2</span>
-            <div class="bat-code bat-meta-row">
-              <span>config entries: {sourceConfigs.length}</span>
-              <span>repositories scanned: {scannedRepositories.length}</span>
-              <span>repositories with docs: {repositorySummaries.length}</span>
-              <span>markdown files: {documentCount}</span>
-            </div>
-          </div>
-        </div>
+    <section class="docs-index-strip" aria-label="Library scan summary">
+      <article class="docs-index-metric-card">
+        <p class="docs-index-metric-label">Library coverage</p>
+        <p class="docs-index-metric-value">{repositorySummaries.length} repositories with docs</p>
+        <p class="docs-index-metric-copy">
+          From {scannedRepositories.length} scanned repositories under the configured GitHub account.
+        </p>
       </article>
 
-      <article class="bat-card">
-        <div class="bat-card-bar">
-          <span class="bat-card-file">data/document-repositories.yaml</span>
-          <span class="bat-card-lang">yaml</span>
-        </div>
+      <article class="docs-index-metric-card">
+        <p class="docs-index-metric-label">Freshness signal</p>
+        <p class="docs-index-metric-value">{documentCount} Markdown pages indexed</p>
+        <p class="docs-index-metric-copy">
+          Latest dated update found in the library: {formatDisplayDate(latestRepositoryUpdate)}.
+        </p>
+      </article>
 
-        <div class="bat-card-body bat-card-body-stack">
-          <div class="bat-line">
-            <span class="bat-gutter">1</span>
-            <div class="bat-code">
-              <p class="bat-heading">Configuration files</p>
-              <p class="bat-copy">
-                These are the only files you need to understand or change when adjusting repository
-                discovery, Markdown loading, and the published documentation routes.
-              </p>
-            </div>
-          </div>
-          <div class="bat-line">
-            <span class="bat-gutter">2</span>
-            <div class="bat-code">
-              <pre class="adrs-yaml-preview"><code>{configFilesPreview}</code></pre>
-            </div>
-          </div>
-        </div>
+      <article class="docs-index-metric-card is-compact">
+        <p class="docs-index-metric-label">Configuration</p>
+        <p class="docs-index-metric-value">{sourceConfigs.length} scan rule set</p>
+        <pre class="adrs-yaml-preview docs-index-config-preview"><code>{configFilesPreview}</code></pre>
       </article>
     </section>
+
+    {normalizedSearchQuery ? (
+      <section class="docs-search-results">
+        <div class="standard-section-heading">
+          <div>
+            <p class="eyebrow">Search</p>
+            <h2>Results for “{searchQuery}”</h2>
+          </div>
+          <p class="standard-section-meta">{searchResults.length} pages matched</p>
+        </div>
+
+        {searchResults.length > 0 ? (
+          <div class="docs-search-results-list">
+            {searchResults.map((entry) => (
+              <a class="docs-search-result-card" href={entry.htmlUrl}>
+                <div class="docs-search-result-topline">
+                  <span class="docs-search-result-repository">{entry.repository}</span>
+                  <span class="docs-search-result-type">{entry.pageType === "repository" ? "Repository" : "Page"}</span>
+                </div>
+                <h3 class="docs-search-result-title">{entry.title}</h3>
+                <p class="docs-search-result-path">{entry.relativePath || entry.repository}</p>
+                <p class="docs-search-result-copy">{entry.summary}</p>
+                {getMatchingHeading(entry.headings) ? (
+                  <p class="docs-search-result-heading">Matching heading: {getMatchingHeading(entry.headings)}</p>
+                ) : null}
+              </a>
+            ))}
+          </div>
+        ) : (
+          <p class="standard-empty-state">No repository pages or document headings matched that query.</p>
+        )}
+      </section>
+    ) : null}
 
     <section class="standard-section-heading">
       <div>
         <p class="eyebrow">Repositories</p>
         <h2>Repositories with matching documentation</h2>
       </div>
-      <p class="standard-section-meta">{repositorySummaries.length} repositories visible</p>
+      <p class="standard-section-meta">{filteredRepositorySummaries.length} repositories visible</p>
     </section>
 
     <section class="docs-library-grid">
-      {repositorySummaries.map((repository, index) => (
+      {filteredRepositorySummaries.map((repository, index) => (
         <a class="docs-library-card docs-library-card-link" href={repository.htmlUrl}>
           <div class="docs-library-topline">
             <span class="community-card-index">{String(index + 1).padStart(2, "0")}</span>

@@ -1,8 +1,10 @@
-import { readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { join, relative } from "node:path";
 
 const projectRoot = process.cwd();
 const pagesRoot = join(projectRoot, "src", "pages");
+const distRoot = join(projectRoot, "dist");
+const shouldVerifyDist = process.argv.includes("--dist");
 
 async function collectFiles(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -66,3 +68,97 @@ if (missingMarkdownPages.length > 0 || orphanMarkdownPages.length > 0) {
 }
 
 console.log(`Markdown route parity OK: ${astroPages.length} Astro pages matched with Markdown endpoints.`);
+
+if (!shouldVerifyDist) {
+  process.exit(0);
+}
+
+function normalizeDistRoute(filePath) {
+  return `/${relative(distRoot, filePath).replaceAll("\\", "/")}`;
+}
+
+function extractMarkdownLinks(markdownSource) {
+  return [...markdownSource.matchAll(/\[([^\]]+)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g)].map((match) => match[2]);
+}
+
+function isInternalMarkdownLink(href) {
+  return !/^(?:[a-z]+:|#|mailto:|tel:|data:)/i.test(href) && href.endsWith(".md");
+}
+
+function toResolvedMarkdownRoute(currentRoute, href) {
+  const url = new URL(href, `https://markdown.local${currentRoute}`);
+  return url.pathname;
+}
+
+const distFiles = await collectFiles(distRoot);
+const builtMarkdownFiles = distFiles.filter((filePath) => filePath.endsWith(".md"));
+const routeToFile = new Map(builtMarkdownFiles.map((filePath) => [normalizeDistRoute(filePath), filePath]));
+const brokenLinks = [];
+const visitedRoutes = new Set();
+const queue = ["/index.md"];
+
+if (!routeToFile.has("/index.md")) {
+  console.error("Markdown graph audit failed.");
+  console.error("");
+  console.error("Missing root Markdown entrypoint: /index.md");
+  process.exit(1);
+}
+
+while (queue.length > 0) {
+  const currentRoute = queue.shift();
+
+  if (!currentRoute || visitedRoutes.has(currentRoute)) {
+    continue;
+  }
+
+  visitedRoutes.add(currentRoute);
+
+  const sourcePath = routeToFile.get(currentRoute);
+
+  if (!sourcePath) {
+    brokenLinks.push({ from: "(graph)", to: currentRoute });
+    continue;
+  }
+
+  const markdownSource = await readFile(sourcePath, "utf-8");
+  const links = extractMarkdownLinks(markdownSource)
+    .filter(isInternalMarkdownLink)
+    .map((href) => toResolvedMarkdownRoute(currentRoute, href));
+
+  for (const nextRoute of links) {
+    if (!routeToFile.has(nextRoute)) {
+      brokenLinks.push({ from: currentRoute, to: nextRoute });
+      continue;
+    }
+
+    if (!visitedRoutes.has(nextRoute)) {
+      queue.push(nextRoute);
+    }
+  }
+}
+
+const unreachableRoutes = [...routeToFile.keys()].filter((route) => !visitedRoutes.has(route)).sort();
+
+if (brokenLinks.length > 0 || unreachableRoutes.length > 0) {
+  console.error("Markdown graph audit failed.");
+
+  if (brokenLinks.length > 0) {
+    console.error("");
+    console.error("Broken internal Markdown links:");
+    for (const link of brokenLinks) {
+      console.error(`- ${link.from} -> ${link.to}`);
+    }
+  }
+
+  if (unreachableRoutes.length > 0) {
+    console.error("");
+    console.error("Generated Markdown pages unreachable from /index.md:");
+    for (const route of unreachableRoutes) {
+      console.error(`- ${route}`);
+    }
+  }
+
+  process.exit(1);
+}
+
+console.log(`Markdown graph OK: ${visitedRoutes.size} generated Markdown pages reachable from /index.md.`);

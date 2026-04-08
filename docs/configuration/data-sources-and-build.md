@@ -23,9 +23,17 @@ flowchart LR
     A["data/*.yaml"] --> B["src/lib/*.ts loaders"]
     B --> C["src/pages/*.astro"]
     B --> D["src/pages/*.md.ts"]
+    E["shared nav and command helpers"] --> D
     C --> E["HTML routes"]
     D --> F["Markdown routes"]
 ```
+
+The Markdown landing page is composed from shared sources instead of a hand-maintained route list:
+
+- `data/terminal-commands.yaml` provides the visible terminal command inventory
+- `src/lib/standard-page-nav.ts` provides the primary section navigation
+- `src/pages/spikes/**/*.md.ts` is scanned for static Markdown support routes that should appear
+  in the landing-page support section
 
 ## How Documentation Scanning Works
 
@@ -103,14 +111,33 @@ Use this update model when maintaining the site:
 - update `docs/**/*.md` when repository documentation should appear in the Documentation section
 - update `src/lib/*.ts` when composition logic, URL rewriting, or derived metadata changes
 - update `src/pages/*.astro` when information architecture or page layout changes
+- keep `src/pages/models.astro` and `src/pages/models.md.ts` aligned when the model catalog surface changes
 
 ## Build Guardrails
 
 The build has a few important safety constraints:
 
 - `npm run check:markdown-pages` enforces HTML and Markdown route parity
-- `npm run build` runs the parity check before Astro build
+- `npm run check:markdown-pages:dist` audits the generated `dist/**/*.md` graph, starting at
+  `/index.md`, and fails on broken internal `.md` links or unreachable generated Markdown pages
+- `npm run build` runs the parity check, Astro build, and the post-build Markdown graph audit
 - documentation routes are generated statically, so scan results are frozen at build time
+
+## Markdown Navigation Model
+
+The repository treats Markdown output as a navigable surface rather than an export-only format.
+
+That means the generation layer is responsible for two guarantees:
+
+1. every HTML page has a Markdown sibling route
+2. the generated Markdown graph is internally traversable from `/index.md`
+
+The second guarantee is validated against built output instead of inferred from source files
+alone, which catches issues such as:
+
+- index pages that list sections as plain text instead of links
+- generated detail pages without a Markdown return path
+- rewritten relative links that resolve to missing `.md` outputs
 
 ## Operational Consequences
 

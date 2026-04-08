@@ -20,6 +20,11 @@ commands:
     html_url: /cloud-enablement/
     markdown_url: /cloud-enablement.md
     file_name: cloud-enablement.md
+  - command: /models
+    description: Open the model catalog Markdown index.
+    html_url: /models/
+    markdown_url: /models.md
+    file_name: models.md
   - command: /documents
     description: Open the documentation Markdown index.
     html_url: /documents/

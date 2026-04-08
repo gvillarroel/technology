@@ -12,6 +12,7 @@ import {
   getAiSdlcTopicBySlug,
 } from "./ai-sdlc";
 import { createMarkdownDocument, markdownLink } from "./markdown";
+import { getModelCatalogData } from "./models";
 import { getApprovedSkills, getSkillsCatalogData } from "./skills-repositories";
 import { getRadarEntries, getRadarEntryMarkdown } from "./tech-radar";
 import { getTechCommunities } from "./tech-communities";
@@ -131,11 +132,51 @@ function getApiSourceMarkdown(
   return doc.finish({ trailingNewline: false });
 }
 
+function getModelFamilyMarkdown(
+  family: Awaited<ReturnType<typeof getModelCatalogData>>["families"][number],
+  updated: string,
+) {
+  const doc = createMarkdownDocument({
+    title: `${family.familyName} (${family.source.name})`,
+    description: `${family.familyName} family on ${family.source.name}`,
+    canonicalHtml: withBasePath(`/models/?q=${encodeURIComponent(family.familyName)}&source=${family.source.slug}`),
+  });
+
+  doc.heading(`${family.familyName} / ${family.source.name}`);
+  doc.paragraph(`${family.familyName} family governed under the shared models catalog.`);
+  doc.section("Classification", () => {
+    doc.keyValueList([
+      { label: "Provider", value: family.source.provider },
+      { label: "Delivery", value: family.source.delivery },
+      { label: "Status", value: family.status },
+      { label: "Updated", value: updated },
+    ]);
+  });
+  doc.section("Availability", () => {
+    doc.keyValueList([
+      { label: "Regions", value: family.regionsAvailable.join(", ") },
+      { label: "Price", value: family.price },
+    ]);
+  });
+  doc.section("Models", () => doc.bullets(family.models));
+  doc.section("Notes", () => doc.bullets(family.notes));
+  doc.section("Links", () =>
+    doc.bullets([
+      markdownLink("Model catalog", withBasePath(`/models.md?q=${encodeURIComponent(family.familyName)}&source=${family.source.slug}`)),
+      markdownLink("Catalog source", family.source.sourceUrl),
+      markdownLink("Pricing source", family.source.pricingUrl),
+    ]),
+  );
+
+  return doc.finish({ trailingNewline: false });
+}
+
 export async function getTerminalSearchNamespaces(): Promise<TerminalSearchNamespace[]> {
-  const [radarEntries, communities, cloudProviders, skillsCatalog, approvedSkills, metricsTopic, aiSdlcOverview] = await Promise.all([
+  const [radarEntries, communities, cloudProviders, modelCatalog, skillsCatalog, approvedSkills, metricsTopic, aiSdlcOverview] = await Promise.all([
     getRadarEntries(),
     getTechCommunities(),
     getCloudEnablementProviders(),
+    getModelCatalogData(),
     getSkillsCatalogData(),
     getApprovedSkills(),
     getAiSdlcTopicBySlug("metrics"),
@@ -256,6 +297,32 @@ export async function getTerminalSearchNamespaces(): Promise<TerminalSearchNames
           community.linkLabel,
           ...community.tags,
           ...community.audience,
+        ]),
+      })),
+    },
+    {
+      namespace: "models",
+      description: "Search governed model families with `/models <terms>`.",
+      documents: modelCatalog.families.map((family) => ({
+        namespace: "models",
+        title: `${family.familyName} (${family.source.name})`,
+        slug: family.slug,
+        summary: family.price,
+        fileName: `models/${family.slug}.md`,
+        htmlUrl: withBasePath(`/models/?q=${encodeURIComponent(family.familyName)}&source=${family.source.slug}`),
+        markdownUrl: withBasePath(`/models.md?q=${encodeURIComponent(family.familyName)}&source=${family.source.slug}`),
+        markdown: getModelFamilyMarkdown(family, modelCatalog.updated),
+        searchText: normalizeSearchText([
+          family.slug,
+          family.familyName,
+          family.source.name,
+          family.source.provider,
+          family.source.delivery,
+          family.status,
+          family.price,
+          ...family.regionsAvailable,
+          ...family.models,
+          ...family.notes,
         ]),
       })),
     },

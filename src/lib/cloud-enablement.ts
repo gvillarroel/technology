@@ -179,7 +179,7 @@ export function getCloudEnablementIndexMarkdown(providers: CloudEnablementProvid
     });
 
     for (const product of provider.products) {
-      doc.bullet(product.name);
+      doc.bullet(markdownLink(product.name, getCloudEnablementDetailMarkdownUrl(provider.slug, product.slug)));
       doc.keyValueList([
         { label: "Archetype", value: product.archetype },
         { label: "Category", value: product.category },
@@ -197,6 +197,8 @@ export function getCloudEnablementIndexMarkdown(providers: CloudEnablementProvid
       }
     }
   }
+
+  doc.paragraph(markdownLink("Back to home", withBasePath("/index.md")));
 
   return doc.finish();
 }

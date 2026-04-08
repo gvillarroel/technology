@@ -1,6 +1,7 @@
 import type { AiSdlcSkillDetailCopy } from "./ai-sdlc";
 import { createMarkdownDocument, markdownLink } from "./markdown";
 import type { ApprovedSkill } from "./skills-repositories";
+import { withBasePath } from "./site-url";
 
 function formatPercent(value: number) {
   return `${(value * 100).toFixed(0)}%`;
@@ -79,7 +80,7 @@ export function getSkillDetailMarkdown(skill: ApprovedSkill, copy: AiSdlcSkillDe
     }
   }
 
-  doc.paragraph(markdownLink(copy.markdownBackLabel, "/ai-sdlc/skills/"));
+  doc.paragraph(markdownLink(copy.markdownBackLabel, withBasePath("/ai-sdlc/skills.md")));
   return doc.finish({ trailingNewline: false });
 }
 

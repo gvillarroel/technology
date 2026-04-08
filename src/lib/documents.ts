@@ -123,6 +123,18 @@ export interface DocumentPage {
   datedDocumentCount?: number;
 }
 
+export interface DocumentSearchEntry {
+  pageType: "repository" | "document";
+  title: string;
+  summary: string;
+  repository: string;
+  repositorySlug: string;
+  relativePath: string;
+  htmlUrl: string;
+  markdownUrl: string;
+  headings: string[];
+}
+
 export interface DocumentTreeNode {
   kind: "folder" | "file";
   title: string;
@@ -131,6 +143,8 @@ export interface DocumentTreeNode {
   docType: string;
   depth: number;
   isActive: boolean;
+  hasActiveDescendant: boolean;
+  shouldOpen: boolean;
   children: DocumentTreeNode[];
 }
 
@@ -140,6 +154,7 @@ interface DocumentsSourceDocument {
 
 interface DocumentsData {
   pages: DocumentPage[];
+  searchEntries: DocumentSearchEntry[];
   repositorySummaries: DocumentRepositorySummary[];
   sourceConfigs: DocumentSourceConfig[];
   scannedRepositories: ResolvedDocumentRepository[];
@@ -153,6 +168,7 @@ interface MutableFolderNode {
   status: string;
   docType: string;
   slugSegments: string[];
+  page?: DocumentPage;
   folders: Map<string, MutableFolderNode>;
   documents: DocumentPage[];
 }
@@ -396,7 +412,7 @@ async function getGitHubCommitDate(repository: string, ref: string, filePath: st
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
 
-    if (matchesGitHubStatus(message, [403, 404, 429])) {
+    if (matchesGitHubStatus(message, [403, 404, 429]) || message.includes("fetch failed")) {
       githubCommitDateCache.set(cacheKey, "");
       return "";
     }
@@ -517,24 +533,18 @@ async function getGitHubAccountRepositories(source: DocumentSourceConfig) {
   const userRepositoriesUrl =
     `https://api.github.com/users/${encodeURIComponent(source.account)}/repos?per_page=100&sort=updated`;
   let payload: GitHubRepositoryResponse[];
+  const localRepositories = await getLocalAccountRepositories(source);
+  const localFallback = localRepositories.filter((repository) =>
+    repositoryMatchesSource(source, repository.repository),
+  );
 
   try {
     payload = await fetchJson<GitHubRepositoryResponse[]>(userRepositoriesUrl);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-
-    if (matchesGitHubStatus(message, [403, 429])) {
-      const localFallback = (await getLocalAccountRepositories(source)).filter((repository) =>
-        repositoryMatchesSource(source, repository.repository),
-      );
-      githubAccountRepositoriesCache.set(cacheKey, localFallback);
-      return localFallback;
-    }
-
-    throw error;
+    githubAccountRepositoriesCache.set(cacheKey, localFallback);
+    return localFallback;
   }
 
-  const localRepositories = await getLocalAccountRepositories(source);
   const localRepositoryMap = new Map(
     localRepositories.map((repository) => [repository.repository, repository] as const),
   );
@@ -560,8 +570,10 @@ async function getGitHubAccountRepositories(source: DocumentSourceConfig) {
     .filter((repository) => repository.repository)
     .filter((repository) => repositoryMatchesSource(source, repository.repository));
 
-  githubAccountRepositoriesCache.set(cacheKey, repositories);
-  return repositories;
+  const mergedRepositories = mergeResolvedRepositories([...repositories, ...localFallback]);
+
+  githubAccountRepositoriesCache.set(cacheKey, mergedRepositories);
+  return mergedRepositories;
 }
 
 function mergeResolvedRepositories(repositories: ResolvedDocumentRepository[]) {
@@ -702,10 +714,40 @@ function getDocumentLinkCandidates(filePath: string) {
   return [...candidates].filter(Boolean);
 }
 
+function resolveRepositoryRelativePath(rawPath: string, repository: ResolvedDocumentRepository) {
+  const slashNormalizedRawPath = rawPath.replaceAll("\\", "/");
+  const normalizedRawPath = normalizePath(slashNormalizedRawPath);
+
+  if (!slashNormalizedRawPath.startsWith("/") && !/^[a-z]:\//i.test(slashNormalizedRawPath)) {
+    return normalizedRawPath;
+  }
+
+  const localPath = repository.localPath ? normalizePath(repository.localPath.replaceAll("\\", "/")) : "";
+  const localPathWithoutDrive = localPath.replace(/^[a-z]:/i, "");
+  const rawPathWithoutDrive = normalizedRawPath.replace(/^[a-z]:/i, "");
+
+  if (localPath && rawPathWithoutDrive.startsWith(localPathWithoutDrive)) {
+    return normalizePath(rawPathWithoutDrive.slice(localPathWithoutDrive.length));
+  }
+
+  const repositoryLeaf = repository.repository.split("/").at(-1)?.toLowerCase() ?? "";
+  const marker = repositoryLeaf ? `/${repositoryLeaf}/` : "";
+  const lowerPath = normalizedRawPath.toLowerCase();
+  const markerIndex = marker ? lowerPath.indexOf(marker) : -1;
+
+  if (markerIndex >= 0) {
+    return normalizePath(normalizedRawPath.slice(markerIndex + marker.length));
+  }
+
+  return normalizedRawPath;
+}
+
 function rewriteDocumentBodyLinks(
   markdown: string,
   currentPath: string,
   pagesBySourcePath: Map<string, DocumentPage>,
+  repository: ResolvedDocumentRepository,
+  repositoryPaths: Set<string>,
   mode: "html" | "markdown",
 ) {
   return markdown.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_match, label: string, href: string) => {
@@ -720,7 +762,7 @@ function rewriteDocumentBodyLinks(
     }
 
     const resolvedPath = rawPath.startsWith("/")
-      ? normalizePath(rawPath)
+      ? resolveRepositoryRelativePath(rawPath, repository)
       : normalizePath(
           posix.join(posix.dirname(currentPath) === "." ? "" : posix.dirname(currentPath), rawPath),
         );
@@ -730,7 +772,18 @@ function rewriteDocumentBodyLinks(
       .find((page): page is DocumentPage => Boolean(page));
 
     if (!targetPage) {
-      return `[${label}](${href})`;
+      const fallbackCandidates = [
+        resolvedPath,
+        ...getDocumentLinkCandidates(resolvedPath).filter((candidate) => candidate !== resolvedPath),
+      ];
+      const fallbackPath = fallbackCandidates.find((candidate) => repositoryPaths.has(candidate.toLowerCase()));
+
+      if (!fallbackPath) {
+        return `[${label}](${href})`;
+      }
+
+      const hash = rawHash ? `#${rawHash}` : "";
+      return `[${label}](${getGitHubBlobUrl(repository.repository, repository.ref, fallbackPath)}${hash})`;
     }
 
     const nextHref = mode === "markdown" ? targetPage.markdownUrl : targetPage.htmlUrl;
@@ -759,6 +812,47 @@ function renderInlineMarkdown(line: string) {
   html = html.replace(/\*([^*]+)\*/g, "<em>$1</em>");
 
   return html;
+}
+
+function parseMarkdownTableRow(line: string) {
+  const trimmed = line.trim();
+
+  if (!trimmed.includes("|")) {
+    return [];
+  }
+
+  const withoutOuterPipes = trimmed.replace(/^\|/, "").replace(/\|$/, "");
+  return withoutOuterPipes.split("|").map((cell) => cell.trim());
+}
+
+function isMarkdownTableSeparator(line: string) {
+  const cells = parseMarkdownTableRow(line);
+
+  if (cells.length === 0) {
+    return false;
+  }
+
+  return cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+}
+
+function getMarkdownTableAlignments(line: string) {
+  return parseMarkdownTableRow(line).map((cell) => {
+    const trimmed = cell.trim();
+
+    if (trimmed.startsWith(":") && trimmed.endsWith(":")) {
+      return "center";
+    }
+
+    if (trimmed.endsWith(":")) {
+      return "right";
+    }
+
+    if (trimmed.startsWith(":")) {
+      return "left";
+    }
+
+    return "";
+  });
 }
 
 function renderMarkdownToHtml(markdown: string) {
@@ -810,7 +904,52 @@ function renderMarkdownToHtml(markdown: string) {
     isInCodeFence = false;
   };
 
-  for (const line of lines) {
+  const flushTable = (startIndex: number) => {
+    const headerCells = parseMarkdownTableRow(lines[startIndex] ?? "");
+    const separatorLine = lines[startIndex + 1] ?? "";
+
+    if (headerCells.length === 0 || !isMarkdownTableSeparator(separatorLine)) {
+      return startIndex;
+    }
+
+    const alignments = getMarkdownTableAlignments(separatorLine);
+    const bodyRows: string[][] = [];
+    let cursor = startIndex + 2;
+
+    while (cursor < lines.length) {
+      const candidate = lines[cursor] ?? "";
+
+      if (!candidate.trim() || !candidate.includes("|")) {
+        break;
+      }
+
+      const rowCells = parseMarkdownTableRow(candidate);
+
+      if (rowCells.length === 0) {
+        break;
+      }
+
+      bodyRows.push(rowCells);
+      cursor += 1;
+    }
+
+    const renderTableCells = (cells: string[], tagName: "th" | "td") =>
+      cells
+        .map((cell, index) => {
+          const alignment = alignments[index] ? ` style="text-align:${alignments[index]}"` : "";
+          return `<${tagName}${alignment}>${renderInlineMarkdown(cell)}</${tagName}>`;
+        })
+        .join("");
+
+    blocks.push(
+      `<div class="docs-markdown-table-wrap"><table><thead><tr>${renderTableCells(headerCells, "th")}</tr></thead>${bodyRows.length > 0 ? `<tbody>${bodyRows.map((row) => `<tr>${renderTableCells(row, "td")}</tr>`).join("")}</tbody>` : ""}</table></div>`,
+    );
+
+    return cursor - 1;
+  };
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
     const headingMatch = line.match(/^(#{1,6})\s+(.+)$/);
     const unorderedMatch = line.match(/^\s*-\s+(.+)$/);
     const orderedMatch = line.match(/^\s*\d+\.\s+(.+)$/);
@@ -838,6 +977,15 @@ function renderMarkdownToHtml(markdown: string) {
     if (!line.trim()) {
       flushParagraph();
       flushList();
+      continue;
+    }
+
+    const nextLine = lines[index + 1] ?? "";
+
+    if (line.includes("|") && nextLine && isMarkdownTableSeparator(nextLine)) {
+      flushParagraph();
+      flushList();
+      index = flushTable(index);
       continue;
     }
 
@@ -898,6 +1046,12 @@ function getBodySummary(body: string) {
     .filter((section) => !section.startsWith("#"));
 
   return paragraphs.find((section) => section.split(/\s+/).length > 4) ?? paragraphs[0] ?? "";
+}
+
+function getDocumentHeadings(body: string) {
+  return [...body.matchAll(/^#{2,3}\s+(.+)$/gm)]
+    .map((match) => match[1]?.trim() ?? "")
+    .filter(Boolean);
 }
 
 function buildDocumentSlugSegments(repositorySlug: string, filePath: string) {
@@ -965,25 +1119,44 @@ async function listLocalRepositoryFiles(repositoryRoot: string, currentPath = ""
   return files.flat();
 }
 
-async function getRepositoryDocumentMatches(repository: ResolvedDocumentRepository) {
-  let paths: string[] = [];
-
+async function getRepositoryFilePaths(repository: ResolvedDocumentRepository) {
   try {
     const tree = await getGitHubTree(repository.repository, repository.ref);
-    paths = tree.filter((entry) => entry.type === "blob").map((entry) => entry.path);
+    const remotePaths = [...new Set(
+      tree.filter((entry) => entry.type === "blob").map((entry) => normalizePath(entry.path)),
+    )].sort((left, right) => left.localeCompare(right));
+
+    if (remotePaths.length > 0 || !repository.localPath) {
+      return remotePaths;
+    }
   } catch (error) {
     if (!repository.localPath) {
       throw error;
     }
   }
 
-  if (paths.length === 0 && repository.localPath) {
-    paths = await listLocalRepositoryFiles(repository.localPath);
+  return [...new Set((await listLocalRepositoryFiles(repository.localPath)).map(normalizePath))].sort(
+    (left, right) => left.localeCompare(right),
+  );
+}
+
+async function getRemoteRepositoryFilePaths(repository: ResolvedDocumentRepository) {
+  try {
+    const tree = await getGitHubTree(repository.repository, repository.ref);
+    return [...new Set(
+      tree.filter((entry) => entry.type === "blob").map((entry) => normalizePath(entry.path)),
+    )].sort((left, right) => left.localeCompare(right));
+  } catch {
+    return [];
   }
+}
+
+async function getRepositoryDocumentMatches(repository: ResolvedDocumentRepository, paths?: string[]) {
+  const repositoryPaths = paths ?? (await getRepositoryFilePaths(repository));
 
   const matches = new Map<string, DocumentMatch>();
 
-  for (const path of paths) {
+  for (const path of repositoryPaths) {
     if (!path.endsWith(".md")) {
       continue;
     }
@@ -1035,6 +1208,7 @@ async function readDocumentSource(repository: ResolvedDocumentRepository, filePa
 async function buildDocumentPage(
   repository: ResolvedDocumentRepository,
   match: DocumentMatch,
+  remotePaths: Set<string>,
 ): Promise<DocumentPage | null> {
   let markdownSource = "";
   let rawUrl = "";
@@ -1060,6 +1234,7 @@ async function buildDocumentPage(
   const { htmlUrl, markdownUrl } = getDocumentsUrls(slugSegments);
   const updated =
     toScalar(data.updated) || (await getGitHubCommitDate(repository.repository, repository.ref, match.path));
+  const hasRemoteSource = remotePaths.has(match.path.toLowerCase());
 
   return {
     pageType: "document",
@@ -1080,8 +1255,8 @@ async function buildDocumentPage(
     repository: repository.repository,
     repositoryRef: repository.ref,
     repositoryUrl: getGitHubRepositoryUrl(repository.repository),
-    sourceUrl,
-    rawUrl,
+    sourceUrl: hasRemoteSource ? sourceUrl : "",
+    rawUrl: hasRemoteSource ? rawUrl : "",
     isFolderIndex: ["readme.md", "index.md"].includes(posix.basename(match.path).toLowerCase()),
     ruleLabels: [...new Set(match.rules.map((rule) => rule.name))],
     domainRoots: [...new Set(match.rules.flatMap((rule) => rule.domains))],
@@ -1132,6 +1307,97 @@ function dedupeDocumentPages(pages: DocumentPage[]) {
   }
 
   return [...bySlug.values()];
+}
+
+function buildRepositoryContentTree(repositoryPages: DocumentPage[]) {
+  const repositoryPage = repositoryPages.find((page) => page.pageType === "repository");
+
+  if (!repositoryPage) {
+    return null;
+  }
+
+  const root: MutableFolderNode = {
+    title: repositoryPage.title,
+    href: repositoryPage.htmlUrl,
+    status: repositoryPage.status,
+    docType: repositoryPage.docType,
+    slugSegments: repositoryPage.slugSegments,
+    folders: new Map<string, MutableFolderNode>(),
+    documents: [],
+  };
+
+  const getOrCreateFolder = (parent: MutableFolderNode, folderSlugSegments: string[]) => {
+    const key = folderSlugSegments.join("/");
+    const existing = parent.folders.get(key);
+
+    if (existing) {
+      return existing;
+    }
+
+    const pageForFolder = repositoryPages.find(
+      (page) => page.pageType === "document" && page.isFolderIndex && page.slugSegments.join("/") === key,
+    );
+
+    const folder = {
+      title: pageForFolder?.title ?? toLabel(folderSlugSegments.at(-1) ?? ""),
+      href: pageForFolder?.htmlUrl,
+      status: pageForFolder?.status ?? "",
+      docType: pageForFolder?.docType ?? "Folder",
+      slugSegments: folderSlugSegments,
+      page: pageForFolder,
+      folders: new Map<string, MutableFolderNode>(),
+      documents: [],
+    } satisfies MutableFolderNode;
+
+    parent.folders.set(key, folder);
+    return folder;
+  };
+
+  for (const page of repositoryPages) {
+    if (page.pageType !== "document") {
+      continue;
+    }
+
+    const relativeSegments = page.slugSegments.slice(1);
+    const folderSegments = page.isFolderIndex ? relativeSegments : relativeSegments.slice(0, -1);
+    let cursor = root;
+    let accumulatedSegments = [repositoryPage.repositorySlug];
+
+    for (const segment of folderSegments) {
+      accumulatedSegments = [...accumulatedSegments, segment];
+      cursor = getOrCreateFolder(cursor, accumulatedSegments);
+    }
+
+    if (!page.isFolderIndex) {
+      cursor.documents.push(page);
+    }
+  }
+
+  return root;
+}
+
+function flattenRepositoryDocumentSequence(root: MutableFolderNode) {
+  const ordered: DocumentPage[] = [];
+
+  const visitFolder = (folder: MutableFolderNode, isRoot = false) => {
+    if (!isRoot && folder.page) {
+      ordered.push(folder.page);
+    }
+
+    const documents = [...folder.documents].sort((left, right) => left.title.localeCompare(right.title));
+    const childFolders = [...folder.folders.values()].sort((left, right) => left.title.localeCompare(right.title));
+
+    for (const document of documents) {
+      ordered.push(document);
+    }
+
+    for (const childFolder of childFolders) {
+      visitFolder(childFolder);
+    }
+  };
+
+  visitFolder(root, true);
+  return ordered;
 }
 
 function getLatestDocumentPage(pages: DocumentPage[]) {
@@ -1421,9 +1687,12 @@ async function loadDocumentsData(): Promise<DocumentsData> {
 
   const documentPagesByRepository = await Promise.all(
     scannedRepositories.map(async (repository) => {
-      const matches = await getRepositoryDocumentMatches(repository);
+      const remoteRepositoryPaths = await getRemoteRepositoryFilePaths(repository);
+      const repositoryPaths = await getRepositoryFilePaths(repository);
+      const matches = await getRepositoryDocumentMatches(repository, repositoryPaths);
+      const remotePathSet = new Set(remoteRepositoryPaths.map((path) => path.toLowerCase()));
       const basePages = dedupeDocumentPages((
-        await Promise.all(matches.map((match) => buildDocumentPage(repository, match)))
+        await Promise.all(matches.map((match) => buildDocumentPage(repository, match, remotePathSet)))
       ).filter((page): page is DocumentPage => Boolean(page)));
       const syntheticPages = createSyntheticFolderPages(repository, basePages);
       const pages = [...basePages, ...syntheticPages].sort((left, right) =>
@@ -1432,6 +1701,7 @@ async function loadDocumentsData(): Promise<DocumentsData> {
 
       return {
         repository,
+        repositoryPaths,
         pages,
       };
     }),
@@ -1440,12 +1710,27 @@ async function loadDocumentsData(): Promise<DocumentsData> {
     const pagesBySourcePath = new Map(
       entry.pages.map((page) => [normalizePath(page.relativePath).toLowerCase(), page] as const),
     );
+    const repositoryPaths = new Set(entry.repositoryPaths.map((path) => path.toLowerCase()));
 
     for (const page of entry.pages) {
       const sourceBody = page.body;
-      page.body = rewriteDocumentBodyLinks(sourceBody, page.relativePath, pagesBySourcePath, "markdown");
+      page.body = rewriteDocumentBodyLinks(
+        sourceBody,
+        page.relativePath,
+        pagesBySourcePath,
+        entry.repository,
+        repositoryPaths,
+        "markdown",
+      );
       page.bodyHtml = renderMarkdownToHtml(
-        rewriteDocumentBodyLinks(sourceBody, page.relativePath, pagesBySourcePath, "html"),
+        rewriteDocumentBodyLinks(
+          sourceBody,
+          page.relativePath,
+          pagesBySourcePath,
+          entry.repository,
+          repositoryPaths,
+          "html",
+        ),
       );
     }
   }
@@ -1486,9 +1771,21 @@ async function loadDocumentsData(): Promise<DocumentsData> {
     sourceCount: page.sourceNames.length,
     roots: page.domainRoots,
   }));
+  const searchEntries = documentPages.map((page) => ({
+    pageType: page.pageType,
+    title: page.title,
+    summary: page.summary,
+    repository: page.repository,
+    repositorySlug: page.repositorySlug,
+    relativePath: page.relativePath,
+    htmlUrl: page.htmlUrl,
+    markdownUrl: page.markdownUrl,
+    headings: getDocumentHeadings(page.body),
+  }));
 
   return {
     pages: [...repositoryPages, ...documentPages],
+    searchEntries,
     repositorySummaries,
     sourceConfigs,
     scannedRepositories,
@@ -1516,6 +1813,11 @@ export async function getDocumentPages() {
   return pages;
 }
 
+export async function getDocumentSearchEntries() {
+  const { searchEntries } = await getDocumentsData();
+  return searchEntries;
+}
+
 export async function getDocumentPageBySlug(slugSegments: string[]) {
   const pages = await getDocumentPages();
   const normalized = slugSegments.join("/");
@@ -1537,66 +1839,10 @@ export async function getDocumentStaticPaths() {
 export async function getDocumentTree(repositorySlug: string, activeSlugSegments: string[]) {
   const pages = await getDocumentPages();
   const repositoryPages = pages.filter((page) => page.repositorySlug === repositorySlug);
-  const rootPage = repositoryPages.find((page) => page.pageType === "repository");
+  const root = buildRepositoryContentTree(repositoryPages);
 
-  if (!rootPage) {
+  if (!root) {
     return [];
-  }
-
-  const root: MutableFolderNode = {
-    title: rootPage.title,
-    href: rootPage.htmlUrl,
-    status: rootPage.status,
-    docType: rootPage.docType,
-    slugSegments: rootPage.slugSegments,
-    folders: new Map<string, MutableFolderNode>(),
-    documents: [],
-  };
-
-  const getOrCreateFolder = (parent: MutableFolderNode, folderSlugSegments: string[]) => {
-    const key = folderSlugSegments.join("/");
-    const existing = parent.folders.get(key);
-
-    if (existing) {
-      return existing;
-    }
-
-    const pageForFolder = repositoryPages.find(
-      (page) => page.pageType === "document" && page.isFolderIndex && page.slugSegments.join("/") === key,
-    );
-
-    const folder = {
-      title: pageForFolder?.title ?? toLabel(folderSlugSegments.at(-1) ?? ""),
-      href: pageForFolder?.htmlUrl,
-      status: pageForFolder?.status ?? "",
-      docType: pageForFolder?.docType ?? "Folder",
-      slugSegments: folderSlugSegments,
-      folders: new Map<string, MutableFolderNode>(),
-      documents: [],
-    } satisfies MutableFolderNode;
-
-    parent.folders.set(key, folder);
-    return folder;
-  };
-
-  for (const page of repositoryPages) {
-    if (page.pageType !== "document") {
-      continue;
-    }
-
-    const relativeSegments = page.slugSegments.slice(1);
-    const folderSegments = page.isFolderIndex ? relativeSegments : relativeSegments.slice(0, -1);
-    let cursor = root;
-    let accumulatedSegments = [repositorySlug];
-
-    for (const segment of folderSegments) {
-      accumulatedSegments = [...accumulatedSegments, segment];
-      cursor = getOrCreateFolder(cursor, accumulatedSegments);
-    }
-
-    if (!page.isFolderIndex) {
-      cursor.documents.push(page);
-    }
   }
 
   const isActivePath = (candidateSegments: string[]) =>
@@ -1616,8 +1862,14 @@ export async function getDocumentTree(repositorySlug: string, activeSlugSegments
         docType: page.docType,
         depth: depth + 1,
         isActive: page.slugSegments.join("/") === activeSlugSegments.join("/"),
+        hasActiveDescendant: false,
+        shouldOpen: false,
         children: [],
       }) satisfies DocumentTreeNode);
+
+    const children = [...folderChildren, ...documentChildren];
+    const isActive = isActivePath(folder.slugSegments);
+    const hasActiveDescendant = children.some((child) => child.isActive || child.hasActiveDescendant);
 
     return {
       kind: "folder",
@@ -1626,8 +1878,10 @@ export async function getDocumentTree(repositorySlug: string, activeSlugSegments
       status: folder.status,
       docType: folder.docType,
       depth,
-      isActive: isActivePath(folder.slugSegments),
-      children: [...folderChildren, ...documentChildren],
+      isActive,
+      hasActiveDescendant,
+      shouldOpen: depth === 0 || isActive || hasActiveDescendant,
+      children,
     };
   };
 
@@ -1664,6 +1918,8 @@ export function getDocumentsIndexMarkdown(data: DocumentsData) {
       { label: "Open", value: markdownLink("View repository docs", repository.markdownUrl) },
     ]);
   }
+
+  doc.paragraph(markdownLink("Back to home", withBasePath("/index.md")));
 
   return doc.finish();
 }
@@ -1711,6 +1967,7 @@ export function getDocumentDetailMarkdown(page: DocumentPage, tree: DocumentTree
   doc.section(page.pageType === "repository" ? "Repository overview" : "Document body", () => {
     doc.raw(documentBody);
   });
+  doc.paragraph(markdownLink("Back to documents index", withBasePath("/documents.md")));
 
   return doc.finish();
 }

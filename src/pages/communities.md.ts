@@ -27,5 +27,7 @@ export async function GET() {
     ]);
   }
 
+  doc.paragraph(markdownLink("Back to home", withBasePath("/index.md")));
+
   return markdownResponse(doc.finish());
 }

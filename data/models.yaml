@@ -1,39 +1,214 @@
-models:
-  - slug: gpt-5.4
-    provider: OpenAI
-    category: frontier
-    status: approved
-    primary_uses:
-      - Agentic coding
-      - Complex reasoning
-      - High value internal copilots
-    guardrails:
-      - Route sensitive workflows through approved gateways
-      - Log prompts and outputs when policy requires it
-      - Evaluate task quality before broad rollout
-
-  - slug: gpt-5.4-mini
-    provider: OpenAI
-    category: efficient
-    status: approved
-    primary_uses:
-      - Fast tool orchestration
-      - Draft generation
-      - Lightweight assistants
-    guardrails:
-      - Keep human review for consequential outputs
-      - Benchmark against the frontier tier before replacing it
-      - Monitor failure modes on long context tasks
-
-  - slug: text-embedding-3-large
-    provider: OpenAI
-    category: embeddings
-    status: approved
-    primary_uses:
-      - Semantic retrieval
-      - Knowledge indexing
-      - Search ranking support
-    guardrails:
-      - Rebuild indexes on schema changes
-      - Track retrieval quality with labeled queries
-      - Avoid mixing incompatible chunking strategies
+catalog:
+  title: AI model families
+  summary: Governed model-family inventory covering managed Vertex AI Model Garden access and approved local Ollama runtimes.
+  updated: 2026-04-07
+  statuses:
+    approved: Approved for standard use with the listed controls.
+    explore: Available for evaluation but not yet a default choice.
+    blacklisted: Not approved for production use.
+  sources:
+    - slug: vertex-ai-model-garden
+      name: Vertex AI Model Garden
+      provider: Google Cloud
+      delivery: Managed API
+      source_url: https://docs.cloud.google.com/vertex-ai/generative-ai/docs/learn/locations
+      pricing_url: https://cloud.google.com/vertex-ai/generative-ai/pricing
+    - slug: ollama
+      name: Ollama
+      provider: Ollama
+      delivery: Local runtime
+      source_url: https://ollama.com/library
+      pricing_url: https://ollama.com/library
+  families:
+    - slug: gemini
+      family_name: Gemini
+      source: vertex-ai-model-garden
+      status: approved
+      regions_available:
+        - global
+        - us-west1
+        - us-west4
+        - us-central1
+        - us-east1
+        - us-east4
+        - us-east5
+        - us-south1
+      price: Gemini 2.5 Flash input starts at $0.54 and output at $4.50 per 1M tokens; Gemini 2.5 Pro input starts at $2.25 and output at $18 per 1M tokens.
+      models:
+        - Gemini 2.5 Pro
+        - Gemini 2.5 Flash
+        - Gemini 2.5 Flash-Lite
+      notes:
+        - Use when teams need Google-managed multimodal and reasoning models with broad US regional coverage.
+        - Global endpoint is available but should not be used where residency requirements apply.
+      source_urls:
+        - https://docs.cloud.google.com/vertex-ai/generative-ai/docs/learn/locations
+        - https://cloud.google.com/vertex-ai/generative-ai/pricing
+    - slug: claude
+      family_name: Claude
+      source: vertex-ai-model-garden
+      status: approved
+      regions_available:
+        - global
+        - us-west1
+        - us-west4
+        - us-central1
+        - us-east1
+        - us-east4
+        - us-east5
+        - us-south1
+      price: Claude Sonnet 4.5 input starts at $3.30 per 1M tokens on Vertex AI pricing.
+      models:
+        - Claude Sonnet 4.5
+        - Claude Sonnet 4
+        - Claude Opus 4.5
+        - Claude Haiku 4.5
+      notes:
+        - Use through the approved managed gateway only.
+        - Keep prompt and response logging aligned with policy before broad rollout.
+      source_urls:
+        - https://docs.cloud.google.com/vertex-ai/generative-ai/docs/learn/locations
+        - https://cloud.google.com/vertex-ai/generative-ai/pricing
+    - slug: mistral
+      family_name: Mistral
+      source: vertex-ai-model-garden
+      status: explore
+      regions_available:
+        - global
+        - us-west1
+        - us-west4
+        - us-central1
+        - us-east1
+        - us-east4
+        - us-east5
+        - us-south1
+      price: Mistral Medium 3 is priced on Vertex AI; use provider pricing review before production selection.
+      models:
+        - Mistral Medium 3
+        - Mistral Small 3.1
+        - Mistral Large (24.07)
+        - Codestral 2
+      notes:
+        - Evaluation-only until benchmark and governance review are completed for target workloads.
+      source_urls:
+        - https://docs.cloud.google.com/vertex-ai/generative-ai/docs/learn/locations
+        - https://cloud.google.com/vertex-ai/generative-ai/pricing
+    - slug: llama
+      family_name: Llama
+      source: vertex-ai-model-garden
+      status: approved
+      regions_available:
+        - global
+        - us-west1
+        - us-west4
+        - us-central1
+        - us-east1
+        - us-east4
+        - us-east5
+        - us-south1
+      price: Llama 4 Maverick input starts at $0.35 per 1M tokens on Vertex AI pricing.
+      models:
+        - Llama 4 Maverick 17B-128E
+        - Llama 4 Scout 17B-16E
+        - Llama 3.3 70B
+      notes:
+        - Use for managed open-weight workloads where a local runtime is not appropriate.
+      source_urls:
+        - https://docs.cloud.google.com/vertex-ai/generative-ai/docs/learn/locations
+        - https://cloud.google.com/vertex-ai/generative-ai/pricing
+    - slug: deepseek
+      family_name: DeepSeek
+      source: vertex-ai-model-garden
+      status: blacklisted
+      regions_available:
+        - global
+        - us-west1
+        - us-west4
+        - us-central1
+        - us-east1
+        - us-east4
+        - us-east5
+        - us-south1
+      price: DeepSeek R1 is available on Vertex AI pricing, but this family is not approved for production use.
+      models:
+        - DeepSeek R1 (0528)
+        - DeepSeek V3.1
+        - DeepSeek V3.2
+      notes:
+        - Keep blocked from standard production adoption pending governance review.
+      source_urls:
+        - https://docs.cloud.google.com/vertex-ai/generative-ai/docs/learn/locations
+        - https://cloud.google.com/vertex-ai/generative-ai/pricing
+    - slug: gemma
+      family_name: Gemma
+      source: ollama
+      status: approved
+      regions_available:
+        - local
+      price: No platform usage fee from Ollama; infrastructure cost depends on local hardware.
+      models:
+        - gemma3
+        - codegemma
+      notes:
+        - Approved as a local runtime family for offline-friendly experimentation and low-risk internal tooling.
+      source_urls:
+        - https://ollama.com/library
+    - slug: llama-local
+      family_name: Llama
+      source: ollama
+      status: approved
+      regions_available:
+        - local
+      price: No platform usage fee from Ollama; infrastructure cost depends on local hardware.
+      models:
+        - llama3.3
+        - llava-llama3
+        - llama-guard3
+      notes:
+        - Approved when teams need local execution and can support the memory footprint.
+      source_urls:
+        - https://ollama.com/library
+    - slug: qwen-local
+      family_name: Qwen
+      source: ollama
+      status: approved
+      regions_available:
+        - local
+      price: No platform usage fee from Ollama; infrastructure cost depends on local hardware.
+      models:
+        - qwen3
+        - qwen3-coder-next
+        - qwen2.5vl
+      notes:
+        - Approved for local coding and multilingual experimentation when GPU capacity is available.
+      source_urls:
+        - https://ollama.com/library
+    - slug: mistral-local
+      family_name: Mistral
+      source: ollama
+      status: approved
+      regions_available:
+        - local
+      price: No platform usage fee from Ollama; infrastructure cost depends on local hardware.
+      models:
+        - mistral-small3.2
+        - mistral-large
+        - mixtral
+      notes:
+        - Approved for local evaluation and coding-oriented assistance with workstation-class hardware.
+      source_urls:
+        - https://ollama.com/library
+    - slug: deepseek-local
+      family_name: DeepSeek
+      source: ollama
+      status: blacklisted
+      regions_available:
+        - local
+      price: No platform usage fee from Ollama; infrastructure cost depends on local hardware.
+      models:
+        - deepseek-r1
+        - deepseek-v3.1
+      notes:
+        - Local availability does not override governance restrictions.
+      source_urls:
+        - https://ollama.com/library

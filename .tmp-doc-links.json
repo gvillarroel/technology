@@ -1,0 +1,50 @@
+[
+  {
+    "file": "documents/index.html",
+    "href": "https://fonts.googleapis.com"
+  },
+  {
+    "file": "documents/index.html",
+    "href": "https://fonts.gstatic.com"
+  },
+  {
+    "file": "documents/index.html",
+    "href": "https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700;800&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..700,0,0"
+  },
+  {
+    "file": "documents/index.html",
+    "href": "/_astro/BaseLayout.BRZzfJDW.css"
+  },
+  {
+    "file": "documents/index.html",
+    "href": "/"
+  },
+  {
+    "file": "documents/index.html",
+    "href": "/tech-radar/"
+  },
+  {
+    "file": "documents/index.html",
+    "href": "/cloud-enablement/"
+  },
+  {
+    "file": "documents/index.html",
+    "href": "/models/"
+  },
+  {
+    "file": "documents/index.html",
+    "href": "/ai-sdlc/"
+  },
+  {
+    "file": "documents/index.html",
+    "href": "/adrs/"
+  },
+  {
+    "file": "documents/index.html",
+    "href": "/communities/"
+  },
+  {
+    "file": "documents/index.html",
+    "href": "/documents/"
+  }
+]

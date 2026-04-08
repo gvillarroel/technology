@@ -927,6 +927,8 @@ export function getAdrIndexMarkdown({
     ]);
   }
 
+  doc.paragraph(markdownLink("Back to home", withBasePath("/index.md")));
+
   return doc.finish();
 }
 
@@ -957,6 +959,7 @@ export function getAdrDetailMarkdown(page: AdrPage) {
     ]);
   });
   doc.section("Decision Record", () => doc.raw(bodyWithoutRepeatedHeading));
+  doc.paragraph(markdownLink("Back to ADR index", withBasePath("/adrs.md")));
 
   return doc.finish();
 }

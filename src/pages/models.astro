@@ -1,0 +1,313 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import StandardPageHeader from "../components/StandardPageHeader.astro";
+import { getModelCatalogData } from "../lib/models";
+
+const catalog = await getModelCatalogData();
+const statusFilters = ["approved", "explore", "blacklisted"] as const;
+---
+
+<BaseLayout
+  title="Models | e*f(x) Technology"
+  description="Governed model-family catalog for Vertex AI Model Garden and approved local Ollama runtimes."
+>
+  <main class="shell shell-narrow standard-page">
+    <StandardPageHeader
+      currentPage="models"
+      searchAction="/models/"
+      searchPlaceholder="Search family, provider, model, or region"
+    />
+
+    <section class="standard-page-intro">
+      <div>
+        <p class="eyebrow">Models</p>
+        <h1 class="standard-page-title">Model families, not ad hoc picks.</h1>
+        <p class="copy standard-copy-wide">
+          This catalog is driven entirely from <code>data/models.yaml</code>. It tracks approved,
+          exploratory, and blocked model families across managed Vertex AI Model Garden access and
+          local Ollama runtimes.
+        </p>
+      </div>
+    </section>
+
+    <section class="models-summary-grid" aria-label="Catalog summary">
+      <article class="info-card models-summary-card">
+        <p class="eyebrow">Updated</p>
+        <h2>{catalog.updated}</h2>
+        <p>{catalog.summary}</p>
+      </article>
+      <article class="info-card models-summary-card">
+        <p class="eyebrow">Families</p>
+        <h2>{catalog.families.length}</h2>
+        <p>Each card shows regions available, price reference, and governance status.</p>
+      </article>
+      <article class="info-card models-summary-card">
+        <p class="eyebrow">Sources</p>
+        <h2>{catalog.sources.length}</h2>
+        <p>Managed access and local runtime options stay in one governed inventory.</p>
+      </article>
+    </section>
+
+    <section class="tech-radar-top" id="models-top">
+      <div class="radar-floating-rail-anchor" id="models-floating-rail-anchor">
+        <aside class="standard-floating-rail is-inline-top has-readable-surface" id="models-floating-rail" aria-label="Model catalog filters">
+          <div class="standard-floating-rail-inner">
+            <div class="radar-top-filters">
+              <div class="radar-control">
+                <span class="standard-label">Source</span>
+                <div class="standard-toggle-group standard-toggle-group-vertical" id="models-source-filter">
+                  <button class="standard-toggle-button is-active" type="button" data-source-filter="">
+                    All
+                  </button>
+                  {catalog.sources.map((source) => (
+                    <button class="standard-toggle-button" type="button" data-source-filter={source.slug}>
+                      {source.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div class="radar-control">
+                <span class="standard-label">Status</span>
+                <div class="standard-toggle-group standard-toggle-group-vertical" id="models-status-filter">
+                  <button class="standard-toggle-button is-active" type="button" data-status-filter="">
+                    All
+                  </button>
+                  {statusFilters.map((status) => (
+                    <button class="standard-toggle-button" type="button" data-status-filter={status}>
+                      {status}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <div class="radar-floating-rail-dock" id="models-floating-rail-dock" aria-hidden="true"></div>
+    </section>
+
+    <section class="standard-toolbar radar-entry-toolbar" aria-label="Model catalog entry filters">
+      <div class="radar-control">
+        <label class="standard-label" for="models-search">Search entries</label>
+        <input
+          id="models-search"
+          class="standard-select"
+          type="search"
+          placeholder="Filter by family, provider, model, price, or region"
+        />
+      </div>
+    </section>
+
+    <section class="standard-section-heading">
+      <div>
+        <p class="eyebrow">Catalog</p>
+        <h2>Governed model families</h2>
+      </div>
+      <p class="standard-section-meta" id="models-results-count">{catalog.families.length} families visible</p>
+    </section>
+
+    <section class="bat-list" id="models-list">
+      {catalog.families.map((family, index) => (
+        <article
+          class="bat-card bat-entry model-entry"
+          data-source={family.source.slug}
+          data-status={family.status}
+          data-search={`${family.familyName} ${family.source.name} ${family.source.provider} ${family.source.delivery} ${family.status} ${family.regionsAvailable.join(" ")} ${family.price} ${family.models.join(" ")} ${family.notes.join(" ")}`.toLowerCase()}
+        >
+          <div class="bat-card-bar">
+            <span class="bat-card-file">models/{family.slug}.yaml</span>
+            <div class="models-card-pills">
+              <span class={`models-source-pill models-source-pill-${family.source.slug}`}>{family.source.name}</span>
+              <span class={`models-status-pill is-${family.status}`}>{family.status}</span>
+            </div>
+          </div>
+
+          <div class="bat-card-body bat-card-body-stack">
+            <div class="bat-line">
+              <span class="bat-gutter">{index * 5 + 1}</span>
+              <div class="bat-code bat-entry-heading">
+                <h3 class="bat-entry-title">{family.familyName}</h3>
+                <span class="bat-meta">{family.source.provider}</span>
+              </div>
+            </div>
+            <div class="bat-line">
+              <span class="bat-gutter">{index * 5 + 2}</span>
+              <div class="bat-code bat-meta-row">
+                <span>delivery: {family.source.delivery}</span>
+                <span>status: {family.status}</span>
+                <span>regions: {family.regionsAvailable.length}</span>
+              </div>
+            </div>
+            <div class="bat-line">
+              <span class="bat-gutter">{index * 5 + 3}</span>
+              <div class="bat-code">
+                <p class="bat-copy"><strong>Price:</strong> {family.price}</p>
+              </div>
+            </div>
+            <div class="bat-line">
+              <span class="bat-gutter">{index * 5 + 4}</span>
+              <div class="bat-code model-entry-grid">
+                <div>
+                  <p class="bat-heading bat-heading-inline">Regions available</p>
+                  <div class="models-region-list">
+                    {family.regionsAvailable.map((region) => <span class="models-region-chip">{region}</span>)}
+                  </div>
+                </div>
+                <div>
+                  <p class="bat-heading bat-heading-inline">Listed models</p>
+                  <ul class="bat-list-block">
+                    {family.models.map((model) => <li>{model}</li>)}
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div class="bat-line">
+              <span class="bat-gutter">{index * 5 + 5}</span>
+              <div class="bat-code bat-link-row">
+                <a href={family.source.sourceUrl} target="_blank" rel="noreferrer">open catalog source</a>
+                <a href={family.source.pricingUrl} target="_blank" rel="noreferrer">open pricing source</a>
+              </div>
+            </div>
+          </div>
+        </article>
+      ))}
+    </section>
+
+    <p class="standard-empty-state" id="models-empty-state" hidden>
+      No model families match the current filters.
+    </p>
+  </main>
+</BaseLayout>
+
+<script is:inline>
+  const list = document.querySelector("#models-list");
+  const entries = list ? [...list.querySelectorAll(".model-entry")] : [];
+  const searchInput = document.querySelector("#models-search");
+  const sourceFilter = document.querySelector("#models-source-filter");
+  const sourceButtons = sourceFilter ? [...sourceFilter.querySelectorAll("[data-source-filter]")] : [];
+  const statusFilter = document.querySelector("#models-status-filter");
+  const statusButtons = statusFilter ? [...statusFilter.querySelectorAll("[data-status-filter]")] : [];
+  const countLabel = document.querySelector("#models-results-count");
+  const emptyState = document.querySelector("#models-empty-state");
+  const params = new URLSearchParams(window.location.search);
+
+  const normalize = (value) => value.trim().toLowerCase();
+
+  const getActiveValue = (buttons, attributeName) =>
+    buttons.find((button) => button.classList.contains("is-active"))?.getAttribute(attributeName) ?? "";
+
+  const hydrateButtons = (buttons, attributeName, value) => {
+    buttons.forEach((button) => {
+      button.classList.toggle("is-active", (button.getAttribute(attributeName) ?? "") === value);
+    });
+  };
+
+  const getFilters = () => ({
+    search: searchInput instanceof HTMLInputElement ? normalize(searchInput.value) : "",
+    source: getActiveValue(sourceButtons, "data-source-filter"),
+    status: getActiveValue(statusButtons, "data-status-filter"),
+  });
+
+  const syncQueryParams = () => {
+    const nextParams = new URLSearchParams(window.location.search);
+    const filters = getFilters();
+    const values = [
+      ["q", searchInput instanceof HTMLInputElement ? searchInput.value.trim() : ""],
+      ["source", filters.source],
+      ["status", filters.status],
+    ];
+
+    values.forEach(([key, value]) => {
+      if (value) {
+        nextParams.set(key, value);
+      } else {
+        nextParams.delete(key);
+      }
+    });
+
+    const nextUrl = nextParams.toString() ? `?${nextParams.toString()}` : window.location.pathname;
+    window.history.replaceState({}, "", nextUrl);
+  };
+
+  const updateResults = () => {
+    const filters = getFilters();
+    const visibleEntries = [];
+
+    entries.forEach((entry) => {
+      const search = entry.getAttribute("data-search") ?? "";
+      const matchesSearch = !filters.search || search.includes(filters.search);
+      const matchesSource = !filters.source || entry.getAttribute("data-source") === filters.source;
+      const matchesStatus = !filters.status || entry.getAttribute("data-status") === filters.status;
+      const shouldShow = matchesSearch && matchesSource && matchesStatus;
+
+      if (shouldShow) {
+        if (entry instanceof HTMLElement) {
+          entry.style.display = "";
+        }
+        entry.removeAttribute("hidden");
+        visibleEntries.push(entry);
+      } else {
+        if (entry instanceof HTMLElement) {
+          entry.style.display = "none";
+        }
+        entry.setAttribute("hidden", "");
+      }
+    });
+
+    if (countLabel) {
+      countLabel.textContent = `${visibleEntries.length} families visible`;
+    }
+
+    if (emptyState instanceof HTMLElement) {
+      emptyState.hidden = visibleEntries.length > 0;
+    }
+
+    syncQueryParams();
+  };
+
+  if (searchInput instanceof HTMLInputElement && params.has("q")) {
+    searchInput.value = params.get("q") ?? "";
+  }
+
+  hydrateButtons(sourceButtons, "data-source-filter", params.get("source") ?? "");
+  hydrateButtons(statusButtons, "data-status-filter", params.get("status") ?? "");
+
+  if (searchInput instanceof HTMLInputElement) {
+    searchInput.addEventListener("input", updateResults);
+    searchInput.addEventListener("change", updateResults);
+  }
+
+  sourceFilter?.addEventListener("click", (event) => {
+    const button = event.target instanceof HTMLElement ? event.target.closest("[data-source-filter]") : null;
+    if (!(button instanceof HTMLElement)) {
+      return;
+    }
+
+    hydrateButtons(sourceButtons, "data-source-filter", button.getAttribute("data-source-filter") ?? "");
+    updateResults();
+  });
+
+  statusFilter?.addEventListener("click", (event) => {
+    const button = event.target instanceof HTMLElement ? event.target.closest("[data-status-filter]") : null;
+    if (!(button instanceof HTMLElement)) {
+      return;
+    }
+
+    hydrateButtons(statusButtons, "data-status-filter", button.getAttribute("data-status-filter") ?? "");
+    updateResults();
+  });
+
+  updateResults();
+</script>
+
+<script>
+  import { initFloatingRail } from "../scripts/floating-rail.ts";
+
+  initFloatingRail({
+    rail: "#models-floating-rail",
+    anchor: "#models-floating-rail-anchor",
+    dock: "#models-floating-rail-dock",
+  });
+</script>

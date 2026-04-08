@@ -1,24 +1,10 @@
 import { createMarkdownDocument, markdownResponse } from "../lib/markdown";
+import {
+  getLandingMarkdownCommands,
+  getLandingMarkdownPrimaryRoutes,
+  getLandingMarkdownSupportingRoutes,
+} from "../lib/home-markdown";
 import { withBasePath } from "../lib/site-url";
-
-const landingCommands = [
-  "/help",
-  "/home",
-  "/tech-radar",
-  "/documents",
-  "/ai-sdlc",
-  "/adrs",
-  "/communities",
-];
-
-const landingDomains = [
-  "Core Platforms",
-  "Delivery Systems",
-  "Decision Intelligence",
-  "Documentation",
-  "AI SDLC",
-  "ADRs",
-];
 
 const rights = [
   "Know which technologies are approved for enterprise use.",
@@ -27,7 +13,12 @@ const rights = [
   "Escalate architectural conflicts to the platform group.",
 ];
 
-export function GET() {
+export async function GET() {
+  const [landingCommands, primaryRoutes, supportingRoutes] = await Promise.all([
+    getLandingMarkdownCommands(),
+    Promise.resolve(getLandingMarkdownPrimaryRoutes()),
+    getLandingMarkdownSupportingRoutes(),
+  ]);
   const doc = createMarkdownDocument({
     title: "e*f(x) Technology",
     description: "Markdown companion for the landing page terminal.",
@@ -37,13 +28,18 @@ export function GET() {
   doc.heading("e*f(x) Technology");
   doc.paragraph("Landing page terminal for technology standards, decision support, and engineering direction.");
   doc.section("Available Commands", () => doc.bullets(landingCommands));
-  doc.section("Primary Routes", () => doc.bullets(landingDomains));
+  doc.section("Technology Sections", () =>
+    doc.bullets(primaryRoutes));
+  doc.section("Page System", () => {
+    doc.paragraph("Each page has an HTML route and a sibling Markdown route with the same path plus a `.md` suffix.");
+    doc.bullets(supportingRoutes);
+  });
   doc.section("Team Rights", () => doc.bullets(rights));
   doc.section("Usage", () => {
     doc.bullets([
       "Type a command in the terminal input.",
       "Use `/help` to list the configured commands.",
-      "Use `/tech-radar`, `/documents`, `/ai-sdlc`, `/adrs`, or `/communities` to read the Markdown companion for those pages.",
+      "Use `/tech-radar`, `/models`, `/documents`, `/ai-sdlc`, `/adrs`, or `/communities` to read the Markdown companion for those pages.",
     ]);
   });
 

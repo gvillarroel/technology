@@ -8,6 +8,7 @@ Initial Astro `6.1.1` base for generating a static site and publishing it to Git
 - `npm run dev`
 - `npm run check`
 - `npm run check:markdown-pages`
+- `npm run check:markdown-pages:dist`
 - `npm run build`
 - `npm run preview`
 
@@ -21,6 +22,8 @@ When a live local service is needed, prefer one shared development session for t
 
 `npm install` also runs `prepare`, which configures `git` to use the repository-local hooks under `.githooks/`.
 The `pre-commit` hook runs `npm run check:markdown-pages` so a new `.astro` page cannot be committed without its matching `.md.ts` route.
+`npm run build` also runs a post-build Markdown graph audit that crawls generated `dist/**/*.md`
+from `/index.md` and fails on broken internal Markdown links or unreachable generated pages.
 
 ## Deploy
 

@@ -611,6 +611,85 @@ code {
   font-family: "Cascadia Code", "Fira Code", monospace;
 }
 
+.models-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.models-summary-card h2 {
+  margin-top: 0.4rem;
+}
+
+.models-card-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  justify-content: flex-end;
+}
+
+.models-source-pill,
+.models-status-pill,
+.models-region-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.models-source-pill,
+.models-status-pill {
+  padding: 0.42rem 0.65rem;
+}
+
+.models-region-chip {
+  padding: 0.38rem 0.58rem;
+  border: 1px solid rgba(51, 62, 72, 0.12);
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--heading);
+}
+
+.models-source-pill-vertex-ai-model-garden {
+  background: rgba(0, 114, 152, 0.1);
+  color: #0d4f68;
+}
+
+.models-source-pill-ollama {
+  background: rgba(69, 132, 42, 0.12);
+  color: #2a5f18;
+}
+
+.models-status-pill.is-approved {
+  background: rgba(69, 132, 42, 0.14);
+  color: #2a5f18;
+}
+
+.models-status-pill.is-explore {
+  background: rgba(0, 114, 152, 0.12);
+  color: #0d4f68;
+}
+
+.models-status-pill.is-blacklisted {
+  background: rgba(158, 27, 50, 0.12);
+  color: var(--brand-red);
+}
+
+.model-entry-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 1rem;
+}
+
+.models-region-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+}
+
 .standard-footer-actions {
   display: flex;
   justify-content: flex-start;
@@ -1313,6 +1392,176 @@ code {
   gap: 1rem;
 }
 
+.docs-index-hero {
+  display: grid;
+  gap: 0.9rem;
+  padding-bottom: 0.1rem;
+}
+
+.docs-index-hero-copy {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.docs-index-hero-trust {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.7rem;
+  color: var(--muted);
+  font-family: "Cascadia Code", "Fira Code", monospace;
+  font-size: 0.8rem;
+}
+
+.docs-index-hero-trust span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.9rem;
+  padding: 0.22rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid rgba(51, 62, 72, 0.08);
+}
+
+.docs-index-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(18rem, 0.9fr);
+  gap: 0.9rem;
+}
+
+.docs-search-results {
+  display: grid;
+  gap: 0.95rem;
+}
+
+.docs-search-results-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.docs-search-result-card {
+  display: grid;
+  gap: 0.45rem;
+  padding: 1rem 1.05rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(51, 62, 72, 0.1);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 18px 44px rgba(22, 32, 40, 0.05);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.docs-search-result-card:hover,
+.docs-search-result-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: rgba(0, 114, 152, 0.16);
+  box-shadow: 0 22px 52px rgba(22, 32, 40, 0.08);
+}
+
+.docs-search-result-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.docs-search-result-repository,
+.docs-search-result-type,
+.docs-search-result-title,
+.docs-search-result-path,
+.docs-search-result-copy,
+.docs-search-result-heading {
+  margin: 0;
+}
+
+.docs-search-result-repository {
+  color: var(--primary-blue);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.docs-search-result-type {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.docs-search-result-title {
+  color: var(--heading);
+  font-size: 1.02rem;
+  line-height: 1.35;
+}
+
+.docs-search-result-path {
+  color: var(--muted);
+  font-family: "Cascadia Code", "Fira Code", monospace;
+  font-size: 0.8rem;
+}
+
+.docs-search-result-copy {
+  color: var(--brand-gray);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.docs-search-result-heading {
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.docs-index-metric-card {
+  display: grid;
+  gap: 0.4rem;
+  padding: 1rem 1.05rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(51, 62, 72, 0.1);
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 18px 44px rgba(22, 32, 40, 0.05);
+}
+
+.docs-index-metric-card.is-compact {
+  gap: 0.55rem;
+}
+
+.docs-index-metric-label,
+.docs-index-metric-value,
+.docs-index-metric-copy {
+  margin: 0;
+}
+
+.docs-index-metric-label {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.docs-index-metric-value {
+  color: var(--heading);
+  font-size: 1.02rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.docs-index-metric-copy {
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.docs-index-config-preview {
+  padding: 0.8rem 0.9rem;
+  font-size: 0.8rem;
+}
+
 .adrs-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1489,8 +1738,8 @@ code {
 
 .docs-library-card {
   display: grid;
-  gap: 1rem;
-  padding: 1.2rem;
+  gap: 0.85rem;
+  padding: 1.05rem;
 }
 
 .docs-library-card-link {
@@ -1558,7 +1807,7 @@ code {
 
 .docs-library-body {
   display: grid;
-  gap: 0.85rem;
+  gap: 0.72rem;
 }
 
 .docs-library-type,
@@ -1582,15 +1831,17 @@ code {
 
 .docs-library-copy {
   color: var(--brand-gray);
-  font-size: 0.95rem;
-  line-height: 1.7;
+  font-size: 0.91rem;
+  line-height: 1.62;
 }
 
 .docs-library-meta {
-  display: grid;
-  gap: 0.4rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.55rem;
   color: var(--muted);
-  font-size: 0.84rem;
+  font-size: 0.8rem;
+  line-height: 1.45;
 }
 
 .docs-detail-layout {
@@ -1794,7 +2045,7 @@ code {
 .docs-reference-layout {
   display: grid;
   grid-template-columns: minmax(16rem, 18rem) minmax(0, 1fr) minmax(14rem, 16rem);
-  gap: 1.5rem;
+  gap: 1.35rem;
   align-items: start;
   margin-top: 0;
 }
@@ -2137,9 +2388,56 @@ code {
   padding: 0.35rem 0 0;
 }
 
+.docs-reference-markdown :is(h2, h3, h4, h5, h6) {
+  scroll-margin-top: 6rem;
+}
+
+.docs-markdown-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid rgba(51, 62, 72, 0.08);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 16px 36px rgba(22, 32, 40, 0.04);
+}
+
+.docs-markdown-table-wrap table {
+  width: 100%;
+  min-width: 28rem;
+  border-collapse: collapse;
+}
+
+.docs-markdown-table-wrap thead {
+  background: rgba(0, 114, 152, 0.05);
+}
+
+.docs-markdown-table-wrap th,
+.docs-markdown-table-wrap td {
+  padding: 0.8rem 0.9rem;
+  border-bottom: 1px solid rgba(51, 62, 72, 0.08);
+  vertical-align: top;
+  text-align: left;
+  line-height: 1.55;
+}
+
+.docs-markdown-table-wrap th {
+  color: var(--heading);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.docs-markdown-table-wrap td {
+  color: var(--brand-gray);
+  font-size: 0.9rem;
+}
+
+.docs-markdown-table-wrap tbody tr:last-child td {
+  border-bottom: 0;
+}
+
 .docs-reference-toc {
   display: grid;
-  gap: 1.15rem;
+  gap: 0.8rem;
 }
 
 .docs-reference-toc.is-repository-toc {
@@ -2148,30 +2446,32 @@ code {
 
 .docs-reference-toc-card {
   display: grid;
-  gap: 0.75rem;
-  padding: 0 0 0.25rem 1rem;
-  border-left: 1px solid rgba(0, 114, 152, 0.16);
-  background: transparent;
+  gap: 0.6rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid rgba(51, 62, 72, 0.08);
+  border-radius: 0.95rem;
+  background: rgba(255, 255, 255, 0.64);
+  box-shadow: 0 14px 36px rgba(22, 32, 40, 0.04);
 }
 
 .docs-reference-toc-title {
   margin: 0;
   color: var(--heading);
-  font-size: 0.86rem;
+  font-size: 0.82rem;
   font-weight: 700;
 }
 
 .docs-outline-list,
 .docs-related-list {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.35rem;
 }
 
 .docs-outline-list a,
 .docs-related-link {
   display: grid;
   gap: 0.16rem;
-  padding: 0.22rem 0;
+  padding: 0.18rem 0;
   color: var(--heading);
   text-decoration: none;
   transition:
@@ -2187,6 +2487,11 @@ code {
   transform: translateY(-1px);
 }
 
+.docs-outline-list a.is-active {
+  color: var(--primary-blue);
+  font-weight: 700;
+}
+
 .docs-related-link small {
   color: var(--muted);
   font-size: 0.74rem;
@@ -2194,13 +2499,13 @@ code {
 
 .docs-reference-definition-list {
   display: grid;
-  gap: 0.65rem;
+  gap: 0.55rem;
   margin: 0;
 }
 
 .docs-reference-definition-list div {
   display: grid;
-  gap: 0.14rem;
+  gap: 0.08rem;
 }
 
 .docs-reference-definition-list dt,
@@ -2218,27 +2523,36 @@ code {
 
 .docs-reference-definition-list dd {
   color: var(--heading);
-  font-size: 0.94rem;
-  line-height: 1.5;
+  font-size: 0.9rem;
+  line-height: 1.42;
   word-break: break-word;
 }
 
 .docs-reference-card-actions {
-  display: grid;
-  gap: 0.32rem;
-  padding-top: 0.15rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.55rem;
+  padding-top: 0.1rem;
 }
 
 .docs-reference-card-actions a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.8rem;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 114, 152, 0.12);
+  background: rgba(0, 114, 152, 0.04);
   color: var(--primary-blue);
-  font-size: 0.84rem;
+  font-size: 0.78rem;
   font-weight: 700;
   text-decoration: none;
 }
 
 .docs-reference-card-actions a:hover,
 .docs-reference-card-actions a:focus-visible {
-  text-decoration: underline;
+  background: rgba(0, 114, 152, 0.08);
+  text-decoration: none;
 }
 
 .docs-reference-section-links {
@@ -4717,6 +5031,7 @@ h3 {
   .adrs-grid,
   .docs-library-grid,
   .community-grid,
+  .models-summary-grid,
   .cloud-product-grid,
   .bat-grid-hero,
   .bat-grid-detail,
@@ -4737,6 +5052,11 @@ h3 {
 
   .docs-repo-trust-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .docs-index-strip,
+  .docs-search-results-list {
+    grid-template-columns: 1fr;
   }
 
   .docs-reference-toc {
@@ -4849,12 +5169,20 @@ h3 {
     flex-direction: column;
   }
 
+  .model-entry-grid {
+    grid-template-columns: 1fr;
+  }
+
   .docs-reference-layout {
     grid-template-columns: 1fr;
     gap: 1.1rem;
   }
 
   .docs-repo-trust-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .docs-search-results-list {
     grid-template-columns: 1fr;
   }
 

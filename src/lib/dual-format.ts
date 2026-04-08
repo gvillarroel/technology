@@ -6,7 +6,7 @@ function shouldRewriteLink(url: string) {
   return !ABSOLUTE_URL_PATTERN.test(url) && !ASSET_OR_ANCHOR_PATTERN.test(url);
 }
 
-function toMarkdownHref(url: string) {
+export function toMarkdownHref(url: string) {
   if (!shouldRewriteLink(url)) {
     return url;
   }

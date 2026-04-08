@@ -71,9 +71,60 @@ const siblingDocuments =
         .sort((left, right) => left.title.localeCompare(right.title))
     : [];
 const relatedDocuments = (siblingDocuments.length > 0 ? siblingDocuments : childDocuments).slice(0, 8);
-const orderedDocuments = repositoryPages
-  .filter((entry) => entry.pageType === "document")
-  .sort((left, right) => left.relativePath.localeCompare(right.relativePath) || left.title.localeCompare(right.title));
+type OrderedFolderNode = {
+  page?: typeof repositoryPages[number];
+  documents: typeof repositoryPages;
+  folders: Map<string, OrderedFolderNode>;
+};
+const rootOrderedFolder: OrderedFolderNode = {
+  documents: [],
+  folders: new Map(),
+};
+for (const entry of repositoryPages.filter((candidate) => candidate.pageType === "document")) {
+  const relativeSegments = entry.slugSegments.slice(1);
+  const folderSegments = entry.isFolderIndex ? relativeSegments : relativeSegments.slice(0, -1);
+  let cursor = rootOrderedFolder;
+
+  for (const segment of folderSegments) {
+    const existing = cursor.folders.get(segment);
+
+    if (existing) {
+      cursor = existing;
+      continue;
+    }
+
+    const nextFolder: OrderedFolderNode = {
+      documents: [],
+      folders: new Map(),
+    };
+    cursor.folders.set(segment, nextFolder);
+    cursor = nextFolder;
+  }
+
+  if (entry.isFolderIndex) {
+    cursor.page = entry;
+  } else {
+    cursor.documents.push(entry);
+  }
+}
+const orderedDocuments: typeof repositoryPages = [];
+const visitOrderedFolder = (folder: OrderedFolderNode) => {
+  if (folder.page) {
+    orderedDocuments.push(folder.page);
+  }
+
+  const directDocuments = [...folder.documents].sort((left, right) => left.title.localeCompare(right.title));
+  const childFolders = [...folder.folders.entries()].sort((left, right) => left[0].localeCompare(right[0]));
+
+  for (const document of directDocuments) {
+    orderedDocuments.push(document);
+  }
+
+  for (const [, childFolder] of childFolders) {
+    visitOrderedFolder(childFolder);
+  }
+};
+visitOrderedFolder(rootOrderedFolder);
 const currentDocumentIndex = orderedDocuments.findIndex(
   (entry) => entry.slugSegments.join("/") === page.slugSegments.join("/"),
 );
@@ -444,18 +495,29 @@ const hasDatedRepositoryDocuments = (page.datedDocumentCount ?? 0) > 0;
               <dt>Status</dt>
               <dd>{page.status}</dd>
             </div>
-            <div>
-              <dt>Type</dt>
-              <dd>{page.docType}</dd>
-            </div>
-            <div>
-              <dt>Rules</dt>
-              <dd>{page.ruleLabels.join(", ") || "None"}</dd>
-            </div>
-            <div>
-              <dt>Roots</dt>
-              <dd>{page.domainRoots.join(", ") || "None"}</dd>
-            </div>
+            {page.pageType === "repository" ? (
+              <>
+                <div>
+                  <dt>Pages</dt>
+                  <dd>{page.fileCount ?? 0}</dd>
+                </div>
+                <div>
+                  <dt>Roots</dt>
+                  <dd>{page.domainRoots.join(", ") || "None"}</dd>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <dt>Type</dt>
+                  <dd>{page.docType}</dd>
+                </div>
+                <div>
+                  <dt>Roots</dt>
+                  <dd>{page.domainRoots.join(", ") || "None"}</dd>
+                </div>
+              </>
+            )}
           </dl>
           <div class="docs-reference-card-actions">
             <a href={page.repositoryUrl} target="_blank" rel="noreferrer">Repository</a>
@@ -490,5 +552,38 @@ const hasDatedRepositoryDocuments = (page.datedDocumentCount ?? 0) > 0;
     await mermaid.run({
       nodes: Array.from(diagrams),
     });
+  }
+
+  const outlineLinks = Array.from(document.querySelectorAll(".docs-outline-list a"));
+  const outlineTargets = outlineLinks
+    .map((link) => {
+      const id = link.getAttribute("href")?.replace(/^#/, "") ?? "";
+      const target = id ? document.getElementById(id) : null;
+
+      if (!target) {
+        return null;
+      }
+
+      return { link, target };
+    })
+    .filter(Boolean);
+
+  if (outlineTargets.length > 0) {
+    const setActiveOutlineLink = () => {
+      let active = outlineTargets[0];
+
+      for (const candidate of outlineTargets) {
+        if (candidate.target.getBoundingClientRect().top <= 140) {
+          active = candidate;
+        }
+      }
+
+      for (const candidate of outlineTargets) {
+        candidate.link.classList.toggle("is-active", candidate === active);
+      }
+    };
+
+    setActiveOutlineLink();
+    document.addEventListener("scroll", setActiveOutlineLink, { passive: true });
   }
 </script>

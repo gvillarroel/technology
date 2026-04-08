@@ -572,6 +572,8 @@ export function getAiSdlcIndexMarkdown(overview: AiSdlcOverview, topics: AiSdlcT
     ]);
   }
 
+  doc.paragraph(markdownLink("Back to home", withBasePath("/index.md")));
+
   return doc.finish();
 }
 

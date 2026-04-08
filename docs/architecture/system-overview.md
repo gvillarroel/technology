@@ -13,7 +13,7 @@ The repository has five macro building blocks:
 2. `src/lib/` loads, normalizes, and shapes the domain data for each page family.
 3. `src/components/` and `src/layouts/` provide the shared page chrome.
 4. `data/` stores the authoritative structured content and scan configuration.
-5. `scripts/` and Astro build steps validate route parity and generate the static site.
+5. `scripts/` and Astro build steps validate route parity, generated Markdown reachability, and the static site.
 
 ```mermaid
 flowchart LR
@@ -23,6 +23,7 @@ flowchart LR
     B --> D
     F["src/components and layouts"] --> D
     G["scripts/verify-markdown-page-pairs.mjs"] --> E
+    H["shared nav and command config"] --> D
 ```
 
 ## Repository Map
@@ -36,6 +37,7 @@ The route layer is grouped by major content surfaces:
 - `documents.*`
 - `ai-sdlc.*`
 - `cloud-enablement.*`
+- `models.*`
 - `communities.*`
 - `index.*`
 
@@ -48,9 +50,12 @@ The library layer is where the page models are composed:
 
 - `documents.ts` scans repositories, resolves Markdown pages, rewrites links, and builds the
   documentation tree.
-- `adrs.ts`, `tech-radar.ts`, `ai-sdlc.ts`, and `cloud-enablement.ts` do the same kind of
+- `adrs.ts`, `tech-radar.ts`, `ai-sdlc.ts`, `cloud-enablement.ts`, and `models.ts` do the same kind of
   composition for their own surfaces.
 - `dual-format.ts` helps keep HTML and Markdown URLs aligned.
+- `home-markdown.ts` builds the Markdown landing page from shared navigation, terminal command
+  configuration, and discovered support routes.
+- `standard-page-nav.ts` is the shared source of truth for the primary section navigation.
 - `site-url.ts` centralizes base-path-aware URL generation.
 
 ### `src/components/` and `src/layouts/`
@@ -67,6 +72,8 @@ These files provide the stable shell:
 
 - page-driving YAML such as `tech-radar.yaml`, `products.yaml`, `models.yaml`, and
   `document-repositories.yaml`
+- interaction-driving YAML such as `terminal-commands.yaml`, which also feeds the Markdown landing
+  page command list
 - contextual nested Markdown and data under `data/context/**`
 - spike inputs and route source material under `data/spikes/**`
 
@@ -74,7 +81,8 @@ These files provide the stable shell:
 
 The scripts directory enforces repo invariants:
 
-- `verify-markdown-page-pairs.mjs` checks every page family for HTML and Markdown parity
+- `verify-markdown-page-pairs.mjs` checks every page family for HTML and Markdown parity and can
+  audit the generated Markdown graph in `dist/`
 - `install-git-hooks.mjs` prepares local workflow guardrails
 
 ## Composition Model
@@ -88,8 +96,10 @@ flowchart TD
     B --> C["Loader normalizes records into page models"]
     C --> D["Astro route renders HTML page"]
     C --> E["Markdown route renders .md twin"]
+    C --> G["Shared navigation and command helpers compose Markdown hubs"]
     D --> F["dist/ static site"]
     E --> F
+    G --> E
 ```
 
 ## Why The Project Is Structured This Way
@@ -100,6 +110,8 @@ This structure keeps the repository opinionated in a few important ways:
 - data files stay separate from route templates
 - each domain page can evolve independently without fragmenting the site shell
 - generated Markdown mirrors the HTML routes so content can be exported or consumed by agents
+- Markdown navigation is derived from shared sources where possible so route additions do not
+  depend on hand-maintained landing-page lists
 
 ## Practical Modification Boundaries
 

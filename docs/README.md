@@ -91,3 +91,11 @@ and publishes them as folder-aware reading experiences with HTML and Markdown tw
 - Route: [`/documents/`](/documents/)
 - Data source: `data/document-repositories.yaml`
 - Implementation: `src/lib/documents.ts`, `src/pages/documents.*`
+
+## Use Cases
+
+The Use Cases section documents example workflows for consuming the site as an operational
+Markdown surface, including code-assistant-oriented patterns.
+
+- Section docs: [`./use-cases/README.md`](./use-cases/README.md)
+- Example focus: Markdown-first navigation, Codex, Claude Code, and GitHub Copilot Chat

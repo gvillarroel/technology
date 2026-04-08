@@ -333,6 +333,8 @@ export function getRadarIndexMarkdown(entries: RadarEntry[]) {
     }
   }
 
+  doc.paragraph(markdownLink("Back to home", withBasePath("/index.md")));
+
   return doc.finish();
 }
 
