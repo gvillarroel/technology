@@ -24,7 +24,7 @@ const radarDensityScore = Math.max(entries.length / 24, maxRadarGroupSize / 6);
 const radarVisualScale = Math.max(0.62, Math.min(1, 1 - (radarDensityScore - 1) * 0.12));
 const radarBlipRadius = Number((4.2 * radarVisualScale).toFixed(2));
 const radarBlipHoverRadius = Number((5.6 * radarVisualScale).toFixed(2));
-const radarLabelSize = Number((5 * radarVisualScale).toFixed(2));
+const radarLabelSize = Number((4.3 * radarVisualScale).toFixed(2));
 const radarAxisLabelSize = Number((5.5 * radarVisualScale).toFixed(2));
 const lifecycleDisplayOrder = ["To evaluate", "Explore", "Adopt", "Endure", "Retired"] as const;
 const primaryScopes = [...new Set(entries.map((entry) => entry.primaryScope))];
@@ -464,6 +464,8 @@ class Retired retired
     });
 
     const occupied = [];
+    let visibleLabelCount = 0;
+    const maxVisibleLabels = showExtendedStates ? 14 : 8;
 
     radarBlipLabels.forEach((label) => {
       const anchor = label.closest("[data-blip]");
@@ -488,12 +490,13 @@ class Retired retired
         !(nextBox.right < current.left || nextBox.left > current.right || nextBox.bottom < current.top || nextBox.top > current.bottom)
       );
 
-      if (intersects) {
+      if (intersects || visibleLabelCount >= maxVisibleLabels) {
         label.classList.add("radar-blip-label-collapsed");
         return;
       }
 
       occupied.push(nextBox);
+      visibleLabelCount += 1;
     });
   };
 

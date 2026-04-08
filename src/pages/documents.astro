@@ -208,14 +208,12 @@ const recentlyUpdatedEntries = [...searchEntries]
             <h3 class="docs-library-title">{repository.repository}</h3>
             <p class="docs-library-copy">{repository.summary}</p>
             <div class="docs-library-meta">
-              <span>owner: {repository.owner}</span>
-              <span>updated: {formatRepositoryUpdatedLabel(repository.updated)}</span>
-              <span>files: {repository.fileCount}</span>
-              <span>folders: {repository.folderCount}</span>
-              <span>rules: {repository.ruleCount}</span>
-              <span>roots: {repository.roots.join(", ") || "None"}</span>
+              <div class="docs-library-meta-row">
+                <span class="docs-library-meta-pill"><strong>Owner</strong>{repository.owner}</span>
+                <span class="docs-library-meta-pill"><strong>Updated</strong>{formatRepositoryUpdatedLabel(repository.updated)}</span>
+              </div>
             </div>
-            <span class="community-card-link">
+            <span class="community-card-link docs-library-cta">
               Open repository
             </span>
           </div>
