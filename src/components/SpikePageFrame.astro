@@ -8,6 +8,8 @@ export interface Props {
   title: string;
   summary: string;
   pills?: IntroPill[];
+  searchAction?: string;
+  searchPlaceholder?: string;
   sectionNavItems?: HeaderNavItem[];
   sectionTrailItems?: HeaderNavItem[];
 }
@@ -17,6 +19,8 @@ const {
   title,
   summary,
   pills = [],
+  searchAction = withBasePath("/spikes/format-architecture/"),
+  searchPlaceholder = "Search spike pages",
   sectionNavItems = [],
   sectionTrailItems = [],
 } = Astro.props;
@@ -24,12 +28,13 @@ const {
 
 <div class="shell shell-narrow standard-page shell-spike">
   <StandardPageHeader
-    searchAction={withBasePath("/tech-radar/")}
-    searchPlaceholder="Search technologies"
+    showSearch={false}
+    searchAction={searchAction}
+    searchPlaceholder={searchPlaceholder}
     sectionNavItems={sectionNavItems}
-    sectionNavLabel="Spike sections"
+    sectionNavLabel="Spike pages"
     sectionTrailItems={sectionTrailItems}
-    sectionTrailLabel="Spike path"
+    sectionTrailLabel="Spike route"
   />
 
   <StandardPageIntro

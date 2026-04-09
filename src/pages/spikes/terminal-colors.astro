@@ -55,8 +55,9 @@ const spikeSectionNavItems = await getSpikeSectionNavItems("terminal-colors");
       title={spikePage.title}
       summary={spikePage.summary}
       pills={spikePage.pills}
+      searchAction={spikePage.href}
+      searchPlaceholder="Search spike pages"
       sectionNavItems={spikeSectionNavItems}
-      sectionTrailItems={[{ label: spikePage.label, current: true }]}
     >
 
     <section class="spike-grid">

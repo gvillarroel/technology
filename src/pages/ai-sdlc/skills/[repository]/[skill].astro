@@ -23,6 +23,7 @@ const { overview } = await getAiSdlcData();
 const topics = await getAiSdlcTopics();
 const skillsTopic = await getAiSdlcTopicBySlug("skills");
 const detailCopy = skillsTopic?.skillDetail;
+const searchQuery = Astro.url.searchParams.get("q")?.trim() ?? "";
 const skill = repository && skillSlug ? await getApprovedSkillByRepoAndSlug(repository, skillSlug) : undefined;
 
 if (!skill || !detailCopy) {
@@ -132,7 +133,7 @@ function getEvaluationMatrix(evaluation: NonNullable<typeof skill>["evaluations"
       currentPage="ai-sdlc"
       searchAction="/ai-sdlc/skills/"
       searchPlaceholder={detailCopy.searchPlaceholder}
-      searchQuery={skill.name}
+      searchQuery={searchQuery}
       sectionNavItems={aiSdlcSectionNavItems}
       sectionNavLabel="AI SDLC sections"
       sectionTrailItems={aiSdlcTrailItems}

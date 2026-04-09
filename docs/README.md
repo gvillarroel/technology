@@ -20,6 +20,14 @@ flowchart LR
     G["scripts and build checks"] --> E
 ```
 
+## Recommended Reading Order
+
+If you need the short version of the repository direction, start here:
+
+1. [Architecture Current Strategy](./architecture/current-strategy.md)
+2. [Architecture System Overview](./architecture/system-overview.md)
+3. [Configuration Data Sources and Build Composition](./configuration/data-sources-and-build.md)
+
 ## Tech Radar
 
 The Tech Radar surface captures the approved technology inventory, operating posture,

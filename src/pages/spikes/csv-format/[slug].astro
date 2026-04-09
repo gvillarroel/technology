@@ -29,6 +29,8 @@ const spikeSectionNavItems = await getSpikeSectionNavItems("csv-format");
       title={page.data.title}
       summary={page.data.description ?? spikePage.summary}
       pills={spikePage.pills}
+      searchAction={spikePage.href}
+      searchPlaceholder="Search spike pages"
       sectionNavItems={spikeSectionNavItems}
       sectionTrailItems={[
         { href: spikePage.href, label: spikePage.label, current: false },
@@ -37,8 +39,10 @@ const spikeSectionNavItems = await getSpikeSectionNavItems("csv-format");
     >
     <section class="section-block prose-block">
       <p class="copy standard-copy-wide">
-        HTML URL: <a href={htmlUrl}>{htmlUrl}</a><br />
-        Markdown URL: <a href={markdownUrl}>{markdownUrl}</a>
+        Route pair:
+        <a href={htmlUrl}>Open HTML page</a>
+        and
+        <a href={markdownUrl}>Open Markdown page</a>.
       </p>
     </section>
 

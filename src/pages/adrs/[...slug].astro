@@ -20,6 +20,34 @@ const introPills = [
 if (!page) {
   return Astro.redirect(withBasePath("/adrs/"));
 }
+
+const normalizeAdrText = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/`/g, "")
+    .replace(/[^\p{L}\p{N}\s-]/gu, "")
+    .replace(/\s+/g, " ")
+    .trim();
+const firstBodyParagraph = page.body
+  .split(/\n\s*\n/g)
+  .map((section) => section.replace(/\s+/g, " ").trim())
+  .filter(Boolean)
+  .find((section) => !section.startsWith("#")) ?? "";
+const summaryDuplicatesOpeningParagraph =
+  !!page.summary &&
+  !!firstBodyParagraph &&
+  normalizeAdrText(page.summary) === normalizeAdrText(firstBodyParagraph);
+const renderedBodyHtml = (() => {
+  let html = page.bodyHtml;
+
+  html = html.replace(/^\s*<h1\b[^>]*>[\s\S]*?<\/h1>\s*/i, "");
+
+  if (summaryDuplicatesOpeningParagraph) {
+    html = html.replace(/^\s*<p\b[^>]*>[\s\S]*?<\/p>\s*/i, "");
+  }
+
+  return html;
+})();
 ---
 
 <BaseLayout
@@ -31,7 +59,7 @@ if (!page) {
       currentPage="adrs"
       searchAction={withBasePath("/adrs/")}
       searchPlaceholder="Search ADRs, products, or tags"
-      searchQuery={page.title}
+      searchQuery=""
     />
 
     <StandardPageIntro
@@ -49,7 +77,7 @@ if (!page) {
           <a href={page.rawUrl} target="_blank" rel="noreferrer">View raw</a>
         </div>
       </div>
-      <div class="docs-markdown" set:html={page.bodyHtml} />
+      <div class="docs-markdown" set:html={renderedBodyHtml} />
     </article>
 
     <section class="bat-grid bat-grid-detail">

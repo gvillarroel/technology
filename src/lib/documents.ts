@@ -3,6 +3,7 @@ import { readFile, readdir } from "node:fs/promises";
 import { parse as parseYaml } from "yaml";
 import { codeToHtml } from "shiki";
 import { createMarkdownDocument, markdownLink, type MarkdownDocument } from "./markdown";
+import { toMarkdownHref } from "./dual-format";
 import { withBasePath } from "./site-url";
 
 interface GitHubTreeEntry {
@@ -46,7 +47,6 @@ interface DocumentSourceConfig {
   account: string;
   repository?: string;
   ref?: string;
-  owner: string;
   includeRepositories: string[];
   excludeRepositories: string[];
   documents: DocumentScanRuleConfig[];
@@ -58,7 +58,6 @@ interface ResolvedDocumentRepository {
   repository: string;
   account: string;
   ref: string;
-  owner: string;
   localPath?: string;
   sourceSlugs: string[];
   sourceNames: string[];
@@ -75,8 +74,8 @@ export interface DocumentRepositorySummary {
   repositoryName: string;
   repository: string;
   repositoryUrl: string;
-  owner: string;
-  updated: string;
+  owner?: string;
+  updated?: string;
   status: string;
   docType: string;
   summary: string;
@@ -94,8 +93,8 @@ export interface DocumentPage {
   title: string;
   summary: string;
   status: string;
-  owner: string;
-  updated: string;
+  owner?: string;
+  updated?: string;
   docType: string;
   body: string;
   bodyHtml: string;
@@ -134,7 +133,7 @@ export interface DocumentSearchEntry {
   htmlUrl: string;
   markdownUrl: string;
   headings: string[];
-  updated: string;
+  updated?: string;
   docType: string;
   isFolderIndex: boolean;
   status: string;
@@ -165,6 +164,10 @@ interface DocumentsData {
   scannedRepositories: ResolvedDocumentRepository[];
   matchedRepositories: ResolvedDocumentRepository[];
   documentCount: number;
+}
+
+interface DocumentDetailMarkdownContext {
+  repositoryPages: DocumentPage[];
 }
 
 interface MutableFolderNode {
@@ -205,6 +208,15 @@ const codeLanguageAliases = new Map<string, string>([
   ["js", "javascript"],
   ["jsx", "jsx"],
 ]);
+const documentsIndexMarkdownTitle = "Repository-driven documentation.";
+const documentsIndexMarkdownSummary =
+  "Browse repository docs as a single library, with one page per repository and folder-aware navigation for every Markdown section that was discovered during the build.";
+const documentsIndexConfigPreview = [
+  "data/document-repositories.yaml",
+  "src/lib/documents.ts",
+  "src/pages/documents.astro",
+  "src/pages/documents/[...slug].astro",
+];
 
 function toScalar(value: unknown, fallback = "") {
   return String(value ?? fallback).trim();
@@ -480,7 +492,6 @@ function buildResolvedRepository(
     repository,
     account: source.account,
     ref,
-    owner: source.owner,
     localPath,
     sourceSlugs: [source.slug],
     sourceNames: [source.name],
@@ -683,6 +694,10 @@ function normalizeComparableMarkdownText(value: string) {
     .trim();
 }
 
+function escapeRegularExpression(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function stripLeadingHeadingAndSummary(markdown: string, title: string, summary: string) {
   let remaining = markdown.trim();
   const headingMatch = remaining.match(/^#\s+(.+?)\s*(?:\n+|$)/);
@@ -704,7 +719,21 @@ function stripLeadingHeadingAndSummary(markdown: string, title: string, summary:
     remaining = remaining.slice(firstParagraphMatch?.[0].length ?? 0).replace(/^\s+/, "");
   }
 
+  remaining = remaining.replace(
+    /^Related docs:\s*\n(?:\n)?(?:- .+\n)+/i,
+    "",
+  ).replace(/^\s+/, "");
+
   return remaining.trim();
+}
+
+function stripLeadingMarkdownSection(markdown: string, heading: string) {
+  const pattern = new RegExp(
+    `^##\\s+${escapeRegularExpression(heading)}\\s*\\n(?:\\n)?[\\s\\S]*?(?=\\n##\\s+|$)`,
+    "i",
+  );
+
+  return markdown.replace(pattern, "").replace(/^\s+/, "").trim();
 }
 
 function getDocumentLinkCandidates(filePath: string) {
@@ -801,6 +830,11 @@ function rewriteDocumentBodyLinks(
       const fallbackPath = fallbackCandidates.find((candidate) => repositoryPaths.has(candidate.toLowerCase()));
 
       if (!fallbackPath) {
+        if (rawPath.startsWith("/")) {
+          const hash = rawHash ? `#${rawHash}` : "";
+          return `[${label}](${mode === "markdown" ? `${toMarkdownHref(rawPath)}${hash}` : `${rawPath}${hash}`})`;
+        }
+
         return `[${label}](${href})`;
       }
 
@@ -1217,20 +1251,235 @@ function getHeadingTitle(body: string) {
   return match?.[1]?.trim() ?? "";
 }
 
-function getBodySummary(body: string) {
-  const paragraphs = body
-    .split(/\n\s*\n/g)
-    .map((section) => section.replace(/\s+/g, " ").trim())
-    .filter(Boolean)
-    .filter((section) => !section.startsWith("#"));
+function stripMarkdownLinks(text: string) {
+  return text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1");
+}
 
-  return paragraphs.find((section) => section.split(/\s+/).length > 4) ?? paragraphs[0] ?? "";
+function isNavigationalSummarySection(section: string) {
+  const normalized = stripMarkdownLinks(section).replace(/`/g, "").trim();
+  const lines = normalized
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length === 0) {
+    return true;
+  }
+
+  if (section.includes("```")) {
+    return true;
+  }
+
+  if (/^(related docs|see also|sections)\s*:?\s*$/i.test(lines[0] ?? "")) {
+    return true;
+  }
+
+  if (/^(read this after|see also:|status note:)/i.test(lines[0] ?? "")) {
+    return true;
+  }
+
+  if (lines.every((line) => /^[-*]\s+/.test(line) || /^\d+\.\s+/.test(line))) {
+    return true;
+  }
+
+  if (lines.some((line) => /[.!?]$/.test(line))) {
+    return false;
+  }
+
+  if (
+    lines.length <= 4 &&
+    lines.every((line) =>
+      line.split(/\s+/).length <= 8 &&
+      (
+        /^[-*]\s+/.test(line) ||
+        /^[\w./:-]+(?:\s+[\w./:-]+)*$/.test(line)
+      ),
+    )
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function summarizeHeadingLabels(labels: string[]) {
+  if (labels.length === 0) {
+    return "";
+  }
+
+  if (labels.length === 1) {
+    return `Reference for ${labels[0]}.`;
+  }
+
+  if (labels.length === 2) {
+    return `Reference for ${labels[0]} and ${labels[1]}.`;
+  }
+
+  return `Reference for ${labels.slice(0, -1).join(", ")}, and ${labels.at(-1)}.`;
+}
+
+function cleanSummaryCandidate(text: string) {
+  return text
+    .replace(/\s+/g, " ")
+    .replace(/[:;]\s*$/, "")
+    .trim();
+}
+
+function getBodySummary(body: string) {
+  const sections = body
+    .split(/\n\s*\n/g)
+    .map((section) => section.trim())
+    .filter(Boolean)
+    .filter((section) => !section.startsWith("#"))
+    .map((section) => ({
+      raw: section,
+      normalized: cleanSummaryCandidate(section),
+    }));
+
+  const viableSections = sections.filter((section) => !isNavigationalSummarySection(section.raw));
+  const firstNarrativeSection = viableSections.find((section) => section.normalized.split(/\s+/).length > 4);
+
+  if (firstNarrativeSection) {
+    const firstNarrativeIndex = sections.findIndex((section) => section.raw === firstNarrativeSection.raw);
+    const nextNarrativeSection =
+      firstNarrativeIndex >= 0 ? sections.slice(firstNarrativeIndex + 1).find((section) => !isNavigationalSummarySection(section.raw)) : null;
+
+    if (
+      nextNarrativeSection &&
+      (
+        /[:;]$/.test(firstNarrativeSection.raw.trim()) ||
+        firstNarrativeSection.normalized.split(/\s+/).length <= 8
+      ) &&
+      nextNarrativeSection.normalized.split(/\s+/).length > 5 &&
+      !nextNarrativeSection.raw.startsWith("-") &&
+      !/^(##|###)\s+/.test(nextNarrativeSection.raw)
+    ) {
+      const separator = /[:;]$/.test(firstNarrativeSection.raw.trim()) ? ". " : " ";
+      return `${firstNarrativeSection.normalized}${separator}${nextNarrativeSection.normalized}`.trim();
+    }
+
+    return firstNarrativeSection.normalized;
+  }
+
+  const headingSummary = summarizeHeadingLabels(getDocumentHeadings(body).slice(0, 3));
+
+  if (headingSummary) {
+    return headingSummary;
+  }
+
+  return (
+    sections.find((section) => section.normalized.split(/\s+/).length > 4)?.normalized ??
+    sections[0]?.normalized ??
+    ""
+  );
+}
+
+function getDocumentSummary(frontmatterSummary: string, body: string) {
+  const explicitSummary = frontmatterSummary.trim();
+  const bodySummary = getBodySummary(body);
+
+  if (!explicitSummary) {
+    return bodySummary;
+  }
+
+  if (isNavigationalSummarySection(explicitSummary) && bodySummary) {
+    return bodySummary;
+  }
+
+  return explicitSummary;
 }
 
 function getDocumentHeadings(body: string) {
   return [...body.matchAll(/^#{2,3}\s+(.+)$/gm)]
     .map((match) => match[1]?.trim() ?? "")
     .filter(Boolean);
+}
+
+function getDisplayDate(value?: string) {
+  if (!value) {
+    return "Unknown";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+}
+
+function getDisplayDateTime(value?: string) {
+  if (!value) {
+    return "Unknown";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  }).format(date);
+}
+
+function getAutomaticOwner(entries: Array<{ owner?: string }>) {
+  const owners = [...new Set(entries.map((entry) => entry.owner?.trim()).filter(Boolean))];
+  return owners.length === 1 ? owners[0] : "";
+}
+
+function getEntryTimestamp(value?: string) {
+  if (!value) {
+    return 0;
+  }
+
+  const timestamp = Date.parse(value);
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+function compareDocumentSearchEntries(left: DocumentSearchEntry, right: DocumentSearchEntry) {
+  const timestampDifference = getEntryTimestamp(right.updated) - getEntryTimestamp(left.updated);
+
+  if (timestampDifference !== 0) {
+    return timestampDifference;
+  }
+
+  if (left.status !== right.status) {
+    return left.status === "Generated" ? 1 : -1;
+  }
+
+  if (left.isFolderIndex !== right.isFolderIndex) {
+    return left.isFolderIndex ? -1 : 1;
+  }
+
+  return (
+    left.repository.localeCompare(right.repository) ||
+    left.title.localeCompare(right.title) ||
+    left.relativePath.localeCompare(right.relativePath)
+  );
+}
+
+function getHeadingAnchor(heading: string) {
+  return heading
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-");
+}
+
+function sanitizeMarkdownSummary(text: string) {
+  return text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1");
 }
 
 function buildDocumentSlugSegments(repositorySlug: string, filePath: string) {
@@ -1319,17 +1568,6 @@ async function getRepositoryFilePaths(repository: ResolvedDocumentRepository) {
   );
 }
 
-async function getRemoteRepositoryFilePaths(repository: ResolvedDocumentRepository) {
-  try {
-    const tree = await getGitHubTree(repository.repository, repository.ref);
-    return [...new Set(
-      tree.filter((entry) => entry.type === "blob").map((entry) => normalizePath(entry.path)),
-    )].sort((left, right) => left.localeCompare(right));
-  } catch {
-    return [];
-  }
-}
-
 async function getRepositoryDocumentMatches(repository: ResolvedDocumentRepository, paths?: string[]) {
   const repositoryPaths = paths ?? (await getRepositoryFilePaths(repository));
 
@@ -1387,7 +1625,6 @@ async function readDocumentSource(repository: ResolvedDocumentRepository, filePa
 async function buildDocumentPage(
   repository: ResolvedDocumentRepository,
   match: DocumentMatch,
-  remotePaths: Set<string>,
 ): Promise<DocumentPage | null> {
   let markdownSource = "";
   let rawUrl = "";
@@ -1413,14 +1650,12 @@ async function buildDocumentPage(
   const { htmlUrl, markdownUrl } = getDocumentsUrls(slugSegments);
   const updated =
     toScalar(data.updated) || (await getGitHubCommitDate(repository.repository, repository.ref, match.path));
-  const hasRemoteSource = remotePaths.has(match.path.toLowerCase());
-
   return {
     pageType: "document",
     title: getFileTitle(body, toScalar(data.title), match.path),
-    summary: toScalar(data.summary, getBodySummary(body)),
+    summary: sanitizeMarkdownSummary(getDocumentSummary(toScalar(data.summary), body)),
     status: toScalar(data.status, "Published"),
-    owner: toScalar(data.owner, repository.owner),
+    owner: toScalar(data.owner),
     updated,
     docType: toScalar(data.doc_type, match.rules[0]?.name || "Markdown Document"),
     body,
@@ -1434,8 +1669,8 @@ async function buildDocumentPage(
     repository: repository.repository,
     repositoryRef: repository.ref,
     repositoryUrl: getGitHubRepositoryUrl(repository.repository),
-    sourceUrl: hasRemoteSource ? sourceUrl : "",
-    rawUrl: hasRemoteSource ? rawUrl : "",
+    sourceUrl,
+    rawUrl,
     isFolderIndex: ["readme.md", "index.md"].includes(posix.basename(match.path).toLowerCase()),
     ruleLabels: [...new Set(match.rules.map((rule) => rule.name))],
     domainRoots: [...new Set(match.rules.flatMap((rule) => rule.domains))],
@@ -1585,11 +1820,37 @@ function getLatestDocumentPage(pages: DocumentPage[]) {
     .filter((page) => Boolean(page.updated))
     .sort(
       (left, right) =>
-        right.updated.localeCompare(left.updated) ||
+        (right.updated ?? "").localeCompare(left.updated ?? "") ||
         left.relativePath.localeCompare(right.relativePath) ||
         left.title.localeCompare(right.title),
     )
     .at(0);
+}
+
+function buildSyntheticFolderSummary(
+  title: string,
+  childFolders: string[],
+  childPages: DocumentPage[],
+) {
+  const labels = [
+    ...childPages.map((page) => page.title),
+    ...childFolders.map((folder) => toLabel(posix.basename(folder))),
+  ].filter(Boolean);
+  const uniqueLabels = [...new Set(labels)];
+
+  if (uniqueLabels.length === 0) {
+    return `Section overview for ${title}.`;
+  }
+
+  if (uniqueLabels.length === 1) {
+    return `Section overview for ${title}, covering ${uniqueLabels[0]}.`;
+  }
+
+  if (uniqueLabels.length === 2) {
+    return `Section overview for ${title}, covering ${uniqueLabels[0]} and ${uniqueLabels[1]}.`;
+  }
+
+  return `Section overview for ${title}, covering ${uniqueLabels.slice(0, 2).join(", ")}, and ${uniqueLabels[2]}.`;
 }
 
 function buildSyntheticFolderOverviewMarkdown(
@@ -1599,10 +1860,11 @@ function buildSyntheticFolderOverviewMarkdown(
   childFolders: string[],
   childPages: DocumentPage[],
 ) {
+  const summary = buildSyntheticFolderSummary(title, childFolders, childPages);
   const lines = [
     `# ${title}`,
     "",
-    `Generated folder landing page for \`${folderPath}\` in \`${repository.repository}\`.`,
+    `${summary} Published from the scanned folder structure for \`${folderPath}\` in \`${repository.repository}\`.`,
     "",
     "## Overview",
     "",
@@ -1704,13 +1966,18 @@ async function createSyntheticFolderPages(repository: ResolvedDocumentRepository
       [...childFolders].sort(),
       childPages.sort((left, right) => left.title.localeCompare(right.title)),
     );
+    const summary = buildSyntheticFolderSummary(
+      title,
+      [...childFolders].sort(),
+      childPages.sort((left, right) => left.title.localeCompare(right.title)),
+    );
 
     syntheticPages.push({
       pageType: "document",
       title,
-      summary: `Generated folder landing page for ${folderPath} in ${repository.repository}.`,
+      summary,
       status: "Generated",
-      owner: repository.owner,
+      owner: getAutomaticOwner(descendantPages),
       updated,
       docType: "Folder Index",
       body,
@@ -1750,7 +2017,6 @@ function buildRepositoryOverviewMarkdown(
     "",
     "## Repository metadata",
     "",
-    `- Owner: ${repository.owner}`,
     `- Branch: ${repository.ref}`,
     `- Files discovered: ${pages.length}`,
     `- Folders discovered: ${folderCount}`,
@@ -1791,9 +2057,9 @@ async function buildRepositoryPage(
   return {
     pageType: "repository",
     title: repository.repository,
-    summary: `Repository landing page for ${repository.repository} and its discovered Markdown documentation.`,
+    summary: `Scanned repository index for ${repository.repository}, with normalized Markdown pages and folder-aware navigation.`,
     status: "Scanned",
-    owner: repository.owner,
+    owner: getAutomaticOwner(pages),
     updated: getLatestDocumentDate(pages),
     docType: "Repository Index",
     body,
@@ -1840,7 +2106,6 @@ async function getDocumentSourceConfigs() {
         account: toScalar(repository.account),
         repository: toScalar(repository.repository) || undefined,
         ref: toScalar(repository.ref) || undefined,
-        owner: toScalar(repository.owner, "Documentation"),
         includeRepositories: toStringArray(repository.include_repositories),
         excludeRepositories: toStringArray(repository.exclude_repositories),
         documents: ((repository.documents as Array<Record<string, unknown>> | undefined) ?? []).map((rule) => ({
@@ -1866,12 +2131,10 @@ async function loadDocumentsData(): Promise<DocumentsData> {
 
   const documentPagesByRepository = await Promise.all(
     scannedRepositories.map(async (repository) => {
-      const remoteRepositoryPaths = await getRemoteRepositoryFilePaths(repository);
       const repositoryPaths = await getRepositoryFilePaths(repository);
       const matches = await getRepositoryDocumentMatches(repository, repositoryPaths);
-      const remotePathSet = new Set(remoteRepositoryPaths.map((path) => path.toLowerCase()));
       const basePages = dedupeDocumentPages((
-        await Promise.all(matches.map((match) => buildDocumentPage(repository, match, remotePathSet)))
+        await Promise.all(matches.map((match) => buildDocumentPage(repository, match)))
       ).filter((page): page is DocumentPage => Boolean(page)));
       const syntheticPages = await createSyntheticFolderPages(repository, basePages);
       const pages = [...basePages, ...syntheticPages].sort((left, right) =>
@@ -2075,34 +2338,123 @@ export async function getDocumentTree(repositorySlug: string, activeSlugSegments
 }
 
 export function getDocumentsIndexMarkdown(data: DocumentsData) {
-  const { repositorySummaries, sourceConfigs, scannedRepositories, documentCount } = data;
+  const { repositorySummaries, searchEntries, sourceConfigs, scannedRepositories, documentCount } = data;
+  const documentEntries = searchEntries
+    .filter((entry) => entry.pageType === "document")
+    .sort(compareDocumentSearchEntries);
+  const recentlyUpdatedEntries = [...searchEntries]
+    .filter((entry) => entry.updated)
+    .sort((left, right) => (right.updated ?? "").localeCompare(left.updated ?? ""))
+    .slice(0, 3);
+  const latestRepositoryUpdate =
+    [...repositorySummaries]
+      .map((entry) => entry.updated)
+      .filter(Boolean)
+      .sort()
+      .at(-1) ?? "";
   const doc = createMarkdownDocument({
-    title: "Documentation",
+    title: documentsIndexMarkdownTitle,
     description: "Markdown companion for the repository-driven documentation index.",
     canonicalHtml: withBasePath("/documents/"),
   });
 
-  doc.heading("Documentation");
-  doc.paragraph("Repository-driven documentation index built from repository filters and document scan rules declared in `data/document-repositories.yaml`.");
-  doc.keyValueList([
-    { label: "Config entries", value: String(sourceConfigs.length) },
-    { label: "Repositories scanned", value: String(scannedRepositories.length) },
-    { label: "Repositories with matching docs", value: String(repositorySummaries.length) },
-    { label: "Markdown files discovered", value: String(documentCount) },
-  ]);
-  doc.section("Repository index");
+  doc.heading(documentsIndexMarkdownTitle);
+  doc.paragraph(documentsIndexMarkdownSummary);
+  doc.section("Library summary", () => {
+    doc.keyValueList([
+      { label: "Repositories", value: String(repositorySummaries.length) },
+      { label: "Pages", value: String(documentCount) },
+      ...(latestRepositoryUpdate ? [{ label: "Last update", value: getDisplayDate(latestRepositoryUpdate) }] : []),
+      { label: "Repositories scanned", value: String(scannedRepositories.length) },
+      { label: "Config rule sets", value: String(sourceConfigs.length) },
+    ]);
+  });
+  doc.section("GitHub repositories", () => {
+    doc.subheading("How repository discovery works", 3);
+    doc.paragraph(
+      "The library starts from repository targets and account filters declared in `data/document-repositories.yaml`, expands the matching repositories, and then applies document rules to decide which Markdown files become published pages.",
+    );
+    doc.keyValueList([
+      { label: "Config entries", value: String(sourceConfigs.length) },
+      { label: "Repositories scanned", value: String(scannedRepositories.length) },
+      { label: "Repositories with docs", value: String(repositorySummaries.length) },
+      { label: "Markdown pages", value: String(documentCount) },
+    ]);
+  });
+  doc.section("YAML configuration", () => {
+    doc.paragraph(
+      "Each configuration entry combines repository filters with one or more document rules. Those rules describe which roots, folders, and Markdown patterns should be treated as published documentation for any repository that matches.",
+    );
+    doc.codeBlock(documentsIndexConfigPreview.join("\n"));
+  });
+  doc.section("Library views", () => {
+    doc.paragraph(
+      "The HTML UI can pivot between repository and page views and can layer live search state on top. The Markdown twin flattens both perspectives into stable repository and page inventories so the same content remains navigable without interactive controls.",
+    );
+  });
+  doc.section("Library", () => {
+    doc.paragraph("Browse the scanned documentation library.");
+    doc.keyValueList([
+      { label: "Repositories visible", value: String(repositorySummaries.length) },
+      { label: "Pages visible", value: String(documentEntries.length) },
+    ]);
+  });
+  if (recentlyUpdatedEntries.length > 0) {
+    doc.section("Recently updated documents", () => {
+      for (const entry of recentlyUpdatedEntries) {
+        doc.subheading(entry.title, 3);
+        doc.keyValueList([
+          { label: "Repository", value: entry.repository },
+          { label: "Updated", value: getDisplayDate(entry.updated) },
+          { label: "Path", value: entry.relativePath || entry.repository },
+          { label: "Open", value: markdownLink("View Markdown page", entry.markdownUrl) },
+        ]);
+        doc.paragraph(sanitizeMarkdownSummary(entry.summary));
+      }
+    });
+  }
+  doc.section("Repositories", () => {
+    doc.paragraph(
+      "Repository view groups the library by source repository, preserving scan status, coverage counts, and the main landing page for each published documentation set.",
+    );
+  });
 
   for (const repository of repositorySummaries) {
     doc.subheading(repository.repository, 3);
     doc.keyValueList([
-      { label: "Owner", value: repository.owner },
-      { label: "Updated", value: repository.updated || "Unknown" },
+      ...(repository.updated ? [{ label: "Updated", value: getDisplayDate(repository.updated) }] : []),
       { label: "Files", value: String(repository.fileCount) },
       { label: "Folders", value: String(repository.folderCount) },
       { label: "Rules", value: String(repository.ruleCount) },
       { label: "Roots", value: repository.roots.join(", ") || "None" },
       { label: "Open", value: markdownLink("View repository docs", repository.markdownUrl) },
     ]);
+    doc.paragraph(sanitizeMarkdownSummary(repository.summary));
+  }
+
+  doc.section("Pages", () => {
+    doc.paragraph(
+      "Page view flattens every published document and generated folder landing page into a single inventory so section fronts and leaf pages remain reachable without the UI toggle state.",
+    );
+  });
+
+  for (const entry of documentEntries) {
+    doc.subheading(entry.title, 3);
+    doc.keyValueList([
+      { label: "Repository", value: entry.repository },
+      { label: "Kind", value: entry.isFolderIndex ? "Section" : "Page" },
+      { label: "Origin", value: entry.status === "Generated" ? "Generated overview" : "Scanned source file" },
+      ...(entry.updated ? [{ label: "Updated", value: getDisplayDate(entry.updated) }] : []),
+      { label: "Path", value: entry.relativePath || entry.repository },
+      { label: "Open", value: markdownLink("View page", entry.markdownUrl) },
+    ]);
+    doc.paragraph(sanitizeMarkdownSummary(entry.summary));
+
+    if (entry.status === "Generated") {
+      doc.paragraph(
+        "Generated overview because this folder did not expose a `README.md` or `index.md` file during the scan.",
+      );
+    }
   }
 
   doc.paragraph(markdownLink("Back to home", withBasePath("/index.md")));
@@ -2123,37 +2475,284 @@ function appendTreeMarkdown(doc: MarkdownDocument, nodes: DocumentTreeNode[], de
   }
 }
 
-export function getDocumentDetailMarkdown(page: DocumentPage, tree: DocumentTreeNode[]) {
-  const documentBody = stripLeadingHeadingAndSummary(page.body, page.title, page.summary);
+function appendDocumentPageList(doc: MarkdownDocument, pages: DocumentPage[]) {
+  for (const entry of pages) {
+    const kind = entry.isFolderIndex ? "Section" : "Page";
+    const status = entry.status === "Generated" ? "Generated overview" : "Scanned source file";
+    doc.bullet(
+      `${markdownLink(entry.title, entry.markdownUrl)} (${kind}, ${status})${entry.relativePath ? ` - \`${entry.relativePath}\`` : ""}`,
+    );
+
+    if (entry.summary) {
+      doc.bullet(sanitizeMarkdownSummary(entry.summary), 1);
+    }
+  }
+
+  doc.blank();
+}
+
+function getDocumentBreadcrumbs(page: DocumentPage, repositoryPages: DocumentPage[]) {
+  const pageBySlug = new Map(repositoryPages.map((entry) => [entry.slugSegments.join("/"), entry] as const));
+
+  return page.slugSegments.map((segment, index) => {
+    const breadcrumbSlug = page.slugSegments.slice(0, index + 1);
+    const breadcrumbPage = pageBySlug.get(breadcrumbSlug.join("/"));
+    const href = withBasePath(`/documents/${breadcrumbSlug.join("/")}.md`);
+
+    return {
+      label: breadcrumbPage?.title ?? (index === 0 ? page.repository : segment),
+      href,
+      isCurrent: index === page.slugSegments.length - 1,
+    };
+  });
+}
+
+function getRelatedDocumentGroups(page: DocumentPage, repositoryPages: DocumentPage[]) {
+  const currentFolderSegments =
+    page.pageType === "repository"
+      ? page.slugSegments
+      : page.isFolderIndex
+        ? page.slugSegments
+        : page.slugSegments.slice(0, -1);
+  const childDocuments = repositoryPages
+    .filter((entry) => entry.pageType === "document")
+    .filter((entry) => entry.slugSegments.join("/") !== page.slugSegments.join("/"))
+    .filter((entry) => {
+      const parentSegments = entry.isFolderIndex ? entry.slugSegments.slice(0, -1) : entry.slugSegments.slice(0, -1);
+      return parentSegments.join("/") === currentFolderSegments.join("/");
+    })
+    .sort((left, right) => Number(right.isFolderIndex) - Number(left.isFolderIndex) || left.title.localeCompare(right.title));
+  const siblingDocuments =
+    page.pageType === "document" && !page.isFolderIndex
+      ? repositoryPages
+          .filter((entry) => entry.pageType === "document")
+          .filter((entry) => !entry.isFolderIndex)
+          .filter((entry) => entry.slugSegments.join("/") !== page.slugSegments.join("/"))
+          .filter((entry) => entry.slugSegments.slice(0, -1).join("/") === page.slugSegments.slice(0, -1).join("/"))
+          .sort((left, right) => left.title.localeCompare(right.title))
+      : [];
+
+  return {
+    childDocuments,
+    siblingDocuments,
+    relatedDocuments: (siblingDocuments.length > 0 ? siblingDocuments : childDocuments).slice(0, 8),
+  };
+}
+
+function getPreviousAndNextDocuments(page: DocumentPage, repositoryPages: DocumentPage[]) {
+  const repositoryTree = buildRepositoryContentTree(repositoryPages);
+
+  if (!repositoryTree) {
+    return {
+      previousDocument: null,
+      nextDocument: null,
+    };
+  }
+
+  const orderedDocuments = flattenRepositoryDocumentSequence(repositoryTree);
+  const currentDocumentIndex = orderedDocuments.findIndex(
+    (entry) => entry.slugSegments.join("/") === page.slugSegments.join("/"),
+  );
+
+  return {
+    previousDocument: currentDocumentIndex > 0 ? orderedDocuments[currentDocumentIndex - 1] : null,
+    nextDocument:
+      currentDocumentIndex >= 0 && currentDocumentIndex < orderedDocuments.length - 1
+        ? orderedDocuments[currentDocumentIndex + 1]
+        : null,
+  };
+}
+
+export function getDocumentDetailMarkdown(
+  page: DocumentPage,
+  tree: DocumentTreeNode[],
+  context: DocumentDetailMarkdownContext,
+) {
+  let documentBody = stripLeadingHeadingAndSummary(page.body, page.title, page.summary);
+  const breadcrumbs = page.pageType === "document" ? getDocumentBreadcrumbs(page, context.repositoryPages) : [];
+  const { childDocuments, relatedDocuments } = getRelatedDocumentGroups(
+    page,
+    context.repositoryPages,
+  );
+  const { previousDocument, nextDocument } = getPreviousAndNextDocuments(page, context.repositoryPages);
+  const previousBreadcrumb = breadcrumbs.filter((item) => !item.isCurrent).at(-1);
+  const publishedFolderChildren =
+    page.pageType === "document" && page.isFolderIndex
+      ? childDocuments.filter((entry) => entry.slugSegments.join("/") !== page.slugSegments.join("/")).slice(0, 8)
+      : [];
+  if (page.pageType === "document" && page.isFolderIndex && publishedFolderChildren.length > 0) {
+    documentBody = stripLeadingMarkdownSection(documentBody, "Sections");
+  }
+  const outlineItems = [
+    ...(publishedFolderChildren.length > 0
+      ? [
+          { label: "Sections", href: "#sections" },
+          { label: "Purpose", href: "#purpose" },
+        ]
+      : []),
+    ...getDocumentHeadings(page.body)
+      .filter((heading) => heading.toLowerCase() !== page.title.toLowerCase())
+      .map((heading) => ({
+        label: heading.replace(/`/g, ""),
+        href: `#${getHeadingAnchor(heading)}`,
+      })),
+  ].filter((item, index, items) => items.findIndex((candidate) => candidate.href === item.href) === index);
+  const hasDatedRepositoryDocuments = (page.datedDocumentCount ?? 0) > 0;
   const doc = createMarkdownDocument({
     title: page.title,
-    description: page.summary,
+    description: sanitizeMarkdownSummary(page.summary),
     canonicalHtml: page.htmlUrl,
   });
 
   doc.heading(page.title);
-  doc.paragraph(page.summary);
+  doc.paragraph(sanitizeMarkdownSummary(page.summary));
+  if (breadcrumbs.length > 0) {
+    doc.paragraph(
+      `Path: ${breadcrumbs
+        .map((item) => (item.isCurrent ? item.label : markdownLink(item.label, item.href)))
+        .join(" / ")}`,
+    );
+  }
+  if (page.status === "Generated") {
+    doc.paragraph(
+      "Generated from folder structure because this section did not expose a `README.md` or `index.md` page during the scan.",
+    );
+  } else if (page.pageType === "document") {
+    doc.paragraph("Published from a scanned Markdown source file.");
+  }
   doc.section("Metadata", () => {
     doc.keyValueList([
       { label: "Repository", value: page.repository },
-      { label: "Owner", value: page.owner },
-      { label: "Updated", value: page.updated || "Unknown" },
+      ...(page.owner ? [{ label: "Owner", value: page.owner }] : []),
+      ...(page.updated ? [{ label: "Updated", value: getDisplayDate(page.updated) }] : []),
       { label: "Type", value: page.docType },
       { label: "Status", value: page.status },
       { label: "Scan rules", value: page.ruleLabels.join(", ") || "None" },
       { label: "Roots", value: page.domainRoots.join(", ") || "None" },
+      { label: "Sources", value: page.sourceNames.join(", ") || "None" },
       ...(page.pageType === "document" ? [{ label: "Source file", value: page.relativePath }] : []),
-      ...(page.rawUrl ? [{ label: "Raw source", value: page.rawUrl }] : []),
+      ...(page.pageType === "repository" ? [{ label: "Branch", value: page.repositoryRef }] : []),
+      ...(page.pageType === "repository" ? [{ label: "Pages", value: String(page.fileCount ?? 0) }] : []),
+      ...(page.pageType === "repository" ? [{ label: "Folders", value: String(page.folderCount ?? 0) }] : []),
+      ...(page.pageType === "repository"
+        ? [{ label: "Last scan", value: getDisplayDateTime(page.lastScannedAt) }]
+        : []),
+    ]);
+    doc.keyValueList([
+      { label: "Repository", value: markdownLink("Open repository", page.repositoryUrl) },
+      ...(page.sourceUrl ? [{ label: "Source", value: markdownLink("Open source view", page.sourceUrl) }] : []),
+      ...(page.rawUrl ? [{ label: "Raw", value: markdownLink("Open raw source", page.rawUrl) }] : []),
+      { label: "HTML", value: markdownLink("Open HTML page", page.htmlUrl) },
+      { label: "Markdown", value: markdownLink("Current Markdown page", page.markdownUrl) },
     ]);
   });
+  if (outlineItems.length > 0) {
+    doc.section("On this page", () => {
+      doc.bullets(outlineItems.map((item) => markdownLink(item.label, item.href)));
+    });
+  }
+  if (page.pageType === "repository") {
+    doc.section("Repository snapshot", () => {
+      doc.keyValueList([
+        { label: "Last scan", value: getDisplayDateTime(page.lastScannedAt) },
+        {
+          label: "Freshness",
+          value: hasDatedRepositoryDocuments
+            ? `${page.datedDocumentCount ?? 0} of ${page.fileCount ?? 0} pages dated`
+            : "No dated pages found",
+        },
+        {
+          label: "Latest dated page",
+          value:
+            page.latestDocumentTitle && page.latestDocumentHtmlUrl
+              ? `${markdownLink(page.latestDocumentTitle, page.latestDocumentHtmlUrl.replace(/\/$/, ".md"))} (${getDisplayDate(page.latestDocumentUpdated || page.updated)})`
+              : page.latestDocumentTitle || "None",
+        },
+        {
+          label: "Most recently changed path",
+          value: page.latestDocumentPath || "No dated page identified",
+        },
+        {
+          label: "Confidence signal",
+          value: hasDatedRepositoryDocuments
+            ? `${page.datedDocumentCount ?? 0} of ${page.fileCount ?? 0} pages dated`
+            : `0 of ${page.fileCount ?? 0} pages dated`,
+        },
+      ]);
+    });
+  }
+  if (page.pageType === "document" && page.isFolderIndex) {
+    doc.section("Section snapshot", () => {
+      doc.keyValueList([
+        { label: "Published child pages", value: String(publishedFolderChildren.length) },
+        {
+          label: "Overview source",
+          value: page.status === "Generated" ? "Generated from scanned folder structure" : "Published README or index source",
+        },
+        { label: "Current section", value: page.relativePath || page.title },
+      ]);
+    });
+  }
+  if (publishedFolderChildren.length > 0) {
+    doc.section("Sections", () => {
+      doc.bullets(publishedFolderChildren.map((entry) => markdownLink(entry.title, entry.markdownUrl)));
+    });
+    doc.section("Purpose", () => {
+      doc.paragraph(sanitizeMarkdownSummary(page.summary));
+    });
+  }
   doc.section("Folder index", () => {
     appendTreeMarkdown(doc, tree);
     doc.blank();
   });
-  doc.section(page.pageType === "repository" ? "Repository overview" : "Document body", () => {
+  if (page.isFolderIndex && relatedDocuments.length > 0) {
+    doc.section("Pages in this section", () => {
+      appendDocumentPageList(doc, relatedDocuments);
+    });
+  } else if (page.pageType === "repository" && childDocuments.length > 0) {
+    doc.section("Pages in this section", () => {
+      appendDocumentPageList(doc, childDocuments.slice(0, 8));
+    });
+  } else if (page.pageType === "document" && relatedDocuments.length > 0) {
+    doc.section("Nearby pages", () => {
+      appendDocumentPageList(
+        doc,
+        relatedDocuments
+          .filter((entry) => entry.slugSegments.join("/") !== page.slugSegments.join("/"))
+          .slice(0, 8),
+      );
+    });
+  }
+  if (page.pageType === "repository") {
+    doc.section("Repository overview", () => {
+      doc.raw(documentBody);
+    });
+  } else if (page.pageType === "document" && page.isFolderIndex) {
+    doc.section("Section guide", () => {
+      doc.paragraph("Retained source-guide content from the published section README.");
+      doc.raw(documentBody);
+    });
+  } else {
     doc.raw(documentBody);
-  });
-  doc.paragraph(markdownLink("Back to documents index", withBasePath("/documents.md")));
+  }
+  if (previousDocument || nextDocument) {
+    doc.section("Navigation", () => {
+      if (previousDocument) {
+        doc.bullet(`Previous: ${markdownLink(previousDocument.title, previousDocument.markdownUrl)}`);
+      }
+
+      if (nextDocument) {
+        doc.bullet(`Next: ${markdownLink(nextDocument.title, nextDocument.markdownUrl)}`);
+      }
+
+      doc.blank();
+    });
+  }
+  if (previousBreadcrumb) {
+    doc.paragraph(markdownLink(`Back to ${previousBreadcrumb.label}`, previousBreadcrumb.href));
+  } else {
+    doc.paragraph(markdownLink("Back to documents index", withBasePath("/documents.md")));
+  }
 
   return doc.finish();
 }

@@ -41,7 +41,7 @@ if (!entry) {
       currentPage="cloud-enablement"
       searchAction={withBasePath("/cloud-enablement/")}
       searchPlaceholder="Search cloud products"
-      searchQuery={entry.name}
+      searchQuery=""
     />
 
     <StandardPageIntro
@@ -121,10 +121,10 @@ if (!entry) {
           <div class="bat-line">
             <span class="bat-gutter">1</span>
             <div class="bat-code bat-link-row">
-              <a href={entry.productUrl} target="_blank" rel="noreferrer">open product page</a>
-              <a href={entry.featureSourceUrl} target="_blank" rel="noreferrer">open feature source</a>
+              <a href={entry.productUrl} target="_blank" rel="noreferrer">Open product page</a>
+              <a href={entry.featureSourceUrl} target="_blank" rel="noreferrer">Open feature source</a>
               {entry.iamSourceUrl && (
-                <a href={entry.iamSourceUrl} target="_blank" rel="noreferrer">open IAM source</a>
+                <a href={entry.iamSourceUrl} target="_blank" rel="noreferrer">Open IAM source</a>
               )}
             </div>
           </div>

@@ -112,11 +112,11 @@ topics:
       status_not_evaluated: not evaluated
       average_success_ratio_label: avg success ratio
       average_success_ratio_empty: n/a
-      detail_link_label: open detail
+      detail_link_label: Open detail
       install_heading: Install
       metadata_heading: Metadata
-      source_link_label: open skill source
-      repository_link_label: open repository
+      source_link_label: Open skill source
+      repository_link_label: Open repository
       empty_state: No skills match the current filters.
       install_unavailable_snippet: |-
         # Local-only trusted source
@@ -353,3 +353,31 @@ topics:
         url: /communities/
       - label: Internal AI SDLC index
         url: /ai-sdlc/
+  - slug: pulse
+    name: Pulse
+    status: Active
+    owner: Observability
+    summary: Review repository evidence from Pulse to understand AI-document coverage, repository size, weekly activity, language composition, and ingestion failures across the tracked portfolio.
+    outcome: Teams can inspect repository-level AI readiness and maintenance signals from one operational page without mixing them with runtime product telemetry or vendor admin analytics.
+    signals:
+      - Repository-level AI entrypoints are visible as concrete file conventions instead of inferred process maturity.
+      - Weekly commit volume can be compared against repository size and language composition on the same page.
+      - Failed repository scans stay visible so coverage gaps are not mistaken for healthy absence.
+      - Freshness metadata shows when the latest Pulse run and fetch completed.
+    practices:
+      - Treat Pulse as repository evidence for governance and maintenance posture, not as proof of assistant usage.
+      - Keep convention coverage, repository scale, language share, and failure state in one comparable operational surface.
+      - Normalize selected subsets only when the denominator is explicit to the user.
+      - Keep failed repositories visible in the same review loop as successful snapshots.
+    metrics:
+      - Repositories with AI entrypoint conventions
+      - Convention coverage by repository
+      - Total files and lines across analyzed repositories
+      - Weekly commits by repository
+      - Language share by bytes
+      - Failed repository count and failure detail
+    links:
+      - label: Internal AI SDLC index
+        url: /ai-sdlc/
+      - label: Observability context
+        url: /communities/

@@ -68,8 +68,9 @@ const spikeSectionNavItems = await getSpikeSectionNavItems("format-architecture"
       title={spikePage.title}
       summary={spikePage.summary}
       pills={spikePage.pills}
+      searchAction={spikePage.href}
+      searchPlaceholder="Search spike pages"
       sectionNavItems={spikeSectionNavItems}
-      sectionTrailItems={[{ label: spikePage.label, current: true }]}
     >
     <section class="section-block prose-block">
       <p class="copy standard-copy-wide">

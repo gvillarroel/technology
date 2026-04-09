@@ -20,7 +20,7 @@ const latestRepositoryUpdate =
     .at(-1) ?? "";
 const formatDisplayDate = (value?: string) => {
   if (!value) {
-    return "Timestamp unavailable";
+    return "";
   }
 
   const date = new Date(value);
@@ -36,7 +36,7 @@ const formatDisplayDate = (value?: string) => {
   }).format(date);
 };
 const formatRepositoryUpdatedLabel = (value?: string) =>
-  value ? formatDisplayDate(value) : "timestamp unavailable";
+  value ? formatDisplayDate(value) : "";
 const configFilesPreview = [
   "data/document-repositories.yaml",
   "src/lib/documents.ts",
@@ -80,19 +80,19 @@ const documentEntries = searchEntries
   .sort(comparePageEntries);
 const recentlyUpdatedEntries = [...searchEntries]
   .filter((entry) => entry.updated)
-  .sort((left, right) => right.updated.localeCompare(left.updated))
+  .sort((left, right) => (right.updated ?? "").localeCompare(left.updated ?? ""))
   .slice(0, 6);
 ---
 
 <BaseLayout
   title="Documentation | e*f(x) Technology"
-  description="Governed Markdown document library for internal manuals, protocols, and operational references."
+  description="Scanned Markdown documentation index with repository views, page search, and folder-aware navigation."
 >
   <main class="shell shell-narrow standard-page">
     <StandardPageHeader
       currentPage="documents"
       searchAction={withBasePath("/documents/")}
-      searchPlaceholder="Search repositories or document paths"
+      searchPlaceholder="Search library pages or repository paths"
       searchQuery={searchQuery}
     />
 
@@ -104,7 +104,7 @@ const recentlyUpdatedEntries = [...searchEntries]
       pills={[
         { label: "Repositories", value: String(repositorySummaries.length) },
         { label: "Pages", value: String(documentCount) },
-        { label: "Updated", value: formatDisplayDate(latestRepositoryUpdate) },
+        ...(latestRepositoryUpdate ? [{ label: "Updated", value: formatDisplayDate(latestRepositoryUpdate) }] : []),
       ]}
     />
 
@@ -113,7 +113,7 @@ const recentlyUpdatedEntries = [...searchEntries]
         file={sourceCard.file}
         lang={sourceCard.lang}
         title={sourceCard.title}
-        summary="Configured repository rules discover Markdown from external GitHub sources, normalize it, and publish it through one shared documentation library."
+        summary="Configured repository rules scan external GitHub Markdown, normalize internal links, and publish one site-wide documentation index."
         meta={[
           { label: "repositories", value: String(repositorySummaries.length) },
           { label: "pages", value: String(documentCount) },
@@ -132,15 +132,17 @@ const recentlyUpdatedEntries = [...searchEntries]
       </article>
 
       <article class="docs-index-metric-card">
-        <p class="docs-index-metric-label">Freshness signal</p>
+        <p class="docs-index-metric-label">Latest activity</p>
         <p class="docs-index-metric-value">{documentCount} Markdown pages indexed</p>
         <p class="docs-index-metric-copy">
-          Latest dated update found in the library: {formatDisplayDate(latestRepositoryUpdate)}.
+          {latestRepositoryUpdate
+            ? `Latest dated update found across scanned repositories: ${formatDisplayDate(latestRepositoryUpdate)}.`
+            : "No automatic document timestamps were derived across the scanned repositories."}
         </p>
       </article>
 
       <article class="docs-index-metric-card is-compact">
-        <p class="docs-index-metric-label">Configuration</p>
+        <p class="docs-index-metric-label">Scan config</p>
         <p class="docs-index-metric-value">{sourceConfigs.length} scan rule set</p>
         <pre class="adrs-yaml-preview docs-index-config-preview"><code>{configFilesPreview}</code></pre>
       </article>
@@ -153,7 +155,7 @@ const recentlyUpdatedEntries = [...searchEntries]
             <p class="eyebrow">Freshness</p>
             <h2>Recently updated documents</h2>
           </div>
-          <p class="standard-section-meta">Latest verified timestamps in the scanned library</p>
+          <p class="standard-section-meta">Latest verified timestamps across scanned repositories</p>
         </div>
 
         <div class="docs-recent-grid docs-recent-grid-compact">
@@ -183,14 +185,14 @@ const recentlyUpdatedEntries = [...searchEntries]
 
       <div class="docs-search-results-list" id="docs-search-results-list"></div>
       <p class="standard-empty-state" id="docs-search-results-empty" hidden>
-        No repository pages or document headings matched that query.
+        No library pages, sections, or repository entries matched that query.
       </p>
     </section>
 
     <section class="standard-section-heading">
       <div>
         <p class="eyebrow">Library</p>
-        <h2>Browse the scanned documentation library</h2>
+        <h2>Browse repositories and pages</h2>
       </div>
       <div class="docs-index-toolbar">
         <p class="standard-section-meta" id="docs-visible-meta">{repositorySummaries.length} repositories visible</p>
@@ -210,7 +212,7 @@ const recentlyUpdatedEntries = [...searchEntries]
         <a
           class="docs-library-card docs-library-card-link"
           href={repository.htmlUrl}
-          data-repository-search-text={[repository.repository, repository.summary, repository.owner, repository.roots.join(" ")].join(" ").toLowerCase()}
+          data-repository-search-text={[repository.repository, repository.summary, repository.roots.join(" ")].join(" ").toLowerCase()}
         >
           <div class="docs-library-topline">
             <span class="community-card-index">{String(index + 1).padStart(2, "0")}</span>
@@ -223,14 +225,15 @@ const recentlyUpdatedEntries = [...searchEntries]
             <p class="docs-library-type">{repository.docType}</p>
             <h3 class="docs-library-title">{repository.repository}</h3>
             <p class="docs-library-copy">{repository.summary}</p>
-            <div class="docs-library-meta">
-              <div class="docs-library-meta-row">
-                <span class="docs-library-meta-pill"><strong>Owner</strong>{repository.owner}</span>
-                <span class="docs-library-meta-pill"><strong>Updated</strong>{formatRepositoryUpdatedLabel(repository.updated)}</span>
+            {repository.updated ? (
+              <div class="docs-library-meta">
+                <div class="docs-library-meta-row">
+                  <span class="docs-library-meta-pill"><strong>Updated</strong>{formatRepositoryUpdatedLabel(repository.updated)}</span>
+                </div>
               </div>
-            </div>
+            ) : null}
             <span class="community-card-link docs-library-cta">
-              Open repository
+              Open repository index
             </span>
           </div>
         </a>
@@ -261,7 +264,7 @@ const recentlyUpdatedEntries = [...searchEntries]
             <span class="docs-page-card-repository">{entry.repository}</span>
             <div class="docs-page-card-pills">
               <span class:list={["docs-origin-pill", entry.status === "Generated" ? "is-generated" : "is-curated"]}>
-                {entry.status === "Generated" ? "Generated" : "Curated"}
+                {entry.status === "Generated" ? "Generated overview" : "Scanned source file"}
               </span>
               <span class="docs-page-card-type">{entry.isFolderIndex ? "Section" : "Page"}</span>
             </div>
@@ -269,23 +272,23 @@ const recentlyUpdatedEntries = [...searchEntries]
           <h3 class="docs-page-card-title">{entry.title}</h3>
           <p class="docs-page-card-path">{entry.relativePath}</p>
           <p class="docs-page-card-copy">{entry.summary}</p>
-          {entry.status === "Generated" ? (
-            <p class="docs-page-card-note">
-              Generated section overview because this folder did not expose a <code>README.md</code> or <code>index.md</code> page during the scan.
-            </p>
-          ) : null}
+            {entry.status === "Generated" ? (
+              <p class="docs-page-card-note">
+              Generated overview because this folder did not expose a <code>README.md</code> or <code>index.md</code> file during the scan.
+              </p>
+            ) : null}
         </a>
       ))}
     </section>
   </main>
 
-  <script id="docs-search-index" type="application/json" set:html={JSON.stringify(searchEntries)} />
+  <script is:inline id="docs-search-index" type="application/json" set:html={JSON.stringify(searchEntries)} />
 </BaseLayout>
 
-<script type="module">
+<script is:inline type="module">
   const searchIndexNode = document.getElementById("docs-search-index");
-  const searchForm = document.querySelector('.standard-search');
-  const searchInputs = Array.from(document.querySelectorAll('.standard-search input'));
+  const searchForm = document.querySelector('[data-docs-search-form]');
+  const searchInputs = Array.from(document.querySelectorAll('[data-docs-search-input]'));
   const resultsSection = document.getElementById("docs-search-results");
   const resultsList = document.getElementById("docs-search-results-list");
   const resultsTitle = document.getElementById("docs-search-results-title");

@@ -933,10 +933,33 @@ export function getAdrIndexMarkdown({
 }
 
 export function getAdrDetailMarkdown(page: AdrPage) {
-  const bodyWithoutRepeatedHeading = page.body
+  const normalizeAdrText = (value: string) =>
+    value
+      .toLowerCase()
+      .replace(/`/g, "")
+      .replace(/[^\p{L}\p{N}\s-]/gu, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  let bodyWithoutRepeatedHeading = page.body
     .replace(/^#\s+.+?\s*(?:\n+|$)/, "")
     .replace(/^\s+/, "")
     .trim();
+  const firstBodyParagraph = bodyWithoutRepeatedHeading
+    .split(/\n\s*\n/g)
+    .map((section) => section.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .find((section) => !section.startsWith("#")) ?? "";
+
+  if (
+    page.summary &&
+    firstBodyParagraph &&
+    normalizeAdrText(page.summary) === normalizeAdrText(firstBodyParagraph)
+  ) {
+    bodyWithoutRepeatedHeading = bodyWithoutRepeatedHeading
+      .replace(/^\s*.+?(?:\n\s*\n|$)/s, "")
+      .trim();
+  }
+
   const doc = createMarkdownDocument({
     title: page.adrNumber ? `ADR ${page.adrNumber}: ${page.title}` : page.title,
     description: page.summary,

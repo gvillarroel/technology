@@ -23,7 +23,7 @@ pages:
     file: data/document-repositories.yaml
     lang: yaml
     title: Source of truth
-    summary: Repository scan rules and Markdown normalization drive the documentation index and folder-aware detail pages.
+    summary: Repository scan rules define what gets indexed, how links are normalized, and how repository docs appear in this site.
   models:
     file: data/models.yaml
     lang: yaml

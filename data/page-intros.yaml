@@ -13,8 +13,8 @@ pages:
     summary: Find technology communities by track, audience, and category, then open the external home for the group that fits the work.
   documents:
     eyebrow: Documentation
-    title: Repository-driven documentation.
-    summary: Browse repository docs as one governed library with repository landing pages and folder-aware Markdown navigation.
+    title: One documentation library across repositories.
+    summary: Browse scanned Markdown as one governed library with repository indexes, page-level search, and folder-aware navigation.
   models:
     eyebrow: Models
     title: Model families, not ad hoc picks.

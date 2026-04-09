@@ -8,6 +8,16 @@ import { getStandardPageSource } from "../lib/page-sources";
 
 const { overview, topics } = await getAiSdlcData();
 const sourceCard = await getStandardPageSource("ai-sdlc");
+const searchQuery = Astro.url.searchParams.get("q")?.trim() ?? "";
+const normalizedSearchQuery = searchQuery.toLowerCase();
+const visibleTopics = normalizedSearchQuery
+  ? topics.filter((topic) =>
+      [topic.name, topic.slug, topic.summary, topic.status, topic.owner, topic.outcome]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedSearchQuery),
+    )
+  : topics;
 const aiSdlcSectionNavItems = [
   {
     href: "/ai-sdlc/",
@@ -31,6 +41,7 @@ const aiSdlcSectionNavItems = [
       currentPage="ai-sdlc"
       searchAction="/ai-sdlc/"
       searchPlaceholder={overview.copy.searchPlaceholder}
+      searchQuery={searchQuery}
       sectionNavItems={aiSdlcSectionNavItems}
       sectionNavLabel="AI SDLC sections"
     />
@@ -40,7 +51,7 @@ const aiSdlcSectionNavItems = [
       title={overview.copy.indexHeading}
       summary={overview.copy.indexIntro}
       pills={[
-        { label: "Topics", value: String(topics.length) },
+        { label: "Topics", value: String(visibleTopics.length) },
         { label: "Owner", value: overview.owner },
         { label: "Updated", value: overview.updated },
       ]}
@@ -55,7 +66,7 @@ const aiSdlcSectionNavItems = [
         meta={[
           { label: overview.copy.sourceOwnerLabel, value: overview.owner },
           { label: overview.copy.sourceUpdatedLabel, value: overview.updated },
-          { label: overview.copy.sourceTopicsLabel, value: String(topics.length) },
+          { label: overview.copy.sourceTopicsLabel, value: String(visibleTopics.length) },
         ]}
       />
     </section>
@@ -65,11 +76,11 @@ const aiSdlcSectionNavItems = [
         <p class="eyebrow">{overview.copy.topicsEyebrow}</p>
         <h2>{overview.copy.topicsHeading}</h2>
       </div>
-      <p class="standard-section-meta">{topics.length} {overview.copy.topicsCountSuffix}</p>
+      <p class="standard-section-meta">{visibleTopics.length} {overview.copy.topicsCountSuffix}</p>
     </section>
 
     <section class="ai-sdlc-grid">
-      {topics.map((topic, index) => (
+      {visibleTopics.map((topic, index) => (
         <article class="ai-sdlc-card">
           <div class="ai-sdlc-card-topline">
             <a class="ai-sdlc-card-file-link" href={getAiSdlcDetailHtmlUrl(topic.slug)}>
@@ -85,5 +96,9 @@ const aiSdlcSectionNavItems = [
         </article>
       ))}
     </section>
+
+    {visibleTopics.length === 0 ? (
+      <p class="standard-empty-state">No AI SDLC topics match the current search.</p>
+    ) : null}
   </main>
 </BaseLayout>

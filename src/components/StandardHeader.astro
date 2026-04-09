@@ -23,6 +23,7 @@ export interface SecondaryNavItem {
 
 export interface Props {
   navGroups: NavGroup[];
+  showSearch?: boolean;
   searchAction?: string;
   searchPlaceholder?: string;
   searchQuery?: string;
@@ -34,6 +35,7 @@ export interface Props {
 
 const {
   navGroups,
+  showSearch = true,
   searchAction = withBasePath("/tech-radar/"),
   searchPlaceholder = "Search technologies",
   searchQuery = "",
@@ -42,6 +44,8 @@ const {
   sectionTrailItems = [],
   sectionTrailLabel = "Path",
 } = Astro.props;
+
+const globalSearchAction = withBasePath("/search/");
 ---
 
 <div class="standard-header-stack">
@@ -89,18 +93,21 @@ const {
         )}
       </nav>
 
-      <form class="standard-search" action={searchAction} method="get">
-        <label class="standard-search-label" for="site-search">
-          <span class="material-symbols-rounded" aria-hidden="true">search</span>
-        </label>
-        <input
-          id="site-search"
-          name="q"
-          type="search"
-          placeholder={searchPlaceholder}
-          value={searchQuery}
-        />
-      </form>
+      {showSearch ? (
+        <form class="standard-search" action={globalSearchAction} method="get">
+          <label class="standard-search-label" for="site-search">
+            <span class="material-symbols-rounded" aria-hidden="true">search</span>
+          </label>
+          <input
+            id="site-search"
+            name="q"
+            type="search"
+            placeholder={searchPlaceholder}
+            value={searchQuery}
+          />
+          {searchAction ? <input type="hidden" name="scope" value={searchAction} /> : null}
+        </form>
+      ) : null}
     </div>
   </header>
 

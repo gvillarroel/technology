@@ -19,6 +19,7 @@ Read the following documents when they are relevant to the task:
 - `data/skills-repositories.yaml`: allowed sources of skills that may be listed here.
 - `data/spikes/**`: data files used by spike loaders and spike-backed routes.
 - `data/context/**`: contextual content stored in arbitrarily nested folders, where each level may contain Markdown files and additional folders with related material.
+- Record new durable technical or workflow decisions as ADRs under `.specs/adr/*.md`.
 
 ## Workflow
 

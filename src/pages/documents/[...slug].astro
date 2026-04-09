@@ -75,12 +75,11 @@ const siblingDocuments =
         .sort((left, right) => left.title.localeCompare(right.title))
     : [];
 const relatedDocuments = (siblingDocuments.length > 0 ? siblingDocuments : childDocuments).slice(0, 8);
-const rightRailDocuments = siblingDocuments.slice(0, 6);
-const pageOriginLabel = page.status === "Generated" ? "Generated structure" : "Curated content";
+const pageOriginLabel = page.status === "Generated" ? "Generated overview" : "Scanned source file";
 const pageOriginCopy =
   page.status === "Generated"
-    ? "Generated from folder structure because this section did not expose a README.md or index.md page during the scan."
-    : "Published directly from a scanned Markdown source file.";
+    ? "Generated from folder structure because this section did not expose a README.md or index.md file during the scan."
+    : "Published from a scanned Markdown source file.";
 type OrderedFolderNode = {
   page?: typeof repositoryPages[number];
   documents: typeof repositoryPages;
@@ -219,15 +218,16 @@ const repositoryRootsLabel = page.domainRoots.join(", ") || "None";
 const repositoryRulesLabel = page.ruleLabels.join(", ") || "None";
 const repositorySourcesLabel = page.sourceNames.join(", ") || "None";
 const repositoryIntroPills = [
-  { label: "Owner", value: page.owner },
-  { label: "Updated", value: hasDatedRepositoryDocuments ? formatDisplayDate(page.updated) : "No dated docs" },
   { label: "Pages", value: String(page.fileCount ?? 0) },
+  ...(hasDatedRepositoryDocuments && page.updated
+    ? [{ label: "Updated", value: formatDisplayDate(page.updated) }]
+    : []),
 ];
 const documentIntroPills = [
   { label: "Status", value: page.status },
-  { label: "Source", value: pageOriginLabel },
-  { label: "Owner", value: page.owner },
-  { label: "Updated", value: page.updated || "Timestamp unavailable" },
+  { label: "Origin", value: pageOriginLabel },
+  ...(page.owner ? [{ label: "Owner", value: page.owner }] : []),
+  ...(page.updated ? [{ label: "Updated", value: formatDisplayDate(page.updated) }] : []),
 ];
 const documentEyebrow = page.pageType === "document" ? "Documentation" : "Section";
 ---
@@ -241,8 +241,8 @@ const documentEyebrow = page.pageType === "document" ? "Documentation" : "Sectio
       <StandardPageHeader
         currentPage="documents"
         searchAction={withBasePath("/documents/")}
-        searchPlaceholder="Search repositories or document paths"
-        searchQuery={page.title}
+        searchPlaceholder="Search library pages or repository paths"
+        searchQuery=""
       />
     </div>
 
@@ -259,7 +259,9 @@ const documentEyebrow = page.pageType === "document" ? "Documentation" : "Sectio
               </a>
             )}
             <p class="docs-reference-sidebar-copy">
-              External repository content normalized into a stable navigation tree for this site.
+              {page.pageType === "repository"
+                ? "Browse the scanned folder tree for this repository."
+                : "Move through sections and pages without leaving this repository."}
             </p>
           </div>
           <div class="docs-reference-sidebar-tree">
@@ -311,13 +313,12 @@ const documentEyebrow = page.pageType === "document" ? "Documentation" : "Sectio
                   <span class="bat-card-lang">scan</span>
                 </div>
                 <div class="bat-card-body bat-card-body-stack">
-                  <p class="bat-heading">External source normalized for site navigation</p>
+                  <p class="bat-heading">Scan metadata for this repository view</p>
                   <p class="bat-copy">
-                    Markdown content is discovered from GitHub, filtered through the configured
-                    rules, and published here as a stable repository library.
+                    Markdown is discovered from GitHub, filtered through the configured rules,
+                    and exposed here as a stable repository index.
                   </p>
                   <div class="bat-meta-row">
-                    <span>owner: {page.owner}</span>
                     <span>branch: {page.repositoryRef}</span>
                     <span>last scan: {formatDisplayDateTime(page.lastScannedAt)}</span>
                   </div>
@@ -388,7 +389,7 @@ const documentEyebrow = page.pageType === "document" ? "Documentation" : "Sectio
               </div>
             </header>
 
-            {(outlineItems.length > 0 || rightRailDocuments.length > 0 || page.pageType === "document") ? (
+            {(outlineItems.length > 0 || page.pageType === "document") ? (
               <section class="docs-mobile-tools" aria-label="Document tools">
                 {outlineItems.length > 0 ? (
                   <details class="docs-mobile-tool" data-mobile-tool="outline">
@@ -396,20 +397,6 @@ const documentEyebrow = page.pageType === "document" ? "Documentation" : "Sectio
                     <nav class="docs-mobile-tool-list" aria-label="On this page">
                       {outlineItems.map((item) => (
                         <a href={item.href}>{item.label}</a>
-                      ))}
-                    </nav>
-                  </details>
-                ) : null}
-
-                {rightRailDocuments.length > 0 && page.pageType === "document" && !page.isFolderIndex ? (
-                  <details class="docs-mobile-tool" data-mobile-tool="nearby">
-                    <summary>Nearby pages</summary>
-                    <nav class="docs-mobile-tool-list" aria-label="Nearby pages">
-                      {rightRailDocuments.map((entry) => (
-                        <a href={entry.htmlUrl}>
-                          <span>{entry.title}</span>
-                          <small>{entry.docType}</small>
-                        </a>
                       ))}
                     </nav>
                   </details>
@@ -456,9 +443,7 @@ const documentEyebrow = page.pageType === "document" ? "Documentation" : "Sectio
 
         {relatedDocuments.length > 0 && page.isFolderIndex ? (
           <section class="docs-reference-section-links">
-            <p class="docs-reference-section-links-title">
-              {page.isFolderIndex ? "Pages in this section" : "Nearby pages"}
-            </p>
+            <p class="docs-reference-section-links-title">Pages in this section</p>
             <div class="docs-reference-section-links-grid">
               {relatedDocuments.map((entry) => (
                 <a class="docs-reference-section-link" href={entry.htmlUrl}>
@@ -500,20 +485,6 @@ const documentEyebrow = page.pageType === "document" ? "Documentation" : "Sectio
           </section>
         ) : null}
 
-        {rightRailDocuments.length > 0 && page.pageType === "document" && !page.isFolderIndex ? (
-          <section class="docs-reference-toc-card">
-            <p class="docs-reference-toc-title">Nearby pages</p>
-            <nav class="docs-related-list" aria-label="This section">
-              {rightRailDocuments.map((entry) => (
-                <a class="docs-related-link" href={entry.htmlUrl}>
-                  <span>{entry.title}</span>
-                  <small>{entry.docType}</small>
-                </a>
-              ))}
-            </nav>
-          </section>
-        ) : null}
-
         <section class="docs-reference-toc-card">
           <p class="docs-reference-toc-title">{page.pageType === "repository" ? "Repository links" : "Document"}</p>
           {page.pageType === "document" ? <p class="docs-reference-card-copy">{pageOriginCopy}</p> : null}
@@ -538,7 +509,7 @@ const documentEyebrow = page.pageType === "document" ? "Documentation" : "Sectio
             </dl>
           ) : (
             <p class="docs-reference-card-copy">
-              Open the upstream repository or the normalized exports for this snapshot.
+              Open the upstream repository or the normalized exports for this route.
             </p>
           )}
           <div class="docs-reference-card-actions">
@@ -559,7 +530,7 @@ const documentEyebrow = page.pageType === "document" ? "Documentation" : "Sectio
   </main>
 </BaseLayout>
 
-<script type="module">
+<script is:inline type="module">
   import mermaid from "https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.esm.min.mjs";
 
   mermaid.initialize({

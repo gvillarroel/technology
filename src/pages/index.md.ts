@@ -5,6 +5,7 @@ import {
   getLandingMarkdownSupportingRoutes,
 } from "../lib/home-markdown";
 import { withBasePath } from "../lib/site-url";
+import { markdownLink } from "../lib/markdown";
 
 const rights = [
   "Know which technologies are approved for enterprise use.",
@@ -40,6 +41,7 @@ export async function GET() {
       "Type a command in the terminal input.",
       "Use `/help` to list the configured commands.",
       "Use `/tech-radar`, `/models`, `/documents`, `/ai-sdlc`, `/adrs`, or `/communities` to read the Markdown companion for those pages.",
+      `Use ${markdownLink("/search", withBasePath("/search.md"))} to open the Markdown companion for the global search page.`,
     ]);
   });
 

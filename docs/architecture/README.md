@@ -12,9 +12,11 @@ site is composed from local data, remote GitHub content, and Astro page template
 
 ## Pages
 
+- [Current Strategy](./current-strategy.md)
 - [System Overview](./system-overview.md)
 
 ## Reading Order
 
-Start with the system overview if you need to understand how the repository is organized
-before modifying page loaders, data files, or route templates.
+Start with the current strategy if you need the architectural intent and repository-level
+direction. Then read the system overview to understand how that strategy is implemented
+across loaders, routes, and shared components.

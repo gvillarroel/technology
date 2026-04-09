@@ -1,0 +1,177 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import StandardPageHeader from "../components/StandardPageHeader.astro";
+import StandardPageIntro from "../components/StandardPageIntro.astro";
+import { getGlobalSearchIndex } from "../lib/search";
+
+const searchIndex = await getGlobalSearchIndex();
+---
+
+<BaseLayout
+  title="Search | e*f(x) Technology"
+  description="Global search across technology pages, documentation, models, communities, ADRs, and AI SDLC content."
+>
+  <main class="shell shell-narrow standard-page">
+    <StandardPageHeader
+      searchAction=""
+      searchPlaceholder="Search all pages"
+      searchQuery=""
+    />
+
+    <StandardPageIntro
+      eyebrow="Search"
+      title="Search across the technology library."
+      summary="Use the shared search box to query documents, radar entries, models, communities, ADRs, and AI SDLC pages from one place."
+      pills={[
+        { label: "Indexed pages", value: String(searchIndex.length) },
+      ]}
+    />
+
+    <section class="search-results-list" id="global-search-results" aria-label="Search results" hidden></section>
+    <p class="standard-empty-state" id="global-search-empty">
+      Enter a query to search the full site index.
+    </p>
+  </main>
+
+  <script is:inline id="global-search-index" type="application/json" set:html={JSON.stringify(searchIndex)} />
+</BaseLayout>
+
+<script is:inline>
+  const searchIndexNode = document.getElementById("global-search-index");
+  const searchResults = document.getElementById("global-search-results");
+  const searchEmpty = document.getElementById("global-search-empty");
+  const searchInput = document.getElementById("site-search");
+
+  const searchIndex = searchIndexNode ? JSON.parse(searchIndexNode.textContent || "[]") : [];
+
+  const normalizeText = (value) => String(value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  const getSearchTokens = (query) => normalizeText(query).split(" ").filter(Boolean);
+  const escapeHtml = (value) =>
+    String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+
+  const scoreEntry = (entry, normalizedQuery, tokens, scope) => {
+    let score = 0;
+    const normalizedTitle = normalizeText(entry.title);
+    const normalizedSlug = normalizeText(entry.slug);
+    const normalizedSummary = normalizeText(entry.summary);
+    const normalizedSection = normalizeText(entry.section);
+    const normalizedSearchText = normalizeText(entry.searchText);
+
+    if (normalizedTitle === normalizedQuery || normalizedSlug === normalizedQuery) {
+      score += 220;
+    }
+
+    if (normalizedTitle.includes(normalizedQuery)) {
+      score += 90;
+    }
+
+    if (normalizedSlug.includes(normalizedQuery)) {
+      score += 70;
+    }
+
+    if (normalizedSummary.includes(normalizedQuery)) {
+      score += 35;
+    }
+
+    if (normalizedSection.includes(normalizedQuery)) {
+      score += 25;
+    }
+
+    for (const token of tokens) {
+      if (normalizedTitle.includes(token)) {
+        score += 24;
+      }
+
+      if (normalizedSlug.includes(token)) {
+        score += 18;
+      }
+
+      if (normalizedSummary.includes(token)) {
+        score += 10;
+      }
+
+      if (normalizedSection.includes(token)) {
+        score += 8;
+      }
+
+      score += Math.min(normalizedSearchText.split(token).length - 1, 6);
+    }
+
+    if (scope && String(entry.scopeHref || "").startsWith(scope)) {
+      score += 40;
+    }
+
+    return score;
+  };
+
+  const renderResults = () => {
+    if (!(searchResults instanceof HTMLElement) || !(searchEmpty instanceof HTMLElement)) {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const query = params.get("q")?.trim() ?? "";
+    const scope = params.get("scope")?.trim() ?? "";
+    const normalizedQuery = normalizeText(query);
+
+    if (searchInput instanceof HTMLInputElement) {
+      searchInput.value = query;
+    }
+
+    if (!normalizedQuery) {
+      searchResults.hidden = true;
+      searchResults.innerHTML = "";
+      searchEmpty.hidden = false;
+      searchEmpty.textContent = "Enter a query to search the full site index.";
+      return;
+    }
+
+    const tokens = getSearchTokens(query);
+    const results = searchIndex
+      .filter((entry) => tokens.every((token) => normalizeText(entry.searchText).includes(token)))
+      .map((entry) => ({
+        ...entry,
+        score: scoreEntry(entry, normalizedQuery, tokens, scope),
+      }))
+      .sort((left, right) => right.score - left.score || left.title.localeCompare(right.title))
+      .slice(0, 24);
+
+    document.title = `Search: ${query} | e*f(x) Technology`;
+
+    if (results.length === 0) {
+      searchResults.hidden = true;
+      searchResults.innerHTML = "";
+      searchEmpty.hidden = false;
+      searchEmpty.textContent = `No indexed pages matched "${query}".`;
+      return;
+    }
+
+    searchEmpty.hidden = true;
+    searchResults.hidden = false;
+    searchResults.innerHTML = results
+      .map(
+        (result, index) => `
+          <a class="search-result-card" href="${result.htmlUrl}">
+            <div class="search-result-topline">
+              <span class="search-result-section">${escapeHtml(result.section)}</span>
+              <span class="search-result-rank">#${String(index + 1).padStart(2, "0")}</span>
+            </div>
+            <h2 class="search-result-title">${escapeHtml(result.title)}</h2>
+            <p class="search-result-summary">${escapeHtml(result.summary)}</p>
+            <div class="search-result-meta">
+              <span>${escapeHtml(result.fileName || result.slug)}</span>
+              ${result.markdownUrl ? '<span class="search-result-markdown">Markdown available</span>' : ""}
+            </div>
+          </a>
+        `,
+      )
+      .join("");
+  };
+
+  renderResults();
+</script>

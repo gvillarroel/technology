@@ -2,7 +2,6 @@ repositories:
   - slug: gvillarroel-docs
     name: gvillarroel docs folders
     account: gvillarroel
-    owner: Knowledge Systems
     include_repositories:
       - "*"
     exclude_repositories:

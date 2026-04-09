@@ -3,6 +3,7 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 import StandardPageIntro from "../../components/StandardPageIntro.astro";
 import StandardPageHeader from "../../components/StandardPageHeader.astro";
 import { getAiMetricsDemoDataset } from "../../lib/ai-metrics-demo";
+import { getPulseDataset } from "../../lib/pulse";
 import {
   getAiSdlcData,
   getAiSdlcDetailHtmlUrl,
@@ -28,8 +29,10 @@ const { slug } = Astro.params;
 const { overview } = await getAiSdlcData();
 const topic = slug ? await getAiSdlcTopicBySlug(slug) : undefined;
 const topics = await getAiSdlcTopics();
+const searchQuery = Astro.url.searchParams.get("q")?.trim() ?? "";
 const skillsCatalog = topic?.slug === "skills" ? await getSkillsCatalogData() : undefined;
 const metricsDataset = topic?.slug === "metrics" ? await getAiMetricsDemoDataset() : undefined;
+const pulseDataset = topic?.slug === "pulse" ? await getPulseDataset() : undefined;
 const skillsPageCopy = topic?.skillsPage;
 const harnessToolGroups = topic?.slug === "harness-tools" ? await getAiSdlcResolvedToolGroups(topic) : undefined;
 const harnessTools = harnessToolGroups?.flatMap((group) => group.tools) ?? [];
@@ -42,6 +45,8 @@ const introPills = [
         ? `${skillsCatalog?.skills.length ?? 0} approved skills`
         : topic?.slug === "harness-tools"
           ? `${harnessTools.length} radar tools`
+          : topic?.slug === "pulse"
+            ? `${pulseDataset?.summary.repositories ?? 0} repositories`
           : topic?.slug === "metrics"
             ? `${metricsDataset?.teams.length ?? 0} teams`
             : "",
@@ -100,7 +105,7 @@ const aiSdlcSectionNavItems = [
       currentPage="ai-sdlc"
       searchAction={withBasePath("/ai-sdlc/")}
       searchPlaceholder={overview.copy.searchPlaceholder}
-      searchQuery={topic.name}
+      searchQuery={searchQuery}
       sectionNavItems={aiSdlcSectionNavItems}
       sectionNavLabel="AI SDLC sections"
     />
@@ -123,6 +128,7 @@ const aiSdlcSectionNavItems = [
               class="standard-select"
               type="search"
               placeholder={skillsPageCopy?.filterSearchPlaceholder}
+              value={searchQuery}
             />
           </div>
           <label class="skills-toggle" for="skills-evaluated-only">
@@ -286,7 +292,7 @@ const aiSdlcSectionNavItems = [
                       <p class="bat-heading bat-heading-inline">Production signal</p>
                       <p class="ai-sdlc-card-copy">{tool.productionSignal}</p>
                       <div class="bat-link-row">
-                        <a href={withBasePath(`/tech-radar/${tool.entry.slug}/`)}>open tech radar detail</a>
+                        <a href={withBasePath(`/tech-radar/${tool.entry.slug}/`)}>Open Tech Radar detail</a>
                       </div>
                     </div>
                   </article>
@@ -294,6 +300,321 @@ const aiSdlcSectionNavItems = [
               </div>
             </article>
           ))}
+        </section>
+      </>
+    ) : topic.slug === "pulse" && pulseDataset ? (
+      <>
+        <section class="metrics-demo-top" id="pulse-demo-top">
+          <div class="radar-floating-rail-anchor" id="pulse-repo-rail-anchor">
+            <aside class="standard-floating-rail is-inline-top has-readable-surface" id="pulse-repo-rail" aria-label="Pulse repository filters">
+              <div class="standard-floating-rail-inner">
+                <div class="radar-top-filters">
+                  <div class="radar-control metrics-team-control">
+                    <span class="standard-label">Repositories</span>
+                    <div class="metrics-team-multiselect" id="pulse-repo-filter">
+                      <button
+                        class="standard-select metrics-team-trigger"
+                        id="pulse-repo-trigger"
+                        type="button"
+                        aria-expanded="false"
+                        aria-controls="pulse-repo-panel"
+                      >
+                        <span class="metrics-team-trigger-text">
+                          <span class="metrics-team-trigger-value" id="pulse-repo-filter-label">All repositories</span>
+                          <span class="metrics-team-trigger-hint">
+                            {pulseDataset.filters.repositories.length} repositories available
+                          </span>
+                        </span>
+                        <span class="metrics-team-trigger-icon" aria-hidden="true">▾</span>
+                      </button>
+
+                      <div class="metrics-team-panel" id="pulse-repo-panel" hidden>
+                        <div class="metrics-team-panel-topline">
+                          <input
+                            id="pulse-repo-search"
+                            class="standard-select metrics-team-search"
+                            type="search"
+                            placeholder="Search repositories"
+                            autocomplete="off"
+                          />
+                          <button class="standard-toggle-button metrics-team-reset" type="button" data-repo-filter="all">
+                            All repos
+                          </button>
+                        </div>
+
+                        <div class="metrics-team-options" id="pulse-repo-options">
+                          {pulseDataset.filters.repositories.map((repo) => (
+                            <label class="metrics-team-option" data-repo-option={repo.repoSlug} data-search={repo.repoName.toLowerCase()}>
+                              <input class="metrics-team-checkbox" type="checkbox" value={repo.repoKey} />
+                              <span class="pulse-repo-option-mark" aria-hidden="true"></span>
+                              <span class="metrics-team-option-name">{repo.repoName}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="radar-control">
+                    <span class="standard-label">Scale</span>
+                    <div class="standard-toggle-group standard-toggle-group-vertical" id="pulse-value-mode">
+                      <button class="standard-toggle-button is-active" type="button" data-value-mode="total">
+                        Total
+                      </button>
+                      <button class="standard-toggle-button" type="button" data-value-mode="ratio">
+                        Ratio
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </aside>
+          </div>
+
+          <div class="metrics-demo-top-content">
+            <div class="radar-floating-rail-dock" id="pulse-repo-rail-dock" aria-hidden="true"></div>
+          </div>
+        </section>
+
+        <section class="standard-section-heading">
+          <div>
+            <p class="eyebrow">Repository Evidence</p>
+            <h2>AI conventions and repository coverage</h2>
+          </div>
+          <p class="standard-section-meta" id="pulse-selection-meta">
+            All {pulseDataset.summary.repositories} repositories in view
+          </p>
+        </section>
+
+        <section class="bat-grid bat-grid-detail metrics-hero-grid">
+          <article class="bat-card bat-card-wide">
+            <div class="bat-card-bar">
+              <span class="bat-card-file">pulse-conventions.json</span>
+              <span class="bat-card-lang">json</span>
+            </div>
+
+            <div class="bat-card-body bat-card-body-stack">
+              <div class="bat-line">
+                <span class="bat-gutter">1</span>
+                <div class="bat-code">
+                  <p class="bat-heading">Convention coverage by repository</p>
+                  <p class="bat-copy">
+                    First view: tracked AI entrypoints per repository, keeping AGENTS, CLAUDE,
+                    README, Copilot instructions, and generic AI markdown visible as separate
+                    coverage slots. Ratio mode normalizes each repository against the five tracked
+                    convention categories.
+                  </p>
+                </div>
+              </div>
+              <div class="bat-line">
+                <span class="bat-gutter">2</span>
+                <div class="bat-code">
+                  <div class="metrics-platform-chart pulse-chart" id="pulse-conventions-chart"></div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="bat-card">
+            <div class="bat-card-bar">
+              <span class="bat-card-file">pulse-summary.json</span>
+              <span class="bat-card-lang">json</span>
+            </div>
+
+            <div class="bat-card-body bat-card-body-stack">
+              <div class="bat-line">
+                <span class="bat-gutter">1</span>
+                <div class="bat-code">
+                  <dl class="bat-definition-list metrics-summary-list pulse-summary-list">
+                    <div>
+                      <dt>repositories</dt>
+                      <dd id="pulse-summary-repositories">{pulseDataset.summary.repositories}</dd>
+                    </div>
+                    <div>
+                      <dt>analyzed</dt>
+                      <dd id="pulse-summary-analyzed">{pulseDataset.summary.analyzedRepositories}</dd>
+                    </div>
+                    <div>
+                      <dt>failed</dt>
+                      <dd id="pulse-summary-failed">{pulseDataset.summary.failedRepositories}</dd>
+                    </div>
+                    <div>
+                      <dt>total lines</dt>
+                      <dd id="pulse-summary-lines">{pulseDataset.summary.totalLines}</dd>
+                    </div>
+                    <div>
+                      <dt>total files</dt>
+                      <dd id="pulse-summary-files">{pulseDataset.summary.totalFiles}</dd>
+                    </div>
+                    <div>
+                      <dt>last run</dt>
+                      <dd id="pulse-summary-run">{pulseDataset.overview.lastRunAt || "n/a"}</dd>
+                    </div>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="standard-section-heading">
+          <div>
+            <p class="eyebrow">Scale</p>
+            <h2>Repository size by total lines</h2>
+          </div>
+          <p class="standard-section-meta">Descending repository footprint across the visible selection</p>
+        </section>
+
+        <section class="bat-grid bat-grid-detail metrics-full-width-chart-grid">
+          <article class="bat-card bat-card-wide">
+            <div class="bat-card-bar">
+              <span class="bat-card-file">pulse-repository-size.json</span>
+              <span class="bat-card-lang">json</span>
+            </div>
+
+            <div class="bat-card-body bat-card-body-stack">
+              <div class="bat-line">
+                <span class="bat-gutter">1</span>
+                <div class="bat-code">
+                  <p class="bat-heading">Repository size distribution</p>
+                  <p class="bat-copy">
+                    Second view: latest analyzed repository size from Pulse snapshots, ordered by
+                    total lines. Ratio mode shows each repository as share of visible analyzed
+                    lines.
+                  </p>
+                </div>
+              </div>
+              <div class="bat-line">
+                <span class="bat-gutter">2</span>
+                <div class="bat-code">
+                  <div class="metrics-platform-chart pulse-chart" id="pulse-size-chart"></div>
+                </div>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="standard-section-heading">
+          <div>
+            <p class="eyebrow">Activity</p>
+            <h2>Weekly commits for the top visible repositories</h2>
+          </div>
+          <p class="standard-section-meta">Line view limited to the strongest commit histories in the current selection</p>
+        </section>
+
+        <section class="bat-grid bat-grid-detail metrics-full-width-chart-grid">
+          <article class="bat-card bat-card-wide">
+            <div class="bat-card-bar">
+              <span class="bat-card-file">pulse-weekly-activity.json</span>
+              <span class="bat-card-lang">json</span>
+            </div>
+
+            <div class="bat-card-body bat-card-body-stack">
+              <div class="bat-line">
+                <span class="bat-gutter">1</span>
+                <div class="bat-code">
+                  <p class="bat-heading">Weekly activity by repository</p>
+                  <p class="bat-copy">
+                    Third view: weekly commit count for the most active visible repositories. Hover
+                    a point to inspect both commits and active contributors for that week.
+                  </p>
+                </div>
+              </div>
+              <div class="bat-line">
+                <span class="bat-gutter">2</span>
+                <div class="bat-code">
+                  <div class="metrics-platform-chart pulse-weekly-chart" id="pulse-weekly-chart"></div>
+                </div>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="standard-section-heading">
+          <div>
+            <p class="eyebrow">Composition</p>
+            <h2>Language share by bytes</h2>
+          </div>
+          <p class="standard-section-meta">Aggregated from current file snapshots across the visible repositories</p>
+        </section>
+
+        <section class="bat-grid bat-grid-detail metrics-full-width-chart-grid">
+          <article class="bat-card bat-card-wide">
+            <div class="bat-card-bar">
+              <span class="bat-card-file">pulse-language-share.json</span>
+              <span class="bat-card-lang">json</span>
+            </div>
+
+            <div class="bat-card-body bat-card-body-stack">
+              <div class="bat-line">
+                <span class="bat-gutter">1</span>
+                <div class="bat-code">
+                  <p class="bat-heading">Language share by bytes</p>
+                  <p class="bat-copy">
+                    Fourth view: dominant languages across the visible repository subset. Ratio mode
+                    shows share of visible bytes instead of raw volume.
+                  </p>
+                </div>
+              </div>
+              <div class="bat-line">
+                <span class="bat-gutter">2</span>
+                <div class="bat-code">
+                  <div class="metrics-platform-chart pulse-chart" id="pulse-language-chart"></div>
+                </div>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="standard-section-heading">
+          <div>
+            <p class="eyebrow">Failures</p>
+            <h2>Failure ledger</h2>
+          </div>
+          <p class="standard-section-meta" id="pulse-failure-meta">
+            {pulseDataset.failures.length} failed repositories in the current export
+          </p>
+        </section>
+
+        <section class="bat-grid bat-grid-detail metrics-full-width-chart-grid">
+          <article class="bat-card bat-card-wide">
+            <div class="bat-card-bar">
+              <span class="bat-card-file">pulse-failures.json</span>
+              <span class="bat-card-lang">json</span>
+            </div>
+
+            <div class="bat-card-body bat-card-body-stack">
+              <div class="bat-line">
+                <span class="bat-gutter">1</span>
+                <div class="bat-code">
+                  <div class="pulse-failure-table-wrap">
+                    <table class="pulse-failure-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Repository</th>
+                          <th scope="col">Stage</th>
+                          <th scope="col">Status</th>
+                          <th scope="col">Updated</th>
+                          <th scope="col">Detail</th>
+                        </tr>
+                      </thead>
+                      <tbody id="pulse-failure-table-body">
+                        {pulseDataset.failures.map((failure) => (
+                          <tr>
+                            <td>{failure.repoName}</td>
+                            <td>{failure.stage}</td>
+                            <td>{failure.status}</td>
+                            <td>{failure.updatedAt || "n/a"}</td>
+                            <td>{failure.detail}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
         </section>
       </>
     ) : topic.slug === "metrics" && metricsDataset ? (
@@ -839,6 +1160,11 @@ const aiSdlcSectionNavItems = [
       control?.addEventListener("change", updateSkillResults);
     });
 
+    const skillsParams = new URLSearchParams(window.location.search);
+    if (skillsSearch instanceof HTMLInputElement && skillsParams.has("q")) {
+      skillsSearch.value = skillsParams.get("q") ?? "";
+    }
+
     updateSkillResults();
   </script>
 ) : topic.slug === "harness-tools" ? (
@@ -860,6 +1186,25 @@ const aiSdlcSectionNavItems = [
       },
     });
   </script>
+) : topic.slug === "pulse" && pulseDataset ? (
+  <>
+    <script id="pulse-dataset" is:inline type="application/json" set:html={JSON.stringify(pulseDataset)}></script>
+    <script>
+      import { initPulseDashboard } from "../../scripts/pulse-dashboard.ts";
+
+      initPulseDashboard();
+    </script>
+
+    <script>
+      import { initFloatingRail } from "../../scripts/floating-rail.ts";
+
+      initFloatingRail({
+        rail: "#pulse-repo-rail",
+        anchor: "#pulse-repo-rail-anchor",
+        dock: "#pulse-repo-rail-dock",
+      });
+    </script>
+  </>
 ) : topic.slug === "metrics" && metricsDataset ? (
   <script id="metrics-dataset" is:inline type="application/json" set:html={JSON.stringify(metricsDataset)}></script>
   <script>

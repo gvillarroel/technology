@@ -14,6 +14,7 @@ export interface HeaderNavItem {
 
 export interface Props {
   currentPage?: StandardPageKey;
+  showSearch?: boolean;
   searchAction?: string;
   searchPlaceholder?: string;
   searchQuery?: string;
@@ -25,6 +26,7 @@ export interface Props {
 
 const {
   currentPage,
+  showSearch = true,
   searchAction = withBasePath("/tech-radar/"),
   searchPlaceholder = "Search",
   searchQuery = "",
@@ -37,6 +39,7 @@ const {
 
 <StandardHeader
   navGroups={getStandardPageNavGroups(currentPage)}
+  showSearch={showSearch}
   searchAction={searchAction}
   searchPlaceholder={searchPlaceholder}
   searchQuery={searchQuery}

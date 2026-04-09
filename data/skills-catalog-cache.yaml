@@ -1,4 +1,4 @@
-generated_at: 2026-04-08T23:38:37.174Z
+generated_at: 2026-04-09T23:57:08.356Z
 repositories:
   - slug: agent-marketplace
     skills:
@@ -208,10 +208,10 @@ repositories:
           # Skill source:
           https://github.com/anthropics/skills/tree/main/skills/claude-api
         installAvailable: true
-        searchText: "claude-api this skill helps you build llm-powered applications with
+        searchText: claude-api this skill helps you build llm-powered applications with
           claude. choose the right surface based on your needs, detect the
           project language, then read the relevant language-specific
-          documentation.  anthropic skills anthropics/skills skills/claude-api "
+          documentation.  anthropic skills anthropics/skills skills/claude-api
       - id: anthropic-skills:doc-coauthoring
         slug: doc-coauthoring
         name: doc-coauthoring
@@ -244,14 +244,14 @@ repositories:
           # Skill source:
           https://github.com/anthropics/skills/tree/main/skills/doc-coauthoring
         installAvailable: true
-        searchText: "doc-coauthoring guide users through a structured workflow for
+        searchText: doc-coauthoring guide users through a structured workflow for
           co-authoring documentation. use when user wants to write
           documentation, proposals, technical specs, decision docs, or similar
           structured content. this workflow helps users efficiently transfer
           context, refine content through iteration, and verify the doc works
           for readers. trigger when user mentions writing docs, creating
           proposals, drafting specs, or similar documentation tasks.  anthropic
-          skills anthropics/skills skills/doc-coauthoring "
+          skills anthropics/skills skills/doc-coauthoring
       - id: anthropic-skills:docx
         slug: docx
         name: docx
@@ -553,12 +553,12 @@ repositories:
           # Skill source:
           https://github.com/anthropics/skills/tree/main/skills/skill-creator
         installAvailable: true
-        searchText: "skill-creator create new skills, modify and improve existing
-          skills, and measure skill performance. use when users want to create a
-          skill from scratch, edit, or optimize an existing skill, run evals to
-          test a skill, benchmark skill performance with variance analysis, or
-          optimize a skill's description for better triggering
-          accuracy.  anthropic skills anthropics/skills skills/skill-creator "
+        searchText: skill-creator create new skills, modify and improve existing skills,
+          and measure skill performance. use when users want to create a skill
+          from scratch, edit, or optimize an existing skill, run evals to test a
+          skill, benchmark skill performance with variance analysis, or optimize
+          a skill's description for better triggering accuracy.  anthropic
+          skills anthropics/skills skills/skill-creator
       - id: anthropic-skills:slack-gif-creator
         slug: slack-gif-creator
         name: slack-gif-creator
@@ -2000,8 +2000,8 @@ repositories:
         name: sentry
         description: Use when the user asks to inspect Sentry issues or events,
           summarize recent production errors, or pull basic Sentry health data
-          via the Sentry API; perform read-only queries with the bundled script
-          and require `SENTRY_AUTH_TOKEN`.
+          via the Sentry CLI; perform read-only queries using the `sentry`
+          command.
         repositorySlug: openai-curated-skills
         repositoryName: OpenAI Curated Skills
         repositorySource: github
@@ -2023,9 +2023,9 @@ repositories:
         installAvailable: true
         searchText: "sentry use when the user asks to inspect sentry issues or events,
           summarize recent production errors, or pull basic sentry health data
-          via the sentry api; perform read-only queries with the bundled script
-          and require `sentry_auth_token`. curated openai curated skills
-          openai/skills skills/.curated/sentry "
+          via the sentry cli; perform read-only queries using the `sentry`
+          command. curated openai curated skills openai/skills
+          skills/.curated/sentry "
       - id: openai-curated-skills:slides
         slug: slides
         name: slides

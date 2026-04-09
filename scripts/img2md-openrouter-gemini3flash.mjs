@@ -1,10 +1,10 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
-import { GoogleGenAI } from "@google/genai";
 
-const DEFAULT_MODEL = process.env.IMG2MD_MODEL?.trim() || "gemini-3-flash-preview";
+const DEFAULT_MODEL = process.env.IMG2MD_MODEL?.trim() || "google/gemini-3-flash-preview";
 const DEFAULT_OUTPUT_ROOT = path.resolve(process.cwd(), ".tmp", "img2md");
+const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"]);
 const EXCLUDED_SEGMENTS = new Set([
   ".artifacts",
@@ -28,8 +28,9 @@ Requirements:
 - Preserve visible labels, commands, navigation items, headings, table headers, values, code-like text, and short paragraphs.
 - Prefer structure over raw OCR dumping.
 - If text is uncertain, mark it with [?].
-- Do not describe colors or style unless it helps identify location.
-- Do not mention the model or explain your process.
+- Do not describe the image.
+- Do not explain your process.
+- Do not wrap the answer in code fences.
 
 Output shape:
 # Screen Summary
@@ -113,18 +114,18 @@ function parseArgs(argv) {
 }
 
 function printHelp() {
-  console.log(`Usage: node scripts/img2md-gemini-flash.mjs [options]
+  console.log(`Usage: node scripts/img2md-openrouter-gemini3flash.mjs [options]
 
 Options:
   --input-root <dir>    Root directory to scan for images. Default: current directory
   --output-root <dir>   Markdown output directory. Default: .tmp/img2md
-  --model <name>        Gemini model name. Default: ${DEFAULT_MODEL}
+  --model <name>        OpenRouter model name. Default: ${DEFAULT_MODEL}
   --limit <n>           Process only the first N images
   --overwrite           Rewrite existing .md files
   --help                Show this help
 
 Environment:
-  GEMINI_API_KEY        Required
+  OPENROUTER_API_KEY    Required
   IMG2MD_MODEL          Optional default model override
 `);
 }
@@ -192,77 +193,63 @@ function getMimeType(imagePath) {
   }
 }
 
-async function readImageInlineData(imagePath) {
-  return {
-    mime_type: getMimeType(imagePath),
-    data: (await fs.readFile(imagePath)).toString("base64"),
-  };
+async function imageToDataUrl(imagePath) {
+  const mimeType = getMimeType(imagePath);
+  const base64 = (await fs.readFile(imagePath)).toString("base64");
+  return `data:${mimeType};base64,${base64}`;
 }
 
-function extractText(responseBody) {
-  const candidates = Array.isArray(responseBody.candidates) ? responseBody.candidates : [];
-  const firstCandidate = candidates[0];
-
-  if (!firstCandidate?.content?.parts) {
-    return "";
-  }
-
-  return firstCandidate.content.parts
-    .map((part) => (typeof part.text === "string" ? part.text : ""))
-    .join("\n")
-    .trim();
-}
-
-async function callGemini({ apiKey, model, imagePath }) {
-  const inlineData = await readImageInlineData(imagePath);
-  const client = new GoogleGenAI({ apiKey });
+async function callOpenRouter({ apiKey, model, imagePath }) {
+  const imageUrl = await imageToDataUrl(imagePath);
 
   for (let attempt = 1; attempt <= 4; attempt += 1) {
-    try {
-      const response = await client.models.generateContent({
+    const response = await fetch(OPENROUTER_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://local.codex",
+        "X-Title": "technology-img2md",
+      },
+      body: JSON.stringify({
         model,
-        contents: [
+        temperature: 0.1,
+        messages: [
           {
             role: "user",
-            parts: [
-              { text: PROMPT },
+            content: [
+              { type: "text", text: PROMPT },
               {
-                inlineData: inlineData,
+                type: "image_url",
+                image_url: {
+                  url: imageUrl,
+                },
               },
             ],
           },
         ],
-        config: {
-          temperature: 0.1,
-          topP: 0.95,
-          maxOutputTokens: 8192,
-          responseMimeType: "text/plain",
-          mediaResolution: "MEDIA_RESOLUTION_HIGH",
-        },
-      });
+      }),
+    });
 
-      const text =
-        typeof response.text === "string" ? response.text.trim() : extractText(response);
+    const raw = await response.text();
+    if (response.ok) {
+      const body = JSON.parse(raw);
+      const text = body?.choices?.[0]?.message?.content?.trim() || "";
       if (!text) {
-        throw new Error(`Gemini returned no text for ${path.basename(imagePath)}.`);
+        throw new Error(`OpenRouter returned no text for ${path.basename(imagePath)}.`);
       }
       return text;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      const isRetryable =
-        message.includes("429") ||
-        message.includes("500") ||
-        message.includes("503") ||
-        message.includes("RESOURCE_EXHAUSTED");
-
-      if (!isRetryable || attempt === 4) {
-        throw new Error(`Gemini SDK request failed: ${message}`);
-      }
     }
+
+    const isRetryable = response.status === 429 || response.status >= 500;
+    if (!isRetryable || attempt === 4) {
+      throw new Error(`OpenRouter request failed (${response.status}): ${raw}`);
+    }
+
     await sleep(1500 * attempt);
   }
 
-  throw new Error("Gemini request exhausted retries.");
+  throw new Error("OpenRouter request exhausted retries.");
 }
 
 function wrapMarkdown(relativePath, model, markdown) {
@@ -309,9 +296,9 @@ async function main() {
     return;
   }
 
-  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  const apiKey = process.env.OPENROUTER_API_KEY?.trim();
   if (!apiKey) {
-    throw new Error("GEMINI_API_KEY is required.");
+    throw new Error("OPENROUTER_API_KEY is required.");
   }
 
   await fs.mkdir(options.outputRoot, { recursive: true });
@@ -337,7 +324,7 @@ async function main() {
     }
 
     try {
-      const markdown = await callGemini({
+      const markdown = await callOpenRouter({
         apiKey,
         model: options.model,
         imagePath: image.absolutePath,
