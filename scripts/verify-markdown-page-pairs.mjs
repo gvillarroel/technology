@@ -6,6 +6,18 @@ const pagesRoot = join(projectRoot, "src", "pages");
 const distRoot = join(projectRoot, "dist");
 const shouldVerifyDist = process.argv.includes("--dist");
 
+function getBasePath() {
+  const repository = process.env.GITHUB_REPOSITORY;
+  const owner = process.env.GITHUB_REPOSITORY_OWNER;
+
+  if (!repository || !owner) {
+    return "";
+  }
+
+  const [, repo] = repository.split("/");
+  return repo === `${owner}.github.io` ? "" : `/${repo}`;
+}
+
 async function collectFiles(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
   const files = await Promise.all(
@@ -87,7 +99,15 @@ function isInternalMarkdownLink(href) {
 
 function toResolvedMarkdownRoute(currentRoute, href) {
   const url = new URL(href, `https://markdown.local${currentRoute}`);
-  return url.pathname;
+  const pathname = url.pathname;
+  const basePath = getBasePath();
+
+  if (basePath && (pathname === basePath || pathname.startsWith(`${basePath}/`))) {
+    const withoutBase = pathname.slice(basePath.length);
+    return withoutBase.startsWith("/") ? withoutBase : `/${withoutBase}`;
+  }
+
+  return pathname;
 }
 
 const distFiles = await collectFiles(distRoot);
