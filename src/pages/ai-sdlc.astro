@@ -8,16 +8,7 @@ import { getStandardPageSource } from "../lib/page-sources";
 
 const { overview, topics } = await getAiSdlcData();
 const sourceCard = await getStandardPageSource("ai-sdlc");
-const searchQuery = Astro.url.searchParams.get("q")?.trim() ?? "";
-const normalizedSearchQuery = searchQuery.toLowerCase();
-const visibleTopics = normalizedSearchQuery
-  ? topics.filter((topic) =>
-      [topic.name, topic.slug, topic.summary, topic.status, topic.owner, topic.outcome]
-        .join(" ")
-        .toLowerCase()
-        .includes(normalizedSearchQuery),
-    )
-  : topics;
+const visibleTopics = topics;
 const aiSdlcSectionNavItems = [
   {
     href: "/ai-sdlc/",
@@ -41,7 +32,7 @@ const aiSdlcSectionNavItems = [
       currentPage="ai-sdlc"
       searchAction="/ai-sdlc/"
       searchPlaceholder={overview.copy.searchPlaceholder}
-      searchQuery={searchQuery}
+      searchQuery=""
       sectionNavItems={aiSdlcSectionNavItems}
       sectionNavLabel="AI SDLC sections"
     />
@@ -76,12 +67,16 @@ const aiSdlcSectionNavItems = [
         <p class="eyebrow">{overview.copy.topicsEyebrow}</p>
         <h2>{overview.copy.topicsHeading}</h2>
       </div>
-      <p class="standard-section-meta">{visibleTopics.length} {overview.copy.topicsCountSuffix}</p>
+      <p class="standard-section-meta" id="ai-sdlc-topics-count">{visibleTopics.length} {overview.copy.topicsCountSuffix}</p>
     </section>
 
     <section class="ai-sdlc-grid">
       {visibleTopics.map((topic, index) => (
-        <article class="ai-sdlc-card">
+        <article
+          class="ai-sdlc-card"
+          data-ai-sdlc-card
+          data-search-text={[topic.name, topic.slug, topic.summary, topic.status, topic.owner, topic.outcome].join(" ").toLowerCase()}
+        >
           <div class="ai-sdlc-card-topline">
             <a class="ai-sdlc-card-file-link" href={getAiSdlcDetailHtmlUrl(topic.slug)}>
               <span class="ai-sdlc-card-file">{topic.slug}.md</span>
@@ -97,8 +92,50 @@ const aiSdlcSectionNavItems = [
       ))}
     </section>
 
-    {visibleTopics.length === 0 ? (
-      <p class="standard-empty-state">No AI SDLC topics match the current search.</p>
-    ) : null}
+    <p class="standard-empty-state" id="ai-sdlc-empty-state" hidden>No AI SDLC topics match the current search.</p>
   </main>
 </BaseLayout>
+
+<script is:inline>
+  const searchInput = document.getElementById("site-search");
+  const topicCards = Array.from(document.querySelectorAll("[data-ai-sdlc-card]"));
+  const topicsCount = document.getElementById("ai-sdlc-topics-count");
+  const emptyState = document.getElementById("ai-sdlc-empty-state");
+  const countSuffix = "topics";
+
+  const normalizeText = (value) => String(value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+
+  const applyFilter = () => {
+    const params = new URLSearchParams(window.location.search);
+    const query = normalizeText(params.get("q") ?? "");
+
+    if (searchInput instanceof HTMLInputElement) {
+      searchInput.value = params.get("q") ?? "";
+    }
+
+    let visibleCount = 0;
+
+    topicCards.forEach((card) => {
+      if (!(card instanceof HTMLElement)) {
+        return;
+      }
+
+      const haystack = normalizeText(card.dataset.searchText ?? "");
+      const matches = !query || haystack.includes(query);
+      card.hidden = !matches;
+      if (matches) {
+        visibleCount += 1;
+      }
+    });
+
+    if (topicsCount instanceof HTMLElement) {
+      topicsCount.textContent = `${visibleCount} ${countSuffix}`;
+    }
+
+    if (emptyState instanceof HTMLElement) {
+      emptyState.hidden = visibleCount > 0 || !query;
+    }
+  };
+
+  applyFilter();
+</script>

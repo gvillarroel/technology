@@ -29,7 +29,6 @@ const { slug } = Astro.params;
 const { overview } = await getAiSdlcData();
 const topic = slug ? await getAiSdlcTopicBySlug(slug) : undefined;
 const topics = await getAiSdlcTopics();
-const searchQuery = Astro.url.searchParams.get("q")?.trim() ?? "";
 const skillsCatalog = topic?.slug === "skills" ? await getSkillsCatalogData() : undefined;
 const metricsDataset = topic?.slug === "metrics" ? await getAiMetricsDemoDataset() : undefined;
 const pulseDataset = topic?.slug === "pulse" ? await getPulseDataset() : undefined;
@@ -105,7 +104,7 @@ const aiSdlcSectionNavItems = [
       currentPage="ai-sdlc"
       searchAction={withBasePath("/ai-sdlc/")}
       searchPlaceholder={overview.copy.searchPlaceholder}
-      searchQuery={searchQuery}
+      searchQuery=""
       sectionNavItems={aiSdlcSectionNavItems}
       sectionNavLabel="AI SDLC sections"
     />
@@ -125,11 +124,11 @@ const aiSdlcSectionNavItems = [
             <label class="standard-label" for="skills-search">{skillsPageCopy?.filterSearchLabel}</label>
             <input
               id="skills-search"
-              class="standard-select"
-              type="search"
-              placeholder={skillsPageCopy?.filterSearchPlaceholder}
-              value={searchQuery}
-            />
+                class="standard-select"
+                type="search"
+                placeholder={skillsPageCopy?.filterSearchPlaceholder}
+                value=""
+              />
           </div>
           <label class="skills-toggle" for="skills-evaluated-only">
             <span class="skills-toggle-copy">
@@ -310,6 +309,54 @@ const aiSdlcSectionNavItems = [
               <div class="standard-floating-rail-inner">
                 <div class="radar-top-filters">
                   <div class="radar-control metrics-team-control">
+                    <span class="standard-label">Teams</span>
+                    <div class="metrics-team-multiselect" id="pulse-team-filter">
+                      <button
+                        class="standard-select metrics-team-trigger"
+                        id="pulse-team-trigger"
+                        type="button"
+                        aria-expanded="false"
+                        aria-controls="pulse-team-panel"
+                      >
+                        <span class="metrics-team-trigger-text">
+                          <span class="metrics-team-trigger-value" id="pulse-team-filter-label">All teams</span>
+                          <span class="metrics-team-trigger-hint">
+                            {pulseDataset.filters.teams.length} teams available
+                          </span>
+                        </span>
+                        <span class="metrics-team-trigger-icon" aria-hidden="true">▾</span>
+                      </button>
+
+                      <div class="metrics-team-panel" id="pulse-team-panel" hidden>
+                        <div class="metrics-team-panel-topline">
+                          <input
+                            id="pulse-team-search"
+                            class="standard-select metrics-team-search"
+                            type="search"
+                            placeholder="Search teams"
+                            autocomplete="off"
+                          />
+                          <button class="standard-toggle-button metrics-team-reset" type="button" data-team-filter="all">
+                            All teams
+                          </button>
+                        </div>
+
+                        <div class="metrics-team-options" id="pulse-team-options">
+                          {pulseDataset.filters.teams.map((team) => (
+                            <label class="metrics-team-option" data-team-option={team.slug} data-search={team.name.toLowerCase()}>
+                              <input class="metrics-team-checkbox pulse-team-checkbox" type="checkbox" value={team.slug} />
+                              <span class="metrics-team-option-swatch" style={`background:${team.color};`}></span>
+                              <span class="metrics-team-option-name">
+                                {team.name} <span class="pulse-team-option-count">({team.repositoryCount})</span>
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="radar-control metrics-team-control">
                     <span class="standard-label">Repositories</span>
                     <div class="metrics-team-multiselect" id="pulse-repo-filter">
                       <button
@@ -322,7 +369,7 @@ const aiSdlcSectionNavItems = [
                         <span class="metrics-team-trigger-text">
                           <span class="metrics-team-trigger-value" id="pulse-repo-filter-label">All repositories</span>
                           <span class="metrics-team-trigger-hint">
-                            {pulseDataset.filters.repositories.length} repositories available
+                            {pulseDataset.filters.repositories.length} repositories available across {pulseDataset.filters.teams.length} teams
                           </span>
                         </span>
                         <span class="metrics-team-trigger-icon" aria-hidden="true">▾</span>
@@ -382,7 +429,7 @@ const aiSdlcSectionNavItems = [
             <h2>AI conventions and repository coverage</h2>
           </div>
           <p class="standard-section-meta" id="pulse-selection-meta">
-            All {pulseDataset.summary.repositories} repositories in view
+            All {pulseDataset.summary.repositories} repositories across {pulseDataset.filters.teams.length} teams
           </p>
         </section>
 
