@@ -10,6 +10,7 @@ import type {
   PulseLanguageShare,
   PulseRepoFilter,
   PulseRepoSize,
+  PulseTeamFilter,
   PulseWeeklyActivitySeries,
 } from "../lib/pulse";
 
@@ -23,23 +24,17 @@ const pulseConventions = [
   { key: "hasGenericAiDoc", label: "Generic AI docs", color: "#652f6c" },
 ] as const;
 
-const pulsePalette = [
-  "#007298",
-  "#45842a",
-  "#e77204",
-  "#9e1b32",
-  "#652f6c",
-  "#0f5b78",
-  "#a75800",
-  "#2a5f18",
-  "#8c3141",
-  "#4d4f7f",
-];
+type VisibleTeamGroup = {
+  slug: string;
+  name: string;
+  color: string;
+  repositories: PulseRepoFilter[];
+};
 
 function getEmptyDataset(): PulseDataset {
   return {
     overview: { title: "", sourcePath: "", sourceNote: "", lastRunAt: "", lastFetchAt: "" },
-    filters: { repositories: [], conventions: [] },
+    filters: { teams: [], repositories: [], conventions: [] },
     summary: { repositories: 0, analyzedRepositories: 0, failedRepositories: 0, totalFiles: 0, totalLines: 0 },
     conventionsByRepo: [],
     languageShare: [],
@@ -56,8 +51,15 @@ export function initPulseDashboard() {
     ? (JSON.parse(pulseDatasetNode.textContent ?? "{}") as PulseDataset)
     : getEmptyDataset();
 
+  const pulseTeams = pulseDataset.filters.teams;
   const pulseRepositories = pulseDataset.filters.repositories;
   const pulseParams = new URLSearchParams(window.location.search);
+  const selectedTeams = new Set(
+    (pulseParams.get("teams") ?? "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean),
+  );
   const selectedRepos = new Set(
     (pulseParams.get("repos") ?? "")
       .split(",")
@@ -65,7 +67,17 @@ export function initPulseDashboard() {
       .filter(Boolean),
   );
   let pulseValueMode = pulseParams.get("mode") === "ratio" ? "ratio" : "total";
+  let teamSearch = "";
   let repoSearch = "";
+
+  const teamFilter = document.querySelector("#pulse-team-filter");
+  const teamTrigger = document.querySelector("#pulse-team-trigger");
+  const teamFilterLabel = document.querySelector("#pulse-team-filter-label");
+  const teamPanel = document.querySelector("#pulse-team-panel");
+  const teamSearchInput = document.querySelector("#pulse-team-search");
+  const teamResetButton = teamFilter ? teamFilter.querySelector('[data-team-filter="all"]') : null;
+  const teamCheckboxes = teamFilter ? [...teamFilter.querySelectorAll(".pulse-team-checkbox")] : [];
+  const teamOptions = teamFilter ? [...teamFilter.querySelectorAll("[data-team-option]")] : [];
 
   const repoFilter = document.querySelector("#pulse-repo-filter");
   const repoTrigger = document.querySelector("#pulse-repo-trigger");
@@ -75,6 +87,7 @@ export function initPulseDashboard() {
   const repoResetButton = repoFilter ? repoFilter.querySelector('[data-repo-filter="all"]') : null;
   const repoCheckboxes = repoFilter ? [...repoFilter.querySelectorAll(".metrics-team-checkbox")] : [];
   const repoOptions = repoFilter ? [...repoFilter.querySelectorAll("[data-repo-option]")] : [];
+
   const pulseValueModeFilter = document.querySelector("#pulse-value-mode");
   const pulseValueModeButtons = pulseValueModeFilter ? [...pulseValueModeFilter.querySelectorAll("[data-value-mode]")] : [];
 
@@ -105,6 +118,7 @@ export function initPulseDashboard() {
   const repoWeeklyByKey = new Map(
     pulseDataset.weeklyActivity.map((repo: PulseWeeklyActivitySeries) => [repo.repoKey, repo]),
   );
+  const pulseTeamsBySlug = new Map(pulseTeams.map((team: PulseTeamFilter) => [team.slug, team]));
 
   const formatInt = (value: number) => new Intl.NumberFormat("en-US").format(value || 0);
   const formatPercent = (value: number) =>
@@ -128,18 +142,39 @@ export function initPulseDashboard() {
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#39;");
-  const colorForRepo = (repoKey: string) => {
-    let hash = 0;
-    for (const char of repoKey) {
-      hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-    }
-    return pulsePalette[hash % pulsePalette.length];
+  const colorForTeam = (teamSlug: string, fallback = "#333e48") => pulseTeamsBySlug.get(teamSlug)?.color ?? fallback;
+  const getVisibleTeamGroups = (visibleRepos: PulseRepoFilter[]): VisibleTeamGroup[] => {
+    const grouped = new Map<string, VisibleTeamGroup>();
+
+    visibleRepos.forEach((repo) => {
+      const existing = grouped.get(repo.teamSlug);
+      if (existing) {
+        existing.repositories.push(repo);
+        return;
+      }
+
+      grouped.set(repo.teamSlug, {
+        slug: repo.teamSlug,
+        name: repo.teamName,
+        color: colorForTeam(repo.teamSlug, repo.teamColor),
+        repositories: [repo],
+      });
+    });
+
+    return [...grouped.values()];
   };
 
-  const getVisibleRepositories = (): PulseRepoFilter[] =>
-    selectedRepos.size === 0
+  const getTeamScopedRepositories = (): PulseRepoFilter[] =>
+    selectedTeams.size === 0
       ? pulseRepositories
-      : pulseRepositories.filter((repo: PulseRepoFilter) => selectedRepos.has(repo.repoKey));
+      : pulseRepositories.filter((repo: PulseRepoFilter) => selectedTeams.has(repo.teamSlug));
+
+  const getVisibleRepositories = (): PulseRepoFilter[] => {
+    const teamScopedRepos = getTeamScopedRepositories();
+    return selectedRepos.size === 0
+      ? teamScopedRepos
+      : teamScopedRepos.filter((repo: PulseRepoFilter) => selectedRepos.has(repo.repoKey));
+  };
 
   const syncPulseButtons = () => {
     pulseValueModeButtons.forEach((button) => {
@@ -147,13 +182,46 @@ export function initPulseDashboard() {
     });
   };
 
+  const syncTeamFilterUi = () => {
+    const selectedCount = selectedTeams.size;
+    const selectedLabel =
+      selectedCount === 0
+        ? "All teams"
+        : selectedCount === 1
+          ? pulseTeams.find((team: PulseTeamFilter) => selectedTeams.has(team.slug))?.name ?? "1 team"
+          : `${selectedCount} teams selected`;
+
+    if (teamFilterLabel) {
+      teamFilterLabel.textContent = selectedLabel;
+    }
+
+    teamCheckboxes.forEach((checkbox) => {
+      if (checkbox instanceof HTMLInputElement) {
+        checkbox.checked = selectedTeams.has(checkbox.value);
+      }
+    });
+
+    teamOptions.forEach((option) => {
+      const searchTarget = option.getAttribute("data-search") ?? "";
+      const matchesSearch = !teamSearch || searchTarget.includes(teamSearch);
+      option.toggleAttribute("hidden", !matchesSearch);
+    });
+
+    if (teamResetButton instanceof HTMLElement) {
+      teamResetButton.classList.toggle("is-active", selectedTeams.size === 0);
+    }
+  };
+
   const syncRepoFilterUi = () => {
-    const selectedCount = selectedRepos.size;
+    const availableRepoKeys = new Set(getTeamScopedRepositories().map((repo: PulseRepoFilter) => repo.repoKey));
+    const visibleSelectedRepos = [...selectedRepos].filter((repoKey) => availableRepoKeys.has(repoKey));
+    const selectedCount = visibleSelectedRepos.length;
     const selectedLabel =
       selectedCount === 0
         ? "All repositories"
         : selectedCount === 1
-          ? pulseRepositories.find((repo: PulseRepoFilter) => selectedRepos.has(repo.repoKey))?.repoName ?? "1 repository"
+          ? pulseRepositories.find((repo: PulseRepoFilter) => visibleSelectedRepos.includes(repo.repoKey))?.repoName ??
+            "1 repository"
           : `${selectedCount} repositories selected`;
 
     if (repoFilterLabel) {
@@ -163,17 +231,34 @@ export function initPulseDashboard() {
     repoCheckboxes.forEach((checkbox) => {
       if (checkbox instanceof HTMLInputElement) {
         checkbox.checked = selectedRepos.has(checkbox.value);
+        checkbox.disabled = !availableRepoKeys.has(checkbox.value);
       }
     });
 
     repoOptions.forEach((option) => {
       const searchTarget = option.getAttribute("data-search") ?? "";
+      const checkbox = option.querySelector(".metrics-team-checkbox");
+      const repoKey = checkbox instanceof HTMLInputElement ? checkbox.value : "";
+      const matchesTeamScope = availableRepoKeys.has(repoKey);
       const matchesSearch = !repoSearch || searchTarget.includes(repoSearch);
-      option.toggleAttribute("hidden", !matchesSearch);
+      option.toggleAttribute("hidden", !(matchesTeamScope && matchesSearch));
     });
 
     if (repoResetButton instanceof HTMLElement) {
       repoResetButton.classList.toggle("is-active", selectedRepos.size === 0);
+    }
+  };
+
+  const setTeamPanelOpen = (open: boolean) => {
+    if (!(teamPanel instanceof HTMLElement) || !(teamTrigger instanceof HTMLButtonElement)) {
+      return;
+    }
+
+    teamPanel.hidden = !open;
+    teamTrigger.setAttribute("aria-expanded", open ? "true" : "false");
+
+    if (open && teamSearchInput instanceof HTMLInputElement) {
+      teamSearchInput.focus();
     }
   };
 
@@ -191,6 +276,12 @@ export function initPulseDashboard() {
   };
 
   const syncPulseQueryParams = () => {
+    if (selectedTeams.size > 0) {
+      pulseParams.set("teams", [...selectedTeams].join(","));
+    } else {
+      pulseParams.delete("teams");
+    }
+
     if (selectedRepos.size > 0) {
       pulseParams.set("repos", [...selectedRepos].join(","));
     } else {
@@ -216,9 +307,11 @@ export function initPulseDashboard() {
 
     if (pulseSelectionMeta) {
       pulseSelectionMeta.textContent =
-        visibleRepos.length === pulseRepositories.length
-          ? `All ${pulseRepositories.length} repositories in view • ${pulseValueMode === "ratio" ? "ratio mode" : "total mode"}`
-          : `${visibleRepos.length} repositories selected • ${pulseValueMode === "ratio" ? "ratio mode" : "total mode"}`;
+        selectedTeams.size === 0
+          ? visibleRepos.length === pulseRepositories.length
+            ? `All ${pulseRepositories.length} repositories across ${pulseTeams.length} teams • ${pulseValueMode === "ratio" ? "ratio mode" : "total mode"}`
+            : `${visibleRepos.length} repositories selected • ${pulseValueMode === "ratio" ? "ratio mode" : "total mode"}`
+          : `${selectedTeams.size} teams selected • ${visibleRepos.length} repositories in view • ${pulseValueMode === "ratio" ? "ratio mode" : "total mode"}`;
     }
 
     if (pulseSummaryRepositories) {
@@ -282,19 +375,43 @@ export function initPulseDashboard() {
       conventionsChartInstance = echarts.init(conventionsChartElement, undefined, { renderer: "canvas" });
     }
 
-    const visibleRows = visibleRepos
-      .map((repo: PulseRepoFilter) => repoConventionsByKey.get(repo.repoKey))
-      .filter((row): row is PulseConventionCoverage => Boolean(row))
-      .sort((left, right) => right.totalConventionKinds - left.totalConventionKinds || left.repoName.localeCompare(right.repoName));
+    const visibleTeamGroups = getVisibleTeamGroups(visibleRepos)
+      .map((team) => {
+        const teamConventionRows = team.repositories
+          .map((repo) => repoConventionsByKey.get(repo.repoKey))
+          .filter((row): row is PulseConventionCoverage => Boolean(row));
 
-    const totalSlots = pulseConventions.length;
+        const conventionTotals = pulseConventions.map((convention) => ({
+          key: convention.key,
+          label: convention.label,
+          value: teamConventionRows.reduce((sum, row) => sum + (row[convention.key] ? 1 : 0), 0),
+        }));
+        const totalHits = conventionTotals.reduce((sum, convention) => sum + convention.value, 0);
+
+        return {
+          ...team,
+          repoCount: team.repositories.length,
+          conventionTotals,
+          totalHits,
+        };
+      })
+      .sort((left, right) => right.totalHits - left.totalHits || left.name.localeCompare(right.name));
+    const conventionOrder = pulseConventions
+      .map((convention) => ({
+        ...convention,
+        totalHits: visibleTeamGroups.reduce(
+          (sum, team) => sum + (team.conventionTotals.find((entry) => entry.key === convention.key)?.value ?? 0),
+          0,
+        ),
+      }))
+      .sort((left, right) => right.totalHits - left.totalHits || left.label.localeCompare(right.label));
 
     conventionsChartInstance.setOption(
       {
         animationDuration: 250,
         animationDurationUpdate: 250,
         grid: {
-          left: 156,
+          left: 132,
           right: 32,
           top: 72,
           bottom: 14,
@@ -325,22 +442,27 @@ export function initPulseDashboard() {
           },
           formatter: (paramsList: unknown) => {
             const points = Array.isArray(paramsList) ? paramsList : [paramsList];
-            const repoName = String((points[0] as { axisValueLabel?: string })?.axisValueLabel ?? "");
-            const row = visibleRows.find((entry) => entry.repoName === repoName);
-            if (!row) {
-              return repoName;
+            const conventionLabel = String((points[0] as { axisValueLabel?: string })?.axisValueLabel ?? "");
+            const lines = points
+              .filter((point) => Number((point as { value?: number })?.value ?? 0) > 0)
+              .map((point) => {
+                const typedPoint = point as { seriesName: string; value?: number; marker: string };
+                const team = visibleTeamGroups.find((entry) => entry.name === typedPoint.seriesName);
+                if (!team) {
+                  return `${typedPoint.marker} ${typedPoint.seriesName}: ${formatInt(Number(typedPoint.value ?? 0))}`;
+                }
+                const ratio = team.repoCount > 0 ? Number(typedPoint.value ?? 0) / team.repoCount : 0;
+                return `${typedPoint.marker} ${team.name}: ${formatInt(Number(typedPoint.value ?? 0))} repos • ${formatPercent(ratio)} coverage`;
+              });
+            if (lines.length === 0) {
+              return conventionLabel;
             }
-
-            return [
-              `<strong>${escapeHtml(repoName)}</strong>`,
-              `Coverage: ${formatInt(row.totalConventionKinds)} / ${formatInt(totalSlots)} conventions`,
-              `Generic AI docs matched: ${formatInt(row.genericAiDocCount)}`,
-            ].join("<br/>");
+            return [`<strong>${escapeHtml(conventionLabel)}</strong>`, ...lines].join("<br/>");
           },
         },
         xAxis: {
           type: "value",
-          max: pulseValueMode === "ratio" ? 1 : totalSlots,
+          max: pulseValueMode === "ratio" ? 1 : undefined,
           axisLabel: {
             color: "#57636e",
             formatter: (value: number) => (pulseValueMode === "ratio" ? formatPercent(value) : formatInt(value)),
@@ -351,7 +473,8 @@ export function initPulseDashboard() {
         },
         yAxis: {
           type: "category",
-          data: visibleRows.map((row) => row.repoName),
+          inverse: true,
+          data: conventionOrder.map((convention) => convention.label),
           axisTick: { show: false },
           axisLabel: {
             color: "#162028",
@@ -360,19 +483,22 @@ export function initPulseDashboard() {
             fontWeight: 700,
           },
         },
-        series: pulseConventions.map((convention) => ({
-          name: convention.label,
+        series: visibleTeamGroups.map((team) => ({
+          name: team.name,
           type: "bar",
-          stack: "pulse-conventions",
-          barMaxWidth: 30,
+          stack: undefined,
+          barMaxWidth: 18,
           barCategoryGap: "18%",
           itemStyle: {
-            color: convention.color,
+            color: team.color,
             borderRadius: [0, 0, 0, 0],
           },
-          data: visibleRows.map((row) => ({
-            value: Boolean(row[convention.key]) ? (pulseValueMode === "ratio" ? 1 / totalSlots : 1) : 0,
-          })),
+          data: conventionOrder.map((convention) => {
+            const hitCount = team.conventionTotals.find((entry) => entry.key === convention.key)?.value ?? 0;
+            return {
+              value: pulseValueMode === "ratio" ? (team.repoCount > 0 ? hitCount / team.repoCount : 0) : hitCount,
+            };
+          }),
         })),
       },
       true,
@@ -388,10 +514,21 @@ export function initPulseDashboard() {
       sizeChartInstance = echarts.init(sizeChartElement, undefined, { renderer: "canvas" });
     }
 
-    const visibleRows = visibleRepos
-      .map((repo: PulseRepoFilter) => repoSizesByKey.get(repo.repoKey))
-      .filter((row): row is PulseRepoSize => Boolean(row))
-      .sort((left, right) => right.totalLines - left.totalLines || left.repoName.localeCompare(right.repoName));
+    const visibleRows = getVisibleTeamGroups(visibleRepos)
+      .map((team) => {
+        const repoRows = team.repositories
+          .map((repo) => repoSizesByKey.get(repo.repoKey))
+          .filter((row): row is PulseRepoSize => Boolean(row));
+
+        return {
+          ...team,
+          repositoryCount: team.repositories.length,
+          totalLines: repoRows.reduce((sum, row) => sum + row.totalLines, 0),
+          totalFiles: repoRows.reduce((sum, row) => sum + row.totalFiles, 0),
+          totalBytes: repoRows.reduce((sum, row) => sum + row.totalBytes, 0),
+        };
+      })
+      .sort((left, right) => right.totalLines - left.totalLines || left.name.localeCompare(right.name));
     const totalLines = visibleRows.reduce((sum, row) => sum + row.totalLines, 0);
 
     sizeChartInstance.setOption(
@@ -399,7 +536,7 @@ export function initPulseDashboard() {
         animationDuration: 250,
         animationDurationUpdate: 250,
         grid: {
-          left: 156,
+          left: 132,
           right: 32,
           top: 6,
           bottom: 14,
@@ -416,14 +553,15 @@ export function initPulseDashboard() {
           },
           formatter: (paramsList: unknown) => {
             const point = Array.isArray(paramsList) ? paramsList[0] : paramsList;
-            const repoName = String((point as { axisValueLabel?: string })?.axisValueLabel ?? "");
-            const row = visibleRows.find((entry) => entry.repoName === repoName);
+            const teamName = String((point as { axisValueLabel?: string })?.axisValueLabel ?? "");
+            const row = visibleRows.find((entry) => entry.name === teamName);
             if (!row) {
-              return repoName;
+              return teamName;
             }
             const ratio = totalLines > 0 ? row.totalLines / totalLines : 0;
             return [
-              `<strong>${escapeHtml(row.repoName)}</strong>`,
+              `<strong>${escapeHtml(row.name)}</strong>`,
+              `Repositories: ${formatInt(row.repositoryCount)}`,
               `Lines: ${formatInt(row.totalLines)}`,
               `Files: ${formatInt(row.totalFiles)}`,
               `Bytes: ${formatCompactInt(row.totalBytes)}`,
@@ -444,7 +582,8 @@ export function initPulseDashboard() {
         },
         yAxis: {
           type: "category",
-          data: visibleRows.map((row) => row.repoName),
+          inverse: true,
+          data: visibleRows.map((row) => row.name),
           axisTick: { show: false },
           axisLabel: {
             color: "#162028",
@@ -461,7 +600,7 @@ export function initPulseDashboard() {
             data: visibleRows.map((row) => ({
               value: pulseValueMode === "ratio" ? (totalLines > 0 ? row.totalLines / totalLines : 0) : row.totalLines,
               itemStyle: {
-                color: colorForRepo(row.repoKey),
+                color: row.color,
                 borderRadius: [0, 0, 0, 0],
               },
             })),
@@ -490,12 +629,39 @@ export function initPulseDashboard() {
       weeklyChartInstance = echarts.init(weeklyChartElement, undefined, { renderer: "canvas" });
     }
 
-    const visibleRows = visibleRepos
-      .map((repo: PulseRepoFilter) => repoWeeklyByKey.get(repo.repoKey))
-      .filter((row): row is PulseWeeklyActivitySeries => Boolean(row))
+    const visibleRows = getVisibleTeamGroups(visibleRepos)
+      .map((team) => {
+        const teamWeeklyRows = team.repositories
+          .map((repo) => repoWeeklyByKey.get(repo.repoKey))
+          .filter((row): row is PulseWeeklyActivitySeries => Boolean(row));
+        const pointsByWeek = new Map<string, { commitCount: number; activeContributors: number }>();
+
+        teamWeeklyRows.forEach((row) => {
+          row.points.forEach((point) => {
+            const current = pointsByWeek.get(point.weekStart) ?? { commitCount: 0, activeContributors: 0 };
+            current.commitCount += point.commitCount;
+            current.activeContributors += point.activeContributors;
+            pointsByWeek.set(point.weekStart, current);
+          });
+        });
+
+        const points = [...pointsByWeek.entries()]
+          .map(([weekStart, value]) => ({
+            weekStart,
+            commitCount: value.commitCount,
+            activeContributors: value.activeContributors,
+          }))
+          .sort((left, right) => left.weekStart.localeCompare(right.weekStart));
+
+        return {
+          ...team,
+          repositoryCount: team.repositories.length,
+          totalCommits: points.reduce((sum, point) => sum + point.commitCount, 0),
+          points,
+        };
+      })
       .filter((row) => row.totalCommits > 0)
-      .sort((left, right) => right.totalCommits - left.totalCommits || left.repoName.localeCompare(right.repoName))
-      .slice(0, 8);
+      .sort((left, right) => right.totalCommits - left.totalCommits || left.name.localeCompare(right.name));
     const weekOrder = [...new Set(visibleRows.flatMap((row) => row.points.map((point) => point.weekStart)))].sort();
 
     weeklyChartInstance.setOption(
@@ -542,7 +708,8 @@ export function initPulseDashboard() {
                   seriesName: string;
                   data?: { commits?: number; contributors?: number };
                 };
-                return `${typedPoint.marker} ${typedPoint.seriesName}: ${formatInt(typedPoint.data?.commits ?? 0)} commits • ${formatInt(typedPoint.data?.contributors ?? 0)} contributors`;
+                const series = visibleRows.find((row) => row.name === typedPoint.seriesName);
+                return `${typedPoint.marker} ${typedPoint.seriesName}: ${formatInt(typedPoint.data?.commits ?? 0)} commits • ${formatInt(typedPoint.data?.contributors ?? 0)} contributors • ${formatInt(series?.repositoryCount ?? 0)} repos`;
               });
             return [`<strong>${escapeHtml(week)}</strong>`, ...lines].join("<br/>");
           },
@@ -571,17 +738,17 @@ export function initPulseDashboard() {
         series: visibleRows.map((row) => {
           const pointsByWeek = new Map(row.points.map((point) => [point.weekStart, point]));
           return {
-            name: row.repoName,
+            name: row.name,
             type: "line",
             smooth: false,
             symbol: "circle",
             symbolSize: 6,
             lineStyle: {
               width: 2,
-              color: colorForRepo(row.repoKey),
+              color: row.color,
             },
             itemStyle: {
-              color: colorForRepo(row.repoKey),
+              color: row.color,
             },
             data: weekOrder.map((week) => {
               const point = pointsByWeek.get(week);
@@ -609,6 +776,7 @@ export function initPulseDashboard() {
 
     const visibleRepoKeys = new Set(visibleRepos.map((repo: PulseRepoFilter) => repo.repoKey));
     const totalsByLanguage = new Map<string, number>();
+    const totalsByLanguageAndTeam = new Map<string, Map<string, number>>();
 
     pulseDataset.repoLanguageShare.forEach((entry: PulseLanguageShare) => {
       if (!visibleRepoKeys.has(entry.repoKey)) {
@@ -616,12 +784,23 @@ export function initPulseDashboard() {
       }
 
       totalsByLanguage.set(entry.language, (totalsByLanguage.get(entry.language) ?? 0) + entry.bytes);
+      const teamTotals = totalsByLanguageAndTeam.get(entry.language) ?? new Map<string, number>();
+      teamTotals.set(entry.teamSlug, (teamTotals.get(entry.teamSlug) ?? 0) + entry.bytes);
+      totalsByLanguageAndTeam.set(entry.language, teamTotals);
     });
 
     const rows = [...totalsByLanguage.entries()]
       .map(([language, bytes]) => ({ language, bytes }))
       .sort((left, right) => right.bytes - left.bytes || left.language.localeCompare(right.language))
       .slice(0, 10);
+    const visibleTeams = getVisibleTeamGroups(visibleRepos)
+      .map((team) => ({
+        ...team,
+        totalBytes: pulseDataset.repoLanguageShare
+          .filter((entry) => visibleRepoKeys.has(entry.repoKey) && entry.teamSlug === team.slug)
+          .reduce((sum, entry) => sum + entry.bytes, 0),
+      }))
+      .sort((left, right) => right.totalBytes - left.totalBytes || left.name.localeCompare(right.name));
     const totalBytes = rows.reduce((sum, row) => sum + row.bytes, 0);
 
     languageChartInstance.setOption(
@@ -629,9 +808,9 @@ export function initPulseDashboard() {
         animationDuration: 250,
         animationDurationUpdate: 250,
         grid: {
-          left: 156,
+          left: 132,
           right: 32,
-          top: 6,
+          top: 72,
           bottom: 14,
         },
         tooltip: {
@@ -647,15 +826,25 @@ export function initPulseDashboard() {
           formatter: (paramsList: unknown) => {
             const point = Array.isArray(paramsList) ? paramsList[0] : paramsList;
             const language = String((point as { axisValueLabel?: string })?.axisValueLabel ?? "");
-            const row = rows.find((entry) => entry.language === language);
-            if (!row) {
+            const languageTeamTotals = totalsByLanguageAndTeam.get(language);
+            if (!languageTeamTotals) {
               return language;
             }
-
+            const lines = visibleTeams
+              .map((team) => {
+                const teamBytes = languageTeamTotals.get(team.slug) ?? 0;
+                if (teamBytes <= 0) {
+                  return null;
+                }
+                return `${team.name}: ${formatCompactInt(teamBytes)} • ${formatPercent(totalBytes > 0 ? teamBytes / totalBytes : 0)}`;
+              })
+              .filter(Boolean);
+            const totalLanguageBytes = rows.find((entry) => entry.language === language)?.bytes ?? 0;
             return [
-              `<strong>${escapeHtml(row.language)}</strong>`,
-              `Bytes: ${formatCompactInt(row.bytes)}`,
-              `Share of visible bytes: ${formatPercent(totalBytes > 0 ? row.bytes / totalBytes : 0)}`,
+              `<strong>${escapeHtml(language)}</strong>`,
+              `Visible bytes: ${formatCompactInt(totalLanguageBytes)}`,
+              `Share of visible bytes: ${formatPercent(totalBytes > 0 ? totalLanguageBytes / totalBytes : 0)}`,
+              ...lines,
             ].join("<br/>");
           },
         },
@@ -672,6 +861,7 @@ export function initPulseDashboard() {
         },
         yAxis: {
           type: "category",
+          inverse: true,
           data: rows.map((row) => row.language),
           axisTick: { show: false },
           axisLabel: {
@@ -681,29 +871,40 @@ export function initPulseDashboard() {
             fontWeight: 700,
           },
         },
-        series: [
-          {
-            type: "bar",
-            barMaxWidth: 34,
-            barCategoryGap: "18%",
-            data: rows.map((row) => ({
-              value: pulseValueMode === "ratio" ? (totalBytes > 0 ? row.bytes / totalBytes : 0) : row.bytes,
-              itemStyle: {
-                color: "#007298",
-                borderRadius: [0, 0, 0, 0],
-              },
-            })),
-            label: {
-              show: true,
-              position: "right",
-              color: "#162028",
-              fontFamily: "Cascadia Code, Fira Code, monospace",
-              fontSize: 11,
-              formatter: (params: { value: number }) =>
-                pulseValueMode === "ratio" ? formatPercent(params.value ?? 0) : formatCompactInt(params.value ?? 0),
-            },
+        legend: {
+          type: "scroll",
+          top: 12,
+          left: 12,
+          right: 12,
+          itemWidth: 12,
+          itemHeight: 12,
+          textStyle: {
+            color: "#162028",
+            fontFamily: "Cascadia Code, Fira Code, monospace",
+            fontSize: 12,
+            fontWeight: 700,
           },
-        ],
+        },
+        series: visibleTeams.map((team, teamIndex) => ({
+          name: team.name,
+          type: "bar",
+          stack: "pulse-language-by-team",
+          barMaxWidth: 28,
+          barCategoryGap: "18%",
+          itemStyle: {
+            color: team.color,
+            borderRadius: teamIndex === visibleTeams.length - 1 ? [0, 0, 0, 0] : [0, 0, 0, 0],
+          },
+          data: rows.map((row) => {
+            const teamBytes = totalsByLanguageAndTeam.get(row.language)?.get(team.slug) ?? 0;
+            return {
+              value: pulseValueMode === "ratio" ? (totalBytes > 0 ? teamBytes / totalBytes : 0) : teamBytes,
+            };
+          }),
+          label: {
+            show: false,
+          },
+        })),
       },
       true,
     );
@@ -727,7 +928,7 @@ export function initPulseDashboard() {
       .map(
         (failure) => `
           <tr>
-            <td>${escapeHtml(failure.repoName)}</td>
+            <td>${escapeHtml(failure.repoName)}<br/><span class="pulse-failure-team">${escapeHtml(failure.teamName)}</span></td>
             <td>${escapeHtml(failure.stage || "n/a")}</td>
             <td>${escapeHtml(failure.status || "n/a")}</td>
             <td>${escapeHtml(formatIsoTimestamp(failure.updatedAt))}</td>
@@ -741,6 +942,7 @@ export function initPulseDashboard() {
   const renderPulseDashboard = () => {
     const visibleRepos = getVisibleRepositories();
     syncPulseButtons();
+    syncTeamFilterUi();
     syncRepoFilterUi();
     syncPulseQueryParams();
     renderPulseSummary(visibleRepos);
@@ -750,6 +952,51 @@ export function initPulseDashboard() {
     renderLanguageChart(visibleRepos);
     renderFailureTable(visibleRepos);
   };
+
+  if (teamTrigger instanceof HTMLButtonElement) {
+    teamTrigger.addEventListener("click", () => {
+      const isOpen = teamTrigger.getAttribute("aria-expanded") === "true";
+      setTeamPanelOpen(!isOpen);
+    });
+  }
+
+    if (teamResetButton instanceof HTMLButtonElement) {
+      teamResetButton.addEventListener("click", () => {
+      selectedTeams.clear();
+      renderPulseDashboard();
+      setTeamPanelOpen(false);
+    });
+  }
+
+  teamCheckboxes.forEach((checkbox) => {
+    if (!(checkbox instanceof HTMLInputElement)) {
+      return;
+    }
+
+    checkbox.addEventListener("change", () => {
+      if (checkbox.checked) {
+        selectedTeams.add(checkbox.value);
+      } else {
+        selectedTeams.delete(checkbox.value);
+      }
+
+      const availableRepoKeys = new Set(getTeamScopedRepositories().map((repo: PulseRepoFilter) => repo.repoKey));
+      [...selectedRepos].forEach((repoKey) => {
+        if (!availableRepoKeys.has(repoKey)) {
+          selectedRepos.delete(repoKey);
+        }
+      });
+
+      renderPulseDashboard();
+    });
+  });
+
+  if (teamSearchInput instanceof HTMLInputElement) {
+    teamSearchInput.addEventListener("input", () => {
+      teamSearch = teamSearchInput.value.trim().toLowerCase();
+      syncTeamFilterUi();
+    });
+  }
 
   if (repoTrigger instanceof HTMLButtonElement) {
     repoTrigger.addEventListener("click", () => {
@@ -806,11 +1053,18 @@ export function initPulseDashboard() {
   document.addEventListener(
     "pointerdown",
     (event) => {
-      if (!(repoFilter instanceof HTMLElement) || !(event.target instanceof Node)) {
+      if (!(event.target instanceof Node)) {
         return;
       }
 
-      if (!repoFilter.contains(event.target)) {
+      const clickedInsideTeamFilter = teamFilter instanceof HTMLElement && teamFilter.contains(event.target);
+      const clickedInsideRepoFilter = repoFilter instanceof HTMLElement && repoFilter.contains(event.target);
+
+      if (!clickedInsideTeamFilter) {
+        setTeamPanelOpen(false);
+      }
+
+      if (!clickedInsideRepoFilter) {
         setRepoPanelOpen(false);
       }
     },
@@ -819,6 +1073,7 @@ export function initPulseDashboard() {
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
+      setTeamPanelOpen(false);
       setRepoPanelOpen(false);
     }
   });

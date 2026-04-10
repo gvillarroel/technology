@@ -1,5 +1,7 @@
 import { execFileSync } from "node:child_process";
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { parse } from "yaml";
 
 export interface PulseOverview {
   title: string;
@@ -9,11 +11,21 @@ export interface PulseOverview {
   lastFetchAt: string;
 }
 
+export interface PulseTeamFilter {
+  slug: string;
+  name: string;
+  color: string;
+  repositoryCount: number;
+}
+
 export interface PulseRepoFilter {
   repoKey: string;
   repoName: string;
   repoSlug: string;
   url: string;
+  teamSlug: string;
+  teamName: string;
+  teamColor: string;
 }
 
 export interface PulseSummary {
@@ -24,7 +36,13 @@ export interface PulseSummary {
   totalLines: number;
 }
 
-export interface PulseConventionCoverage {
+interface PulseTeamScopedRow {
+  teamSlug: string;
+  teamName: string;
+  teamColor: string;
+}
+
+export interface PulseConventionCoverage extends PulseTeamScopedRow {
   repoKey: string;
   repoName: string;
   repoSlug: string;
@@ -39,14 +57,14 @@ export interface PulseConventionCoverage {
   totalConventionMatches: number;
 }
 
-export interface PulseLanguageShare {
+export interface PulseLanguageShare extends PulseTeamScopedRow {
   repoKey: string;
   repoName: string;
   language: string;
   bytes: number;
 }
 
-export interface PulseRepoSize {
+export interface PulseRepoSize extends PulseTeamScopedRow {
   repoKey: string;
   repoName: string;
   repoSlug: string;
@@ -63,7 +81,7 @@ export interface PulseWeeklyActivityPoint {
   activeContributors: number;
 }
 
-export interface PulseWeeklyActivitySeries {
+export interface PulseWeeklyActivitySeries extends PulseTeamScopedRow {
   repoKey: string;
   repoName: string;
   repoSlug: string;
@@ -71,7 +89,7 @@ export interface PulseWeeklyActivitySeries {
   points: PulseWeeklyActivityPoint[];
 }
 
-export interface PulseFailureLedgerRow {
+export interface PulseFailureLedgerRow extends PulseTeamScopedRow {
   repoKey: string;
   repoName: string;
   repoSlug: string;
@@ -85,6 +103,7 @@ export interface PulseFailureLedgerRow {
 export interface PulseDataset {
   overview: PulseOverview;
   filters: {
+    teams: PulseTeamFilter[];
     repositories: PulseRepoFilter[];
     conventions: string[];
   };
@@ -100,6 +119,17 @@ export interface PulseDataset {
   failures: PulseFailureLedgerRow[];
 }
 
+interface PulseTeamConfig {
+  slug: string;
+  name: string;
+  color: string;
+  repositories: string[];
+}
+
+interface PulseTeamConfigDocument {
+  teams?: PulseTeamConfig[];
+}
+
 const pulseReportsPath = join(
   "C:",
   "Users",
@@ -112,6 +142,8 @@ const pulseReportsPath = join(
   "parquet-zstd",
 );
 
+const pulseTeamConfigPath = join(process.cwd(), "data", "pulse-repo-teams.yaml");
+
 const pulseConventions = [
   "AGENTS.md",
   "CLAUDE.md",
@@ -119,6 +151,44 @@ const pulseConventions = [
   "Copilot instructions",
   "Generic AI docs",
 ] as const;
+
+function toScalar(value: unknown) {
+  return String(value ?? "").trim();
+}
+
+function toRepoList(value: unknown) {
+  return Array.isArray(value)
+    ? value.map((item) => toScalar(item)).filter(Boolean)
+    : [];
+}
+
+async function getPulseTeamAssignments() {
+  const rawConfig = await readFile(pulseTeamConfigPath, "utf-8");
+  const document = parse(rawConfig) as PulseTeamConfigDocument;
+  const teams = Array.isArray(document.teams)
+    ? document.teams.map((team) => ({
+        slug: toScalar(team.slug),
+        name: toScalar(team.name),
+        color: toScalar(team.color),
+        repositories: toRepoList(team.repositories),
+      }))
+    : [];
+
+  const assignments = Object.fromEntries(
+    teams.flatMap((team) =>
+      team.repositories.map((repository) => [
+        repository.toLowerCase(),
+        {
+          teamSlug: team.slug,
+          teamName: team.name,
+          teamColor: team.color,
+        },
+      ]),
+    ),
+  );
+
+  return { teams, assignments };
+}
 
 const pulsePythonScript = String.raw`
 import json
@@ -129,6 +199,14 @@ from pathlib import Path, PurePosixPath
 import pyarrow.parquet as pq
 
 base = Path(sys.argv[1])
+team_config = json.loads(sys.argv[2])
+assignment_map = team_config.get("assignments", {})
+configured_teams = team_config.get("teams", [])
+default_team = {
+    "teamSlug": "unassigned",
+    "teamName": "Unassigned",
+    "teamColor": "#333e48",
+}
 
 def read_rows(name):
     path = base / name
@@ -146,6 +224,13 @@ def repo_slug(name):
         cleaned = cleaned.replace("--", "-")
     return cleaned.strip("-")
 
+def apply_team(repo):
+    team_meta = assignment_map.get(str(repo["repoName"]).lower(), default_team)
+    repo["teamSlug"] = str(team_meta.get("teamSlug") or default_team["teamSlug"])
+    repo["teamName"] = str(team_meta.get("teamName") or default_team["teamName"])
+    repo["teamColor"] = str(team_meta.get("teamColor") or default_team["teamColor"])
+    return repo
+
 def update_repo(registry, repo_key, repo_name=None, url=None):
     repo_key = str(repo_key or "").strip()
     if not repo_key:
@@ -157,6 +242,7 @@ def update_repo(registry, repo_key, repo_name=None, url=None):
             "repoName": repo_name_from_key(repo_key),
             "repoSlug": repo_slug(repo_name_from_key(repo_key)),
             "url": str(url or "").strip(),
+            **default_team,
         },
     )
     if repo_name:
@@ -164,10 +250,7 @@ def update_repo(registry, repo_key, repo_name=None, url=None):
         repo["repoSlug"] = repo_slug(repo["repoName"])
     if url and not repo["url"]:
         repo["url"] = str(url).strip()
-    return repo
-
-def is_markdown(path_value):
-    return str(path_value).lower().endswith(".md")
+    return apply_team(repo)
 
 def classify_generic_ai_doc(path_lower):
     name = PurePosixPath(path_lower).name
@@ -227,6 +310,9 @@ for row in latest_rows:
         "repoName": repo["repoName"],
         "repoSlug": repo["repoSlug"],
         "url": repo["url"],
+        "teamSlug": repo["teamSlug"],
+        "teamName": repo["teamName"],
+        "teamColor": repo["teamColor"],
         "totalFiles": int(row.get("total_files") or 0),
         "totalBytes": int(row.get("total_bytes") or 0),
         "totalLines": int(row.get("total_lines") or 0),
@@ -296,6 +382,9 @@ for repo_key, repo in registry.items():
         "repoName": repo["repoName"],
         "repoSlug": repo["repoSlug"],
         "url": repo["url"],
+        "teamSlug": repo["teamSlug"],
+        "teamName": repo["teamName"],
+        "teamColor": repo["teamColor"],
         **convention,
         "totalConventionKinds": total_kinds,
         "totalConventionMatches": total_matches,
@@ -310,11 +399,12 @@ for repo_key, language_map in repo_languages.items():
         repo_language_share.append({
             "repoKey": repo["repoKey"],
             "repoName": repo["repoName"],
+            "teamSlug": repo["teamSlug"],
+            "teamName": repo["teamName"],
+            "teamColor": repo["teamColor"],
             "language": language,
             "bytes": int(bytes_value),
         })
-
-repo_size_rows = list(repo_sizes.values())
 
 weekly_activity = []
 for repo_key, points in repo_weekly_points.items():
@@ -323,6 +413,9 @@ for repo_key, points in repo_weekly_points.items():
         "repoKey": repo["repoKey"],
         "repoName": repo["repoName"],
         "repoSlug": repo["repoSlug"],
+        "teamSlug": repo["teamSlug"],
+        "teamName": repo["teamName"],
+        "teamColor": repo["teamColor"],
         "totalCommits": int(repo_weekly_totals[repo_key]),
         "points": sorted(points, key=lambda point: point["weekStart"]),
     })
@@ -337,10 +430,38 @@ for row in failed_rows:
         "repoName": repo["repoName"],
         "repoSlug": repo["repoSlug"],
         "url": repo["url"],
+        "teamSlug": repo["teamSlug"],
+        "teamName": repo["teamName"],
+        "teamColor": repo["teamColor"],
         "stage": str(row.get("stage") or ""),
         "status": str(row.get("status") or ""),
         "updatedAt": str(row.get("updated_at") or ""),
         "detail": str(row.get("detail") or ""),
+    })
+
+repo_size_rows = list(repo_sizes.values())
+
+team_repo_counts = defaultdict(int)
+for repo in registry.values():
+    team_repo_counts[repo["teamSlug"]] += 1
+
+team_filters = []
+configured_by_slug = {str(team.get("slug") or ""): team for team in configured_teams}
+for team in configured_teams:
+    slug = str(team.get("slug") or "")
+    team_filters.append({
+        "slug": slug,
+        "name": str(team.get("name") or ""),
+        "color": str(team.get("color") or "#333e48"),
+        "repositoryCount": int(team_repo_counts.get(slug, 0)),
+    })
+
+if team_repo_counts.get(default_team["teamSlug"], 0) > 0 and default_team["teamSlug"] not in configured_by_slug:
+    team_filters.append({
+        "slug": default_team["teamSlug"],
+        "name": default_team["teamName"],
+        "color": default_team["teamColor"],
+        "repositoryCount": int(team_repo_counts.get(default_team["teamSlug"], 0)),
     })
 
 summary = {
@@ -363,6 +484,7 @@ result = {
         "lastFetchAt": last_fetch,
     },
     "filters": {
+        "teams": sorted(team_filters, key=lambda team: team["name"].lower()),
         "repositories": sorted(registry.values(), key=lambda repo: repo["repoName"].lower()),
         "conventions": [
             "AGENTS.md",
@@ -405,6 +527,7 @@ function getEmptyPulseDataset(sourceNote: string): PulseDataset {
       lastFetchAt: "",
     },
     filters: {
+      teams: [],
       repositories: [],
       conventions: [...pulseConventions],
     },
@@ -426,13 +549,18 @@ function getEmptyPulseDataset(sourceNote: string): PulseDataset {
 
 export async function getPulseDataset(): Promise<PulseDataset> {
   if (!pulseDatasetPromise) {
-    pulseDatasetPromise = Promise.resolve().then(() => {
+    pulseDatasetPromise = Promise.resolve().then(async () => {
       try {
-        const output = execFileSync("python", ["-c", pulsePythonScript, pulseReportsPath], {
-          cwd: process.cwd(),
-          encoding: "utf-8",
-          maxBuffer: 24 * 1024 * 1024,
-        }).trim();
+        const teamConfig = await getPulseTeamAssignments();
+        const output = execFileSync(
+          "python",
+          ["-c", pulsePythonScript, pulseReportsPath, JSON.stringify(teamConfig)],
+          {
+            cwd: process.cwd(),
+            encoding: "utf-8",
+            maxBuffer: 24 * 1024 * 1024,
+          },
+        ).trim();
 
         if (!output) {
           return getEmptyPulseDataset("Pulse parquet export returned no rows at build time.");

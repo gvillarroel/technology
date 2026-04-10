@@ -426,7 +426,7 @@ const aiSdlcSectionNavItems = [
         <section class="standard-section-heading">
           <div>
             <p class="eyebrow">Repository Evidence</p>
-            <h2>AI conventions and repository coverage</h2>
+            <h2>AI conventions by team</h2>
           </div>
           <p class="standard-section-meta" id="pulse-selection-meta">
             All {pulseDataset.summary.repositories} repositories across {pulseDataset.filters.teams.length} teams
@@ -446,10 +446,10 @@ const aiSdlcSectionNavItems = [
                 <div class="bat-code">
                   <p class="bat-heading">Convention coverage by repository</p>
                   <p class="bat-copy">
-                    First view: tracked AI entrypoints per repository, keeping AGENTS, CLAUDE,
-                    README, Copilot instructions, and generic AI markdown visible as separate
-                    coverage slots. Ratio mode normalizes each repository against the five tracked
-                    convention categories.
+                    First view: tracked AI entrypoints aggregated by team. Each team becomes a
+                    color-coded series, so you can compare AGENTS, CLAUDE, README, Copilot
+                    instructions, and generic AI markdown adoption across the current team scope.
+                    Ratio mode normalizes by repositories inside each team.
                   </p>
                 </div>
               </div>
@@ -507,9 +507,9 @@ const aiSdlcSectionNavItems = [
         <section class="standard-section-heading">
           <div>
             <p class="eyebrow">Scale</p>
-            <h2>Repository size by total lines</h2>
+            <h2>Team size by total lines</h2>
           </div>
-          <p class="standard-section-meta">Descending repository footprint across the visible selection</p>
+          <p class="standard-section-meta">Descending team footprint across the visible selection</p>
         </section>
 
         <section class="bat-grid bat-grid-detail metrics-full-width-chart-grid">
@@ -523,11 +523,10 @@ const aiSdlcSectionNavItems = [
               <div class="bat-line">
                 <span class="bat-gutter">1</span>
                 <div class="bat-code">
-                  <p class="bat-heading">Repository size distribution</p>
+                  <p class="bat-heading">Team size distribution</p>
                   <p class="bat-copy">
-                    Second view: latest analyzed repository size from Pulse snapshots, ordered by
-                    total lines. Ratio mode shows each repository as share of visible analyzed
-                    lines.
+                    Second view: latest analyzed repository size rolled up to teams and ordered by
+                    total lines. Ratio mode shows each team as share of visible analyzed lines.
                   </p>
                 </div>
               </div>
@@ -544,9 +543,9 @@ const aiSdlcSectionNavItems = [
         <section class="standard-section-heading">
           <div>
             <p class="eyebrow">Activity</p>
-            <h2>Weekly commits for the top visible repositories</h2>
+            <h2>Weekly commits by team</h2>
           </div>
-          <p class="standard-section-meta">Line view limited to the strongest commit histories in the current selection</p>
+          <p class="standard-section-meta">Line view aggregates weekly commit history per visible team</p>
         </section>
 
         <section class="bat-grid bat-grid-detail metrics-full-width-chart-grid">
@@ -560,10 +559,11 @@ const aiSdlcSectionNavItems = [
               <div class="bat-line">
                 <span class="bat-gutter">1</span>
                 <div class="bat-code">
-                  <p class="bat-heading">Weekly activity by repository</p>
+                  <p class="bat-heading">Weekly activity by team</p>
                   <p class="bat-copy">
-                    Third view: weekly commit count for the most active visible repositories. Hover
-                    a point to inspect both commits and active contributors for that week.
+                    Third view: weekly commit count aggregated per team from the visible
+                    repositories. Hover a point to inspect both commits and active contributors for
+                    that week.
                   </p>
                 </div>
               </div>
@@ -580,9 +580,9 @@ const aiSdlcSectionNavItems = [
         <section class="standard-section-heading">
           <div>
             <p class="eyebrow">Composition</p>
-            <h2>Language share by bytes</h2>
+            <h2>Language share split by team</h2>
           </div>
-          <p class="standard-section-meta">Aggregated from current file snapshots across the visible repositories</p>
+          <p class="standard-section-meta">Top languages remain on the y-axis while team colors split byte share inside each bar</p>
         </section>
 
         <section class="bat-grid bat-grid-detail metrics-full-width-chart-grid">
@@ -596,10 +596,11 @@ const aiSdlcSectionNavItems = [
               <div class="bat-line">
                 <span class="bat-gutter">1</span>
                 <div class="bat-code">
-                  <p class="bat-heading">Language share by bytes</p>
+                  <p class="bat-heading">Language share by bytes and team</p>
                   <p class="bat-copy">
-                    Fourth view: dominant languages across the visible repository subset. Ratio mode
-                    shows share of visible bytes instead of raw volume.
+                    Fourth view: dominant languages across the visible repository subset, segmented
+                    by team colors. Ratio mode shows each team-language slice as share of visible
+                    bytes instead of raw volume.
                   </p>
                 </div>
               </div>

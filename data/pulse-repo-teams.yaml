@@ -1,0 +1,87 @@
+teams:
+  - slug: atlas
+    name: Atlas
+    color: "#1f77b4"
+    repositories:
+      - technology
+      - knowledge
+      - pulse
+      - metadata_enricher
+  - slug: aurora
+    name: Aurora
+    color: "#ff7f0e"
+    repositories:
+      - adk-conn
+      - agent-news
+      - astro-gcs
+      - github-utils
+      - pi-extensions
+  - slug: beacon
+    name: Beacon
+    color: "#2ca02c"
+    repositories:
+      - backstage
+      - d3_test
+      - datacatalog-ml
+      - dc-angular
+      - zx-harness
+  - slug: forge
+    name: Forge
+    color: "#d62728"
+    repositories:
+      - blog
+      - ellmtree
+      - feature-construction
+      - guesser
+      - memoria
+  - slug: helix
+    name: Helix
+    color: "#9467bd"
+    repositories:
+      - security
+      - synthetic-data-for-text
+      - television
+      - voice_cloning
+      - whisper_onnx_rust
+  - slug: lattice
+    name: Lattice
+    color: "#8c564b"
+    repositories:
+      - gcp-icons-for-plantuml
+      - gcp-radar
+      - graphviz-build-utilities
+      - graphviz-windows-dependencies
+      - https-gitlab.com-graphviz-graphviz
+  - slug: nimbus
+    name: Nimbus
+    color: "#e377c2"
+    repositories:
+      - convnet2
+      - gender_bias
+      - keras-retinanet
+      - multivac_experiments
+      - project-ai
+  - slug: nova
+    name: Nova
+    color: "#7f7f7f"
+    repositories:
+      - fanhood
+      - gym-duckietown
+      - pigeonXT
+      - unis
+  - slug: quasar
+    name: Quasar
+    color: "#bcbd22"
+    repositories:
+      - emeres
+      - hadoop
+      - llekn
+      - python_euler
+      - scrapy
+  - slug: vertex
+    name: Vertex
+    color: "#17becf"
+    repositories:
+      - codex_efx
+      - hooks-adapter
+      - vertex_metadata

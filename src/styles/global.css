@@ -1017,6 +1017,11 @@ code {
   box-shadow: inset 0 0 0 1px rgba(22, 32, 40, 0.08);
 }
 
+.pulse-team-option-count {
+  color: var(--muted);
+  font-weight: 600;
+}
+
 .metrics-platform-chart {
   display: block;
   width: 100%;
@@ -1132,6 +1137,12 @@ code {
 .pulse-failure-empty {
   color: var(--muted);
   font-style: italic;
+}
+
+.pulse-failure-team {
+  color: var(--muted);
+  font-family: "IBM Plex Mono", "Cascadia Code", "Fira Code", monospace;
+  font-size: 0.78rem;
 }
 
 .radar-control-compact {
