@@ -28,5 +28,10 @@ const {
   </head>
   <body>
     <slot />
+    <script type="module">
+      import { initCodeCopyButtons } from "../scripts/code-copy.ts";
+
+      initCodeCopyButtons();
+    </script>
   </body>
 </html>

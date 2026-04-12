@@ -100,6 +100,20 @@ export interface PulseFailureLedgerRow extends PulseTeamScopedRow {
   detail: string;
 }
 
+export interface PulseAiFileActivity extends PulseTeamScopedRow {
+  repoKey: string;
+  repoName: string;
+  repoSlug: string;
+  url: string;
+  aiFileCount: number;
+  aiLineCount: number;
+  aiBytes: number;
+  agentsCount: number;
+  claudeCount: number;
+  copilotCount: number;
+  genericAiDocCount: number;
+}
+
 export interface PulseDataset {
   overview: PulseOverview;
   filters: {
@@ -117,6 +131,7 @@ export interface PulseDataset {
   repoSizes: PulseRepoSize[];
   weeklyActivity: PulseWeeklyActivitySeries[];
   failures: PulseFailureLedgerRow[];
+  aiFileActivity: PulseAiFileActivity[];
 }
 
 interface PulseTeamConfig {
@@ -130,7 +145,18 @@ interface PulseTeamConfigDocument {
   teams?: PulseTeamConfig[];
 }
 
-const pulseReportsPath = join(
+const pulseOutputRoot = join(
+  "C:",
+  "Users",
+  "villa",
+  "dev",
+  "pulse",
+  "examples",
+  "gvillarroel-all-repos",
+  "output",
+);
+
+const pulseReportsRoot = join(
   "C:",
   "Users",
   "villa",
@@ -139,7 +165,6 @@ const pulseReportsPath = join(
   "examples",
   "gvillarroel-all-repos",
   "reports",
-  "parquet-zstd",
 );
 
 const pulseTeamConfigPath = join(process.cwd(), "data", "pulse-repo-teams.yaml");
@@ -151,6 +176,8 @@ const pulseConventions = [
   "Copilot instructions",
   "Generic AI docs",
 ] as const;
+
+const pulseConventionsJson = JSON.stringify([...pulseConventions]);
 
 function toScalar(value: unknown) {
   return String(value ?? "").trim();
@@ -176,14 +203,13 @@ async function getPulseTeamAssignments() {
 
   const assignments = Object.fromEntries(
     teams.flatMap((team) =>
-      team.repositories.map((repository) => [
-        repository.toLowerCase(),
-        {
-          teamSlug: team.slug,
-          teamName: team.name,
-          teamColor: team.color,
-        },
-      ]),
+      team.repositories.flatMap((repository) => {
+        const normalized = repository.toLowerCase();
+        return [
+          [normalized, { teamSlug: team.slug, teamName: team.name, teamColor: team.color }],
+          [`github/gvillarroel/${normalized}`, { teamSlug: team.slug, teamName: team.name, teamColor: team.color }],
+        ];
+      }),
     ),
   );
 
@@ -192,14 +218,14 @@ async function getPulseTeamAssignments() {
 
 const pulsePythonScript = String.raw`
 import json
+import sqlite3
 import sys
 from collections import defaultdict
 from pathlib import Path, PurePosixPath
 
-import pyarrow.parquet as pq
-
-base = Path(sys.argv[1])
-team_config = json.loads(sys.argv[2])
+output_root = Path(sys.argv[1])
+reports_root = Path(sys.argv[2])
+team_config = json.loads(sys.argv[3])
 assignment_map = team_config.get("assignments", {})
 configured_teams = team_config.get("teams", [])
 default_team = {
@@ -208,87 +234,203 @@ default_team = {
     "teamColor": "#333e48",
 }
 
-def read_rows(name):
-    path = base / name
-    if not path.exists():
-        return []
-    return pq.read_table(path).to_pylist()
+def to_int(value):
+    try:
+        return int(value or 0)
+    except Exception:
+        return 0
 
-def repo_name_from_key(repo_key):
-    parts = str(repo_key).split("/")
-    return parts[-1] if parts else str(repo_key)
+def discover_latest_db(root):
+    best = None
+    best_key = ("", 0)
+    for candidate in root.glob("*/db/pulse.sqlite"):
+        try:
+            conn = sqlite3.connect(candidate)
+            cur = conn.cursor()
+            latest_run = cur.execute("select max(coalesce(finished_at, started_at)) from runs").fetchone()[0] or ""
+            conn.close()
+        except Exception:
+            latest_run = ""
+        key = (str(latest_run), candidate.stat().st_mtime_ns)
+        if key > best_key:
+            best_key = key
+            best = candidate
+    return best
 
-def repo_slug(name):
-    cleaned = "".join(ch.lower() if ch.isalnum() else "-" for ch in str(name).strip())
+def slugify(value):
+    cleaned = "".join(ch.lower() if ch.isalnum() else "-" for ch in str(value or "").strip())
     while "--" in cleaned:
         cleaned = cleaned.replace("--", "-")
     return cleaned.strip("-")
 
-def apply_team(repo):
-    team_meta = assignment_map.get(str(repo["repoName"]).lower(), default_team)
-    repo["teamSlug"] = str(team_meta.get("teamSlug") or default_team["teamSlug"])
-    repo["teamName"] = str(team_meta.get("teamName") or default_team["teamName"])
-    repo["teamColor"] = str(team_meta.get("teamColor") or default_team["teamColor"])
-    return repo
+def repo_name_from_key(repo_key):
+    parts = str(repo_key or "").split("/")
+    return parts[-1] if parts else str(repo_key or "")
 
-def update_repo(registry, repo_key, repo_name=None, url=None):
+def format_team_name(team_slug):
+    slug = str(team_slug or "").strip()
+    if not slug:
+        return ""
+    normalized = slug.replace("_", "-")
+    if normalized.startswith("team-"):
+        suffix = normalized.split("-", 1)[1].replace("-", " ").strip()
+        return f"Team {suffix}"
+    return normalized.replace("-", " ").title()
+
+db_path = discover_latest_db(output_root)
+if db_path is None:
+    print(json.dumps({
+        "overview": {
+            "title": "Pulse Repository Evidence",
+            "sourcePath": str(output_root),
+        "sourceNote": "No Pulse SQLite export was found under the configured output root.",
+        "lastRunAt": "",
+        "lastFetchAt": "",
+        },
+        "filters": {"teams": [], "repositories": [], "conventions": ${pulseConventionsJson}},
+        "summary": {
+            "repositories": 0,
+            "analyzedRepositories": 0,
+            "failedRepositories": 0,
+            "totalFiles": 0,
+            "totalLines": 0,
+        },
+        "conventionsByRepo": [],
+        "languageShare": [],
+        "repoLanguageShare": [],
+        "repoSizes": [],
+        "weeklyActivity": [],
+        "failures": [],
+        "aiFileActivity": [],
+    }))
+    raise SystemExit(0)
+
+conn = sqlite3.connect(db_path)
+conn.row_factory = sqlite3.Row
+cur = conn.cursor()
+
+def read_rows(query, params=()):
+    return [dict(row) for row in cur.execute(query, params).fetchall()]
+
+def resolve_team(repo_key, repo_name, source_team_slug="", source_team_color=""):
+    for candidate in (str(repo_name or "").lower(), str(repo_key or "").lower()):
+        team_meta = assignment_map.get(candidate)
+        if team_meta:
+            return {
+                "teamSlug": str(team_meta.get("teamSlug") or default_team["teamSlug"]),
+                "teamName": str(team_meta.get("teamName") or default_team["teamName"]),
+                "teamColor": str(team_meta.get("teamColor") or default_team["teamColor"]),
+            }
+    team_slug = str(source_team_slug or "").strip()
+    if team_slug:
+        return {
+            "teamSlug": team_slug,
+            "teamName": format_team_name(team_slug) or team_slug,
+            "teamColor": str(source_team_color or default_team["teamColor"]),
+        }
+    return dict(default_team)
+
+def update_repo(registry, repo_key, repo_name=None, url=None, source_team_slug="", source_team_color=""):
     repo_key = str(repo_key or "").strip()
     if not repo_key:
         return None
-    repo = registry.setdefault(
+    current_name = str(repo_name or "").strip() or repo_name_from_key(repo_key)
+    current = registry.setdefault(
         repo_key,
         {
             "repoKey": repo_key,
-            "repoName": repo_name_from_key(repo_key),
-            "repoSlug": repo_slug(repo_name_from_key(repo_key)),
+            "repoName": current_name,
+            "repoSlug": slugify(current_name),
             "url": str(url or "").strip(),
-            **default_team,
+            **resolve_team(repo_key, current_name, source_team_slug, source_team_color),
         },
     )
     if repo_name:
-        repo["repoName"] = str(repo_name).strip()
-        repo["repoSlug"] = repo_slug(repo["repoName"])
-    if url and not repo["url"]:
-        repo["url"] = str(url).strip()
-    return apply_team(repo)
+        current["repoName"] = current_name
+        current["repoSlug"] = slugify(current_name)
+    if url and not current["url"]:
+        current["url"] = str(url).strip()
+    current.update(resolve_team(repo_key, current["repoName"], source_team_slug, source_team_color))
+    return current
 
-def classify_generic_ai_doc(path_lower):
-    name = PurePosixPath(path_lower).name
-    if name in {"agents.md", "claude.md", "readme.md", "copilot-instructions.md"}:
-        return False
-    if not path_lower.endswith(".md"):
-        return False
-    generic_names = {
-        "ai.md",
-        "llms.md",
-        "skills.md",
-        "skill.md",
-        "assistant.md",
-        "prompt.md",
-        "prompts.md",
-        "codex.md",
-        "cursor.md",
-        "windsurf.md",
-    }
-    if name in generic_names:
-        return True
-    if "/.github/instructions/" in path_lower:
-        return True
-    if "/prompts/" in path_lower:
-        return True
-    if "/ai/" in path_lower and path_lower.endswith(".md"):
-        return True
-    return False
-
-latest_rows = read_rows("latest_repo_snapshots.parquet")
-current_file_rows = read_rows("current_file_snapshots.parquet")
-weekly_rows = read_rows("weekly_evolution.parquet")
-failed_rows = read_rows("failed_repositories.parquet")
-run_rows = read_rows("runs.parquet")
-fetch_rows = read_rows("fetch_state.parquet")
+repositories = read_rows("""
+    select repo_key, name, url, team, team_color
+    from repositories
+    where active = 1 or active is null
+""")
+repo_snapshot_rows = read_rows("""
+    select repo_key, revision, total_files, total_bytes, total_lines, generated_at
+    from repo_snapshots
+    order by generated_at desc, repo_key asc
+""")
+file_snapshot_rows = read_rows("""
+    select repo_key, revision, path, language, extension, size_bytes, line_count, is_binary, depth
+    from file_snapshots
+""")
+weekly_rows = read_rows("""
+    select repo_key, week_start, commit_count, active_contributors
+    from weekly_evolution
+""")
+fetch_rows = read_rows("""
+    select repo_key, remote_url, fetched_revision, fetched_at
+    from fetch_state
+""")
+run_rows = read_rows("""
+    select started_at, finished_at, command
+    from runs
+""")
+ai_doc_rows = read_rows("""
+    select repo_key, path, doc_name, category, first_seen_week_start
+    from ai_doc_occurrences
+""")
+failure_rows = read_rows("""
+    select repo_key, stage, status, updated_at, detail
+    from repo_stage_checkpoints
+    where status = 'failed'
+    order by updated_at desc, repo_key asc, stage asc
+""")
 
 registry = {}
+for row in repositories:
+    update_repo(
+        registry,
+        row.get("repo_key"),
+        row.get("name"),
+        row.get("url"),
+        row.get("team"),
+        row.get("team_color"),
+    )
+
+for row in fetch_rows:
+    update_repo(registry, row.get("repo_key"), url=row.get("remote_url"))
+
+latest_repo_snapshots = {}
+latest_revision_by_repo = {}
+for row in repo_snapshot_rows:
+    repo_key = str(row.get("repo_key") or "").strip()
+    if not repo_key or repo_key in latest_repo_snapshots:
+        continue
+    latest_repo_snapshots[repo_key] = row
+    latest_revision_by_repo[repo_key] = str(row.get("revision") or "")
+    update_repo(registry, repo_key)
+
 repo_sizes = {}
+for repo_key, row in latest_repo_snapshots.items():
+    repo = registry.get(repo_key) or update_repo(registry, repo_key)
+    repo_sizes[repo_key] = {
+        "repoKey": repo["repoKey"],
+        "repoName": repo["repoName"],
+        "repoSlug": repo["repoSlug"],
+        "url": repo["url"],
+        "teamSlug": repo["teamSlug"],
+        "teamName": repo["teamName"],
+        "teamColor": repo["teamColor"],
+        "totalFiles": to_int(row.get("total_files")),
+        "totalBytes": to_int(row.get("total_bytes")),
+        "totalLines": to_int(row.get("total_lines")),
+        "generatedAt": str(row.get("generated_at") or ""),
+    }
+
 repo_languages = defaultdict(lambda: defaultdict(int))
 repo_weekly_points = defaultdict(list)
 repo_weekly_totals = defaultdict(int)
@@ -300,66 +442,81 @@ repo_conventions = defaultdict(lambda: {
     "hasGenericAiDoc": False,
     "genericAiDocCount": 0,
 })
+repo_ai_files = defaultdict(lambda: {
+    "aiFileCount": 0,
+    "aiLineCount": 0,
+    "aiBytes": 0,
+    "agentsCount": 0,
+    "claudeCount": 0,
+    "copilotCount": 0,
+    "genericAiDocCount": 0,
+})
+repo_ai_paths = defaultdict(set)
 
-for row in latest_rows:
-    repo = update_repo(registry, row.get("repo_key"), row.get("name"), row.get("url"))
+for row in ai_doc_rows:
+    repo = update_repo(registry, row.get("repo_key"))
     if repo is None:
         continue
-    repo_sizes[repo["repoKey"]] = {
-        "repoKey": repo["repoKey"],
-        "repoName": repo["repoName"],
-        "repoSlug": repo["repoSlug"],
-        "url": repo["url"],
-        "teamSlug": repo["teamSlug"],
-        "teamName": repo["teamName"],
-        "teamColor": repo["teamColor"],
-        "totalFiles": int(row.get("total_files") or 0),
-        "totalBytes": int(row.get("total_bytes") or 0),
-        "totalLines": int(row.get("total_lines") or 0),
-        "generatedAt": str(row.get("generated_at") or ""),
-    }
+    path_value = str(row.get("path") or "")
+    path_lower = path_value.replace("\\", "/").lower()
+    doc_name = str(row.get("doc_name") or PurePosixPath(path_lower).name).lower()
+    convention = repo_conventions[repo["repoKey"]]
+    repo_ai_paths[repo["repoKey"]].add(path_value)
 
-for row in failed_rows:
-    update_repo(registry, row.get("repo_key"), row.get("name"), row.get("url"))
+    if doc_name == "agents.md":
+        convention["hasAgentsMd"] = True
+    elif doc_name == "claude.md":
+        convention["hasClaudeMd"] = True
+    elif doc_name == "copilot-instructions.md":
+        convention["hasCopilotInstructions"] = True
+    elif doc_name != "readme.md":
+        convention["hasGenericAiDoc"] = True
+        convention["genericAiDocCount"] += 1
 
-for row in fetch_rows:
-    update_repo(registry, row.get("repo_key"), None, row.get("remote_url"))
-
-for row in current_file_rows:
-    repo = update_repo(registry, row.get("repo_key"), row.get("name"), row.get("url"))
+for row in file_snapshot_rows:
+    repo_key = str(row.get("repo_key") or "").strip()
+    latest_revision = latest_revision_by_repo.get(repo_key)
+    if latest_revision and str(row.get("revision") or "") != latest_revision:
+        continue
+    repo = registry.get(repo_key) or update_repo(registry, repo_key)
     if repo is None:
         continue
 
     path_value = str(row.get("path") or "")
     path_lower = path_value.replace("\\", "/").lower()
     name = PurePosixPath(path_lower).name
-    size_bytes = int(row.get("size_bytes") or 0)
+    size_bytes = to_int(row.get("size_bytes"))
+    line_count = to_int(row.get("line_count"))
     language = str(row.get("language") or "").strip() or "Unknown"
     repo_languages[repo["repoKey"]][language] += size_bytes
 
-    convention = repo_conventions[repo["repoKey"]]
-    if name == "agents.md":
-        convention["hasAgentsMd"] = True
-    elif name == "claude.md":
-        convention["hasClaudeMd"] = True
-    elif name == "readme.md":
-        convention["hasReadme"] = True
-    elif name == "copilot-instructions.md":
-        convention["hasCopilotInstructions"] = True
-    elif classify_generic_ai_doc(path_lower):
-        convention["hasGenericAiDoc"] = True
-        convention["genericAiDocCount"] += 1
+    if name == "readme.md":
+        repo_conventions[repo["repoKey"]]["hasReadme"] = True
+
+    if path_value in repo_ai_paths[repo["repoKey"]]:
+        ai_file = repo_ai_files[repo["repoKey"]]
+        ai_file["aiFileCount"] += 1
+        ai_file["aiLineCount"] += line_count
+        ai_file["aiBytes"] += size_bytes
+        if name == "agents.md":
+            ai_file["agentsCount"] += 1
+        elif name == "claude.md":
+            ai_file["claudeCount"] += 1
+        elif name == "copilot-instructions.md":
+            ai_file["copilotCount"] += 1
+        else:
+            ai_file["genericAiDocCount"] += 1
 
 for row in weekly_rows:
     repo = update_repo(registry, row.get("repo_key"))
     if repo is None:
         continue
-    commit_count = int(row.get("commit_count") or 0)
+    commit_count = to_int(row.get("commit_count"))
     repo_weekly_totals[repo["repoKey"]] += commit_count
     repo_weekly_points[repo["repoKey"]].append({
         "weekStart": str(row.get("week_start") or ""),
         "commitCount": commit_count,
-        "activeContributors": int(row.get("active_contributors") or 0),
+        "activeContributors": to_int(row.get("active_contributors")),
     })
 
 conventions_by_repo = []
@@ -403,7 +560,7 @@ for repo_key, language_map in repo_languages.items():
             "teamName": repo["teamName"],
             "teamColor": repo["teamColor"],
             "language": language,
-            "bytes": int(bytes_value),
+            "bytes": to_int(bytes_value),
         })
 
 weekly_activity = []
@@ -416,13 +573,40 @@ for repo_key, points in repo_weekly_points.items():
         "teamSlug": repo["teamSlug"],
         "teamName": repo["teamName"],
         "teamColor": repo["teamColor"],
-        "totalCommits": int(repo_weekly_totals[repo_key]),
+        "totalCommits": to_int(repo_weekly_totals[repo_key]),
         "points": sorted(points, key=lambda point: point["weekStart"]),
     })
 
+ai_file_activity = []
+for repo_key, activity in repo_ai_files.items():
+    repo = registry.get(repo_key) or update_repo(registry, repo_key)
+    ai_file_activity.append({
+        "repoKey": repo["repoKey"],
+        "repoName": repo["repoName"],
+        "repoSlug": repo["repoSlug"],
+        "url": repo["url"],
+        "teamSlug": repo["teamSlug"],
+        "teamName": repo["teamName"],
+        "teamColor": repo["teamColor"],
+        "aiFileCount": to_int(activity["aiFileCount"]),
+        "aiLineCount": to_int(activity["aiLineCount"]),
+        "aiBytes": to_int(activity["aiBytes"]),
+        "agentsCount": to_int(activity["agentsCount"]),
+        "claudeCount": to_int(activity["claudeCount"]),
+        "copilotCount": to_int(activity["copilotCount"]),
+        "genericAiDocCount": to_int(activity["genericAiDocCount"]),
+    })
+
 failures = []
-for row in failed_rows:
-    repo = registry.get(str(row.get("repo_key") or "")) or update_repo(registry, row.get("repo_key"), row.get("name"), row.get("url"))
+seen_failures = set()
+for row in failure_rows:
+    repo_key = str(row.get("repo_key") or "").strip()
+    stage = str(row.get("stage") or "").strip()
+    dedupe_key = (repo_key, stage)
+    if dedupe_key in seen_failures:
+        continue
+    seen_failures.add(dedupe_key)
+    repo = registry.get(repo_key) or update_repo(registry, repo_key)
     if repo is None:
         continue
     failures.append({
@@ -433,13 +617,11 @@ for row in failed_rows:
         "teamSlug": repo["teamSlug"],
         "teamName": repo["teamName"],
         "teamColor": repo["teamColor"],
-        "stage": str(row.get("stage") or ""),
+        "stage": stage,
         "status": str(row.get("status") or ""),
         "updatedAt": str(row.get("updated_at") or ""),
         "detail": str(row.get("detail") or ""),
     })
-
-repo_size_rows = list(repo_sizes.values())
 
 team_repo_counts = defaultdict(int)
 for repo in registry.values():
@@ -453,23 +635,26 @@ for team in configured_teams:
         "slug": slug,
         "name": str(team.get("name") or ""),
         "color": str(team.get("color") or "#333e48"),
-        "repositoryCount": int(team_repo_counts.get(slug, 0)),
+        "repositoryCount": to_int(team_repo_counts.get(slug, 0)),
     })
 
-if team_repo_counts.get(default_team["teamSlug"], 0) > 0 and default_team["teamSlug"] not in configured_by_slug:
+for team_slug, repository_count in sorted(team_repo_counts.items()):
+    if team_slug in configured_by_slug:
+        continue
+    sample_repo = next((repo for repo in registry.values() if repo["teamSlug"] == team_slug), None)
     team_filters.append({
-        "slug": default_team["teamSlug"],
-        "name": default_team["teamName"],
-        "color": default_team["teamColor"],
-        "repositoryCount": int(team_repo_counts.get(default_team["teamSlug"], 0)),
+        "slug": team_slug,
+        "name": sample_repo["teamName"] if sample_repo else format_team_name(team_slug) or default_team["teamName"],
+        "color": sample_repo["teamColor"] if sample_repo else default_team["teamColor"],
+        "repositoryCount": to_int(repository_count),
     })
 
 summary = {
     "repositories": len(registry),
-    "analyzedRepositories": len(repo_size_rows),
+    "analyzedRepositories": len(repo_sizes),
     "failedRepositories": len(failures),
-    "totalFiles": sum(int(row.get("totalFiles") or 0) for row in repo_size_rows),
-    "totalLines": sum(int(row.get("totalLines") or 0) for row in repo_size_rows),
+    "totalFiles": sum(to_int(row.get("totalFiles")) for row in repo_sizes.values()),
+    "totalLines": sum(to_int(row.get("totalLines")) for row in repo_sizes.values()),
 }
 
 last_run = max((str(row.get("finished_at") or row.get("started_at") or "") for row in run_rows), default="")
@@ -478,38 +663,36 @@ last_fetch = max((str(row.get("fetched_at") or "") for row in fetch_rows), defau
 result = {
     "overview": {
         "title": "Pulse Repository Evidence",
-        "sourcePath": str(base),
-        "sourceNote": "Repository evidence derived at build time from Pulse parquet exports, normalized into compact operational charts for AI SDLC.",
+        "sourcePath": str(db_path),
+        "sourceNote": "Repository evidence derived at build time from the latest Pulse SQLite export, normalized into compact operational charts for AI SDLC.",
         "lastRunAt": last_run,
         "lastFetchAt": last_fetch,
     },
     "filters": {
         "teams": sorted(team_filters, key=lambda team: team["name"].lower()),
         "repositories": sorted(registry.values(), key=lambda repo: repo["repoName"].lower()),
-        "conventions": [
-            "AGENTS.md",
-            "CLAUDE.md",
-            "README.md",
-            "Copilot instructions",
-            "Generic AI docs",
-        ],
+        "conventions": ${pulseConventionsJson},
     },
     "summary": summary,
     "conventionsByRepo": sorted(
         conventions_by_repo,
-        key=lambda row: (-row["totalConventionKinds"], row["repoName"].lower()),
+        key=lambda row: (-row["totalConventionKinds"], -row["totalConventionMatches"], row["repoName"].lower()),
     ),
     "languageShare": [
-        {"language": language, "bytes": int(bytes_value)}
+        {"language": language, "bytes": to_int(bytes_value)}
         for language, bytes_value in sorted(language_totals.items(), key=lambda item: (-item[1], item[0].lower()))
     ][:12],
     "repoLanguageShare": sorted(
         repo_language_share,
         key=lambda row: (row["repoName"].lower(), -row["bytes"], row["language"].lower()),
     ),
-    "repoSizes": sorted(repo_size_rows, key=lambda row: (-row["totalLines"], row["repoName"].lower())),
+    "repoSizes": sorted(repo_sizes.values(), key=lambda row: (-row["totalLines"], row["repoName"].lower())),
     "weeklyActivity": sorted(weekly_activity, key=lambda row: (-row["totalCommits"], row["repoName"].lower())),
     "failures": sorted(failures, key=lambda row: (row["status"], row["repoName"].lower())),
+    "aiFileActivity": sorted(
+        ai_file_activity,
+        key=lambda row: (-row["aiFileCount"], -row["aiLineCount"], row["repoName"].lower()),
+    ),
 }
 
 print(json.dumps(result))
@@ -521,7 +704,7 @@ function getEmptyPulseDataset(sourceNote: string): PulseDataset {
   return {
     overview: {
       title: "Pulse Repository Evidence",
-      sourcePath: pulseReportsPath,
+      sourcePath: pulseOutputRoot,
       sourceNote,
       lastRunAt: "",
       lastFetchAt: "",
@@ -544,6 +727,7 @@ function getEmptyPulseDataset(sourceNote: string): PulseDataset {
     repoSizes: [],
     weeklyActivity: [],
     failures: [],
+    aiFileActivity: [],
   };
 }
 
@@ -554,7 +738,7 @@ export async function getPulseDataset(): Promise<PulseDataset> {
         const teamConfig = await getPulseTeamAssignments();
         const output = execFileSync(
           "python",
-          ["-c", pulsePythonScript, pulseReportsPath, JSON.stringify(teamConfig)],
+          ["-c", pulsePythonScript, pulseOutputRoot, pulseReportsRoot, JSON.stringify(teamConfig)],
           {
             cwd: process.cwd(),
             encoding: "utf-8",
@@ -563,13 +747,13 @@ export async function getPulseDataset(): Promise<PulseDataset> {
         ).trim();
 
         if (!output) {
-          return getEmptyPulseDataset("Pulse parquet export returned no rows at build time.");
+          return getEmptyPulseDataset("Pulse SQLite export returned no rows at build time.");
         }
 
         return JSON.parse(output) as PulseDataset;
       } catch (error) {
         const message = error instanceof Error ? error.message : "Unknown Pulse loader error";
-        return getEmptyPulseDataset(`Pulse parquet export could not be loaded at build time: ${message}`);
+        return getEmptyPulseDataset(`Pulse SQLite export could not be loaded at build time: ${message}`);
       }
     });
   }

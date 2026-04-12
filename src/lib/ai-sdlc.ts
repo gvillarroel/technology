@@ -175,6 +175,14 @@ export interface AiSdlcToolReference {
   role: string;
   focus: string;
   productionSignal: string;
+  install: AiSdlcToolInstall[];
+}
+
+export interface AiSdlcToolInstall {
+  platform: string;
+  label: string;
+  snippet: string;
+  notes: string;
 }
 
 export interface AiSdlcToolGroup {
@@ -252,6 +260,25 @@ function toList(value: unknown) {
     .filter(Boolean);
 }
 
+function toToolInstallList(value: unknown): AiSdlcToolInstall[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry) => {
+      const normalizedEntry = (entry as Record<string, unknown>) ?? {};
+
+      return {
+        platform: toScalar(normalizedEntry.platform),
+        label: toScalar(normalizedEntry.label),
+        snippet: String(normalizedEntry.snippet ?? "").trim(),
+        notes: toScalar(normalizedEntry.notes),
+      };
+    })
+    .filter((entry) => entry.platform && entry.snippet);
+}
+
 function toToolGroups(value: unknown): AiSdlcToolGroup[] {
   if (!Array.isArray(value)) {
     return [];
@@ -273,6 +300,7 @@ function toToolGroups(value: unknown): AiSdlcToolGroup[] {
             role: toScalar(normalizedTool.role),
             focus: toScalar(normalizedTool.focus),
             productionSignal: toScalar(normalizedTool.production_signal),
+            install: toToolInstallList(normalizedTool.install),
           };
         })
         .filter((tool) => tool.slug),
@@ -678,6 +706,19 @@ export function getAiSdlcHarnessToolsMarkdown(
         { label: "Summary", value: tool.entry.summary },
         { label: "Detail", value: markdownLink("Open", getScopedMarkdownPageUrl("/tech-radar", tool.entry.slug)) },
       ]);
+
+      if (tool.install.length > 0) {
+        doc.subheading("Install", 5);
+
+        for (const install of tool.install) {
+          doc.paragraph(`${install.platform}: ${install.label}`);
+          doc.codeBlock(install.snippet, install.platform === "windows" ? "powershell" : "bash");
+
+          if (install.notes) {
+            doc.paragraph(install.notes);
+          }
+        }
+      }
     }
   }
 

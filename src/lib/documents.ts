@@ -982,6 +982,7 @@ async function renderMarkdownToHtml(markdown: string) {
   const paragraphBuffer: string[] = [];
   const listStack: Array<{ type: "ul" | "ol"; indent: number; items: string[] }> = [];
   const codeBuffer: string[] = [];
+  let codeFenceMarker: { character: "`" | "~"; size: number } | null = null;
   let codeFenceInfo = {
     language: "",
     title: "",
@@ -1120,6 +1121,7 @@ async function renderMarkdownToHtml(markdown: string) {
       title: "",
       metadata: [],
     };
+    codeFenceMarker = null;
     isInCodeFence = false;
   };
 
@@ -1173,18 +1175,36 @@ async function renderMarkdownToHtml(markdown: string) {
     const unorderedMatch = line.match(/^\s*-\s+(.+)$/);
     const orderedMatch = line.match(/^\s*\d+\.\s+(.+)$/);
     const quoteMatch = line.match(/^\s*>\s+(.+)$/);
-    const codeFenceMatch = line.match(/^```(.*)$/);
+    const codeFenceMatch = line.match(/^([`~]{3,})(.*)$/);
 
     if (codeFenceMatch) {
       if (isInCodeFence) {
-        await flushCodeFence();
-      } else {
-        flushParagraph();
-        flushList();
-        isInCodeFence = true;
-        codeFenceInfo = parseCodeFenceInfo(codeFenceMatch[1] ?? "");
+        const currentMarker = codeFenceMatch[1] ?? "";
+        const currentCharacter = currentMarker.charAt(0);
+        const trailingFenceInfo = codeFenceMatch[2] ?? "";
+
+        if (
+          codeFenceMarker &&
+          currentCharacter === codeFenceMarker.character &&
+          currentMarker.length >= codeFenceMarker.size &&
+          !trailingFenceInfo.trim()
+        ) {
+          await flushCodeFence();
+          continue;
+        }
+
+        codeBuffer.push(line);
+        continue;
       }
 
+      flushParagraph();
+      flushList();
+      isInCodeFence = true;
+      codeFenceMarker = {
+        character: (codeFenceMatch[1]?.charAt(0) ?? "`") as "`" | "~",
+        size: codeFenceMatch[1]?.length ?? 3,
+      };
+      codeFenceInfo = parseCodeFenceInfo(codeFenceMatch[2] ?? "");
       continue;
     }
 

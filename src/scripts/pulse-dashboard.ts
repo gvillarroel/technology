@@ -1,12 +1,12 @@
 import * as echarts from "echarts/core";
-import { BarChart, LineChart } from "echarts/charts";
+import { BarChart, LineChart, ScatterChart } from "echarts/charts";
 import type { EChartsType } from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
 import { GridComponent, LegendComponent, TooltipComponent } from "echarts/components";
 import type {
+  PulseAiFileActivity,
   PulseConventionCoverage,
   PulseDataset,
-  PulseFailureLedgerRow,
   PulseLanguageShare,
   PulseRepoFilter,
   PulseRepoSize,
@@ -14,7 +14,7 @@ import type {
   PulseWeeklyActivitySeries,
 } from "../lib/pulse";
 
-echarts.use([BarChart, LineChart, CanvasRenderer, GridComponent, LegendComponent, TooltipComponent]);
+echarts.use([BarChart, LineChart, ScatterChart, CanvasRenderer, GridComponent, LegendComponent, TooltipComponent]);
 
 const pulseConventions = [
   { key: "hasAgentsMd", label: "AGENTS.md", color: "#007298" },
@@ -31,6 +31,20 @@ type VisibleTeamGroup = {
   repositories: PulseRepoFilter[];
 };
 
+const documentationPostures = [
+  { key: "missing", label: "Missing", color: "#b9c0c7" },
+  { key: "minimal", label: "Minimal", color: "#e77204" },
+  { key: "guided", label: "Guided", color: "#007298" },
+  { key: "operational", label: "Operational", color: "#45842a" },
+] as const;
+
+const recencyBuckets = [
+  { key: "active90", label: "Active <= 90d", color: "#007298" },
+  { key: "active365", label: "Active <= 365d", color: "#45842a" },
+  { key: "older", label: "Older history", color: "#e77204" },
+  { key: "none", label: "No history", color: "#b9c0c7" },
+] as const;
+
 function getEmptyDataset(): PulseDataset {
   return {
     overview: { title: "", sourcePath: "", sourceNote: "", lastRunAt: "", lastFetchAt: "" },
@@ -42,6 +56,7 @@ function getEmptyDataset(): PulseDataset {
     repoSizes: [],
     weeklyActivity: [],
     failures: [],
+    aiFileActivity: [],
   };
 }
 
@@ -98,18 +113,25 @@ export function initPulseDashboard() {
   const pulseSummaryLines = document.querySelector("#pulse-summary-lines");
   const pulseSummaryFiles = document.querySelector("#pulse-summary-files");
   const pulseSummaryRun = document.querySelector("#pulse-summary-run");
-  const pulseFailureMeta = document.querySelector("#pulse-failure-meta");
-  const pulseFailureTableBody = document.querySelector("#pulse-failure-table-body");
+  const pulseAiFilesMeta = document.querySelector("#pulse-ai-files-meta");
 
   const conventionsChartElement = document.querySelector("#pulse-conventions-chart");
   const sizeChartElement = document.querySelector("#pulse-size-chart");
   const weeklyChartElement = document.querySelector("#pulse-weekly-chart");
   const languageChartElement = document.querySelector("#pulse-language-chart");
+  const aiFilesChartElement = document.querySelector("#pulse-ai-files-chart");
+  const complexityChartElement = document.querySelector("#pulse-complexity-chart");
+  const documentationPostureChartElement = document.querySelector("#pulse-doc-posture-chart");
+  const recencyChartElement = document.querySelector("#pulse-recency-chart");
 
   let conventionsChartInstance: EChartsType | null = null;
   let sizeChartInstance: EChartsType | null = null;
   let weeklyChartInstance: EChartsType | null = null;
   let languageChartInstance: EChartsType | null = null;
+  let aiFilesChartInstance: EChartsType | null = null;
+  let complexityChartInstance: EChartsType | null = null;
+  let documentationPostureChartInstance: EChartsType | null = null;
+  let recencyChartInstance: EChartsType | null = null;
 
   const repoSizesByKey = new Map(pulseDataset.repoSizes.map((repo: PulseRepoSize) => [repo.repoKey, repo]));
   const repoConventionsByKey = new Map(
@@ -142,6 +164,28 @@ export function initPulseDashboard() {
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#39;");
+  const parseWeekStart = (value: string) => {
+    const parsed = new Date(`${value}T00:00:00Z`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+  const differenceInDays = (later: Date, earlier: Date) =>
+    Math.round((later.getTime() - earlier.getTime()) / (1000 * 60 * 60 * 24));
+  const classifyDocumentationPosture = (row: PulseConventionCoverage) => {
+    if (row.totalConventionKinds === 0) {
+      return "missing";
+    }
+    if (
+      row.hasReadme &&
+      (row.hasAgentsMd || row.hasClaudeMd) &&
+      (row.hasCopilotInstructions || row.hasGenericAiDoc || row.totalConventionKinds >= 3)
+    ) {
+      return "operational";
+    }
+    if (row.hasReadme || row.hasAgentsMd || row.hasClaudeMd || row.hasCopilotInstructions || row.hasGenericAiDoc) {
+      return row.totalConventionKinds >= 2 ? "guided" : "minimal";
+    }
+    return "minimal";
+  };
   const colorForTeam = (teamSlug: string, fallback = "#333e48") => pulseTeamsBySlug.get(teamSlug)?.color ?? fallback;
   const getVisibleTeamGroups = (visibleRepos: PulseRepoFilter[]): VisibleTeamGroup[] => {
     const grouped = new Map<string, VisibleTeamGroup>();
@@ -301,7 +345,7 @@ export function initPulseDashboard() {
   const renderPulseSummary = (visibleRepos: PulseRepoFilter[]) => {
     const visibleRepoKeys = new Set(visibleRepos.map((repo: PulseRepoFilter) => repo.repoKey));
     const analyzed = pulseDataset.repoSizes.filter((repo: PulseRepoSize) => visibleRepoKeys.has(repo.repoKey));
-    const failures = pulseDataset.failures.filter((failure: PulseFailureLedgerRow) => visibleRepoKeys.has(failure.repoKey));
+    const failures = pulseDataset.failures.filter((failure) => visibleRepoKeys.has(failure.repoKey));
     const totalLines = analyzed.reduce((sum, repo) => sum + repo.totalLines, 0);
     const totalFiles = analyzed.reduce((sum, repo) => sum + repo.totalFiles, 0);
 
@@ -361,8 +405,11 @@ export function initPulseDashboard() {
       pulseSummaryRun.textContent = formatIsoTimestamp(pulseDataset.overview.lastRunAt);
     }
 
-    if (pulseFailureMeta) {
-      pulseFailureMeta.textContent = `${failures.length} failed repositories in the visible selection`;
+    if (pulseAiFilesMeta) {
+      const visibleAiRepos = pulseDataset.aiFileActivity.filter(
+        (activity: PulseAiFileActivity) => visibleRepoKeys.has(activity.repoKey) && activity.aiFileCount > 0,
+      ).length;
+      pulseAiFilesMeta.textContent = `${visibleAiRepos} repositories in the visible selection contain AI files`;
     }
   };
 
@@ -910,33 +957,588 @@ export function initPulseDashboard() {
     );
   };
 
-  const renderFailureTable = (visibleRepos: PulseRepoFilter[]) => {
-    if (!(pulseFailureTableBody instanceof HTMLElement)) {
+  const renderComplexityChart = (visibleRepos: PulseRepoFilter[]) => {
+    if (!(complexityChartElement instanceof HTMLElement)) {
       return;
+    }
+
+    if (!complexityChartInstance) {
+      complexityChartInstance = echarts.init(complexityChartElement, undefined, { renderer: "canvas" });
+    }
+
+    const visibleRows = visibleRepos
+      .map((repo) => repoSizesByKey.get(repo.repoKey))
+      .filter((row): row is PulseRepoSize => Boolean(row))
+      .sort((left, right) => right.totalLines - left.totalLines || right.totalFiles - left.totalFiles);
+    const maxFiles = Math.max(...visibleRows.map((row) => row.totalFiles), 0);
+    const maxLines = Math.max(...visibleRows.map((row) => row.totalLines), 0);
+    const visibleTeams = getVisibleTeamGroups(visibleRepos).sort((left, right) => left.name.localeCompare(right.name));
+
+    complexityChartInstance.setOption(
+      {
+        animationDuration: 250,
+        animationDurationUpdate: 250,
+        grid: {
+          left: 72,
+          right: 24,
+          top: 64,
+          bottom: 48,
+        },
+        legend: {
+          type: "scroll",
+          top: 12,
+          left: 12,
+          right: 12,
+          itemWidth: 12,
+          itemHeight: 12,
+          textStyle: {
+            color: "#162028",
+            fontFamily: "Cascadia Code, Fira Code, monospace",
+            fontSize: 12,
+            fontWeight: 700,
+          },
+        },
+        tooltip: {
+          trigger: "item",
+          backgroundColor: "rgba(255, 255, 255, 0.96)",
+          borderColor: "rgba(22, 32, 40, 0.12)",
+          borderWidth: 1,
+          textStyle: {
+            color: "#162028",
+            fontFamily: "Cascadia Code, Fira Code, monospace",
+          },
+          formatter: (params: unknown) => {
+            const point = params as {
+              data?: {
+                repoName: string;
+                teamName: string;
+                totalFiles: number;
+                totalLines: number;
+                totalBytes: number;
+                generatedAt: string;
+              };
+            };
+            const data = point.data;
+            if (!data) {
+              return "";
+            }
+            const avgLinesPerFile = data.totalFiles > 0 ? data.totalLines / data.totalFiles : 0;
+            return [
+              `<strong>${escapeHtml(data.repoName)}</strong>`,
+              `Team: ${escapeHtml(data.teamName)}`,
+              `Files: ${formatInt(data.totalFiles)}`,
+              `Lines: ${formatInt(data.totalLines)}`,
+              `Bytes: ${formatCompactInt(data.totalBytes)}`,
+              `Lines per file: ${formatInt(Math.round(avgLinesPerFile))}`,
+              `Generated: ${escapeHtml(formatIsoTimestamp(data.generatedAt))}`,
+            ].join("<br/>");
+          },
+        },
+        xAxis: {
+          type: "value",
+          name: pulseValueMode === "ratio" ? "Files / max visible files" : "Files",
+          nameLocation: "middle",
+          nameGap: 32,
+          max: pulseValueMode === "ratio" ? 1 : undefined,
+          axisLabel: {
+            color: "#57636e",
+            formatter: (value: number) => (pulseValueMode === "ratio" ? formatPercent(value) : formatCompactInt(value)),
+          },
+          splitLine: {
+            lineStyle: { color: "rgba(87, 99, 110, 0.16)" },
+          },
+        },
+        yAxis: {
+          type: "value",
+          name: pulseValueMode === "ratio" ? "Lines / max visible lines" : "Lines",
+          nameLocation: "middle",
+          nameGap: 52,
+          max: pulseValueMode === "ratio" ? 1 : undefined,
+          axisLabel: {
+            color: "#57636e",
+            formatter: (value: number) => (pulseValueMode === "ratio" ? formatPercent(value) : formatCompactInt(value)),
+          },
+          splitLine: {
+            lineStyle: { color: "rgba(87, 99, 110, 0.16)" },
+          },
+        },
+        series: visibleTeams.map((team) => ({
+          name: team.name,
+          type: "scatter",
+          symbolSize: (value: number[]) => {
+            const fileShare = value[0] ?? 0;
+            const lineShare = value[1] ?? 0;
+            if (pulseValueMode === "ratio") {
+              return Math.max(10, Math.min(28, 10 + (fileShare + lineShare) * 8));
+            }
+            return 14;
+          },
+          itemStyle: {
+            color: team.color,
+            borderColor: "rgba(22, 32, 40, 0.18)",
+            borderWidth: 1,
+          },
+          data: visibleRows
+            .filter((row) => row.teamSlug === team.slug)
+            .map((row) => ({
+              value: [
+                pulseValueMode === "ratio" ? (maxFiles > 0 ? row.totalFiles / maxFiles : 0) : row.totalFiles,
+                pulseValueMode === "ratio" ? (maxLines > 0 ? row.totalLines / maxLines : 0) : row.totalLines,
+              ],
+              repoName: row.repoName,
+              teamName: row.teamName,
+              totalFiles: row.totalFiles,
+              totalLines: row.totalLines,
+              totalBytes: row.totalBytes,
+              generatedAt: row.generatedAt,
+            })),
+        })),
+      },
+      true,
+    );
+  };
+
+  const renderDocumentationPostureChart = (visibleRepos: PulseRepoFilter[]) => {
+    if (!(documentationPostureChartElement instanceof HTMLElement)) {
+      return;
+    }
+
+    if (!documentationPostureChartInstance) {
+      documentationPostureChartInstance = echarts.init(documentationPostureChartElement, undefined, {
+        renderer: "canvas",
+      });
+    }
+
+    const visibleTeamGroups = getVisibleTeamGroups(visibleRepos)
+      .map((team) => {
+        const postureCounts = new Map(documentationPostures.map((posture) => [posture.key, 0]));
+        team.repositories.forEach((repo) => {
+          const conventionRow = repoConventionsByKey.get(repo.repoKey);
+          const postureKey = conventionRow ? classifyDocumentationPosture(conventionRow) : "missing";
+          postureCounts.set(postureKey, (postureCounts.get(postureKey) ?? 0) + 1);
+        });
+        return {
+          ...team,
+          repositoryCount: team.repositories.length,
+          postureCounts,
+          operationalShare:
+            team.repositories.length > 0 ? (postureCounts.get("operational") ?? 0) / team.repositories.length : 0,
+        };
+      })
+      .sort(
+        (left, right) =>
+          right.operationalShare - left.operationalShare || right.repositoryCount - left.repositoryCount || left.name.localeCompare(right.name),
+      );
+
+    documentationPostureChartInstance.setOption(
+      {
+        animationDuration: 250,
+        animationDurationUpdate: 250,
+        grid: {
+          left: 132,
+          right: 32,
+          top: 72,
+          bottom: 14,
+        },
+        legend: {
+          type: "scroll",
+          top: 12,
+          left: 12,
+          right: 12,
+          itemWidth: 12,
+          itemHeight: 12,
+          textStyle: {
+            color: "#162028",
+            fontFamily: "Cascadia Code, Fira Code, monospace",
+            fontSize: 12,
+            fontWeight: 700,
+          },
+        },
+        tooltip: {
+          trigger: "axis",
+          axisPointer: { type: "shadow" },
+          backgroundColor: "rgba(255, 255, 255, 0.96)",
+          borderColor: "rgba(22, 32, 40, 0.12)",
+          borderWidth: 1,
+          textStyle: {
+            color: "#162028",
+            fontFamily: "Cascadia Code, Fira Code, monospace",
+          },
+          formatter: (paramsList: unknown) => {
+            const points = Array.isArray(paramsList) ? paramsList : [paramsList];
+            const teamName = String((points[0] as { axisValueLabel?: string })?.axisValueLabel ?? "");
+            const row = visibleTeamGroups.find((entry) => entry.name === teamName);
+            if (!row) {
+              return teamName;
+            }
+            const lines = documentationPostures.map((posture) => {
+              const raw = row.postureCounts.get(posture.key) ?? 0;
+              const value = pulseValueMode === "ratio" ? (row.repositoryCount > 0 ? raw / row.repositoryCount : 0) : raw;
+              return `${posture.label}: ${pulseValueMode === "ratio" ? formatPercent(value) : formatInt(raw)}`;
+            });
+            return [
+              `<strong>${escapeHtml(row.name)}</strong>`,
+              `Repositories: ${formatInt(row.repositoryCount)}`,
+              ...lines,
+            ].join("<br/>");
+          },
+        },
+        xAxis: {
+          type: "value",
+          max: pulseValueMode === "ratio" ? 1 : undefined,
+          axisLabel: {
+            color: "#57636e",
+            formatter: (value: number) => (pulseValueMode === "ratio" ? formatPercent(value) : formatInt(value)),
+          },
+          splitLine: {
+            lineStyle: { color: "rgba(87, 99, 110, 0.16)" },
+          },
+        },
+        yAxis: {
+          type: "category",
+          inverse: true,
+          data: visibleTeamGroups.map((row) => row.name),
+          axisTick: { show: false },
+          axisLabel: {
+            color: "#162028",
+            fontFamily: "Cascadia Code, Fira Code, monospace",
+            fontSize: 12,
+            fontWeight: 700,
+          },
+        },
+        series: documentationPostures.map((posture) => ({
+          name: posture.label,
+          type: "bar",
+          stack: "pulse-documentation-posture",
+          barMaxWidth: 30,
+          itemStyle: {
+            color: posture.color,
+            borderRadius: [0, 0, 0, 0],
+          },
+          data: visibleTeamGroups.map((row) => {
+            const raw = row.postureCounts.get(posture.key) ?? 0;
+            return {
+              value: pulseValueMode === "ratio" ? (row.repositoryCount > 0 ? raw / row.repositoryCount : 0) : raw,
+            };
+          }),
+        })),
+      },
+      true,
+    );
+  };
+
+  const renderRecencyChart = (visibleRepos: PulseRepoFilter[]) => {
+    if (!(recencyChartElement instanceof HTMLElement)) {
+      return;
+    }
+
+    if (!recencyChartInstance) {
+      recencyChartInstance = echarts.init(recencyChartElement, undefined, { renderer: "canvas" });
+    }
+
+    const latestObservedWeek = pulseDataset.weeklyActivity
+      .flatMap((series) => series.points.map((point) => point.weekStart))
+      .sort()
+      .at(-1);
+    const latestObservedDate = latestObservedWeek ? parseWeekStart(latestObservedWeek) : null;
+
+    const visibleTeamGroups = getVisibleTeamGroups(visibleRepos)
+      .map((team) => {
+        const bucketCounts = new Map(recencyBuckets.map((bucket) => [bucket.key, 0]));
+        team.repositories.forEach((repo) => {
+          const weeklyRow = repoWeeklyByKey.get(repo.repoKey);
+          const lastWeek = weeklyRow?.points.map((point) => point.weekStart).sort().at(-1);
+          const lastDate = lastWeek ? parseWeekStart(lastWeek) : null;
+
+          if (!latestObservedDate || !lastDate) {
+            bucketCounts.set("none", (bucketCounts.get("none") ?? 0) + 1);
+            return;
+          }
+
+          const ageInDays = differenceInDays(latestObservedDate, lastDate);
+          if (ageInDays <= 90) {
+            bucketCounts.set("active90", (bucketCounts.get("active90") ?? 0) + 1);
+            return;
+          }
+          if (ageInDays <= 365) {
+            bucketCounts.set("active365", (bucketCounts.get("active365") ?? 0) + 1);
+            return;
+          }
+          bucketCounts.set("older", (bucketCounts.get("older") ?? 0) + 1);
+        });
+        return {
+          ...team,
+          repositoryCount: team.repositories.length,
+          bucketCounts,
+          recentShare:
+            team.repositories.length > 0 ? (bucketCounts.get("active90") ?? 0) / team.repositories.length : 0,
+        };
+      })
+      .sort(
+        (left, right) =>
+          right.recentShare - left.recentShare || right.repositoryCount - left.repositoryCount || left.name.localeCompare(right.name),
+      );
+
+    recencyChartInstance.setOption(
+      {
+        animationDuration: 250,
+        animationDurationUpdate: 250,
+        grid: {
+          left: 132,
+          right: 32,
+          top: 72,
+          bottom: 14,
+        },
+        legend: {
+          type: "scroll",
+          top: 12,
+          left: 12,
+          right: 12,
+          itemWidth: 12,
+          itemHeight: 12,
+          textStyle: {
+            color: "#162028",
+            fontFamily: "Cascadia Code, Fira Code, monospace",
+            fontSize: 12,
+            fontWeight: 700,
+          },
+        },
+        tooltip: {
+          trigger: "axis",
+          axisPointer: { type: "shadow" },
+          backgroundColor: "rgba(255, 255, 255, 0.96)",
+          borderColor: "rgba(22, 32, 40, 0.12)",
+          borderWidth: 1,
+          textStyle: {
+            color: "#162028",
+            fontFamily: "Cascadia Code, Fira Code, monospace",
+          },
+          formatter: (paramsList: unknown) => {
+            const points = Array.isArray(paramsList) ? paramsList : [paramsList];
+            const teamName = String((points[0] as { axisValueLabel?: string })?.axisValueLabel ?? "");
+            const row = visibleTeamGroups.find((entry) => entry.name === teamName);
+            if (!row) {
+              return teamName;
+            }
+            const lines = recencyBuckets.map((bucket) => {
+              const raw = row.bucketCounts.get(bucket.key) ?? 0;
+              const value = pulseValueMode === "ratio" ? (row.repositoryCount > 0 ? raw / row.repositoryCount : 0) : raw;
+              return `${bucket.label}: ${pulseValueMode === "ratio" ? formatPercent(value) : formatInt(raw)}`;
+            });
+            return [
+              `<strong>${escapeHtml(row.name)}</strong>`,
+              `Repositories: ${formatInt(row.repositoryCount)}`,
+              latestObservedWeek ? `Reference week: ${escapeHtml(latestObservedWeek)}` : "Reference week: n/a",
+              ...lines,
+            ].join("<br/>");
+          },
+        },
+        xAxis: {
+          type: "value",
+          max: pulseValueMode === "ratio" ? 1 : undefined,
+          axisLabel: {
+            color: "#57636e",
+            formatter: (value: number) => (pulseValueMode === "ratio" ? formatPercent(value) : formatInt(value)),
+          },
+          splitLine: {
+            lineStyle: { color: "rgba(87, 99, 110, 0.16)" },
+          },
+        },
+        yAxis: {
+          type: "category",
+          inverse: true,
+          data: visibleTeamGroups.map((row) => row.name),
+          axisTick: { show: false },
+          axisLabel: {
+            color: "#162028",
+            fontFamily: "Cascadia Code, Fira Code, monospace",
+            fontSize: 12,
+            fontWeight: 700,
+          },
+        },
+        series: recencyBuckets.map((bucket) => ({
+          name: bucket.label,
+          type: "bar",
+          stack: "pulse-recency-buckets",
+          barMaxWidth: 30,
+          itemStyle: {
+            color: bucket.color,
+            borderRadius: [0, 0, 0, 0],
+          },
+          data: visibleTeamGroups.map((row) => {
+            const raw = row.bucketCounts.get(bucket.key) ?? 0;
+            return {
+              value: pulseValueMode === "ratio" ? (row.repositoryCount > 0 ? raw / row.repositoryCount : 0) : raw,
+            };
+          }),
+        })),
+      },
+      true,
+    );
+  };
+
+  const renderAiFilesChart = (visibleRepos: PulseRepoFilter[]) => {
+    if (!(aiFilesChartElement instanceof HTMLElement)) {
+      return;
+    }
+
+    if (!aiFilesChartInstance) {
+      aiFilesChartInstance = echarts.init(aiFilesChartElement, undefined, { renderer: "canvas" });
     }
 
     const visibleRepoKeys = new Set(visibleRepos.map((repo: PulseRepoFilter) => repo.repoKey));
-    const rows = pulseDataset.failures.filter((failure: PulseFailureLedgerRow) => visibleRepoKeys.has(failure.repoKey));
+    const visibleRows = getVisibleTeamGroups(visibleRepos)
+      .map((team) => {
+        const aiRows = pulseDataset.aiFileActivity.filter(
+          (activity: PulseAiFileActivity) => visibleRepoKeys.has(activity.repoKey) && activity.teamSlug === team.slug,
+        );
+        return {
+          ...team,
+          repositoryCount: team.repositories.length,
+          aiRepositories: aiRows.filter((row) => row.aiFileCount > 0).length,
+          aiFileCount: aiRows.reduce((sum, row) => sum + row.aiFileCount, 0),
+          aiLineCount: aiRows.reduce((sum, row) => sum + row.aiLineCount, 0),
+          aiBytes: aiRows.reduce((sum, row) => sum + row.aiBytes, 0),
+          agentsPresence: aiRows.filter((row) => row.agentsCount > 0).length,
+          claudePresence: aiRows.filter((row) => row.claudeCount > 0).length,
+          copilotPresence: aiRows.filter((row) => row.copilotCount > 0).length,
+          genericPresence: aiRows.filter((row) => row.genericAiDocCount > 0).length,
+        };
+      })
+      .sort((left, right) => right.aiRepositories - left.aiRepositories || right.aiFileCount - left.aiFileCount || left.name.localeCompare(right.name));
 
-    if (rows.length === 0) {
-      pulseFailureTableBody.innerHTML =
-        '<tr><td colspan="5" class="pulse-failure-empty">No failed repositories in the visible selection.</td></tr>';
-      return;
-    }
-
-    pulseFailureTableBody.innerHTML = rows
-      .map(
-        (failure) => `
-          <tr>
-            <td>${escapeHtml(failure.repoName)}<br/><span class="pulse-failure-team">${escapeHtml(failure.teamName)}</span></td>
-            <td>${escapeHtml(failure.stage || "n/a")}</td>
-            <td>${escapeHtml(failure.status || "n/a")}</td>
-            <td>${escapeHtml(formatIsoTimestamp(failure.updatedAt))}</td>
-            <td>${escapeHtml(failure.detail || "n/a")}</td>
-          </tr>
-        `,
-      )
-      .join("");
+    aiFilesChartInstance.setOption(
+      {
+        animationDuration: 250,
+        animationDurationUpdate: 250,
+        grid: {
+          left: 132,
+          right: 32,
+          top: 72,
+          bottom: 14,
+        },
+        legend: {
+          type: "scroll",
+          top: 12,
+          left: 12,
+          right: 12,
+          itemWidth: 12,
+          itemHeight: 12,
+          textStyle: {
+            color: "#162028",
+            fontFamily: "Cascadia Code, Fira Code, monospace",
+            fontSize: 12,
+            fontWeight: 700,
+          },
+        },
+        tooltip: {
+          trigger: "axis",
+          axisPointer: { type: "shadow" },
+          backgroundColor: "rgba(255, 255, 255, 0.96)",
+          borderColor: "rgba(22, 32, 40, 0.12)",
+          borderWidth: 1,
+          textStyle: {
+            color: "#162028",
+            fontFamily: "Cascadia Code, Fira Code, monospace",
+          },
+          formatter: (paramsList: unknown) => {
+            const points = Array.isArray(paramsList) ? paramsList : [paramsList];
+            const teamName = String((points[0] as { axisValueLabel?: string })?.axisValueLabel ?? "");
+            const row = visibleRows.find((entry) => entry.name === teamName);
+            if (!row) {
+              return teamName;
+            }
+            return [
+              `<strong>${escapeHtml(row.name)}</strong>`,
+              `Repositories in view: ${formatInt(row.repositoryCount)}`,
+              `Repositories with AI files: ${formatInt(row.aiRepositories)}`,
+              `AI files: ${formatInt(row.aiFileCount)}`,
+              `AI lines: ${formatCompactInt(row.aiLineCount)}`,
+              `AI bytes: ${formatCompactInt(row.aiBytes)}`,
+              `AGENTS repos: ${formatInt(row.agentsPresence)} • CLAUDE repos: ${formatInt(row.claudePresence)} • Copilot repos: ${formatInt(row.copilotPresence)} • Generic repos: ${formatInt(row.genericPresence)}`,
+            ].join("<br/>");
+          },
+        },
+        xAxis: {
+          type: "value",
+          max: pulseValueMode === "ratio" ? 1 : undefined,
+          axisLabel: {
+            color: "#57636e",
+            formatter: (value: number) => (pulseValueMode === "ratio" ? formatPercent(value) : formatInt(value)),
+          },
+          splitLine: {
+            lineStyle: { color: "rgba(87, 99, 110, 0.16)" },
+          },
+        },
+        yAxis: {
+          type: "category",
+          inverse: true,
+          data: visibleRows.map((row) => row.name),
+          axisTick: { show: false },
+          axisLabel: {
+            color: "#162028",
+            fontFamily: "Cascadia Code, Fira Code, monospace",
+            fontSize: 12,
+            fontWeight: 700,
+          },
+        },
+        series: [
+          {
+            name: "AGENTS.md",
+            type: "bar",
+            stack: "pulse-ai-files",
+            barMaxWidth: 28,
+            itemStyle: { color: "#007298", borderRadius: [0, 0, 0, 0] },
+            data: visibleRows.map((row) => ({
+              value:
+                pulseValueMode === "ratio"
+                  ? (row.repositoryCount > 0 ? row.agentsPresence / row.repositoryCount : 0)
+                  : row.agentsPresence,
+            })),
+          },
+          {
+            name: "CLAUDE.md",
+            type: "bar",
+            stack: "pulse-ai-files",
+            barMaxWidth: 28,
+            itemStyle: { color: "#45842a", borderRadius: [0, 0, 0, 0] },
+            data: visibleRows.map((row) => ({
+              value:
+                pulseValueMode === "ratio"
+                  ? (row.repositoryCount > 0 ? row.claudePresence / row.repositoryCount : 0)
+                  : row.claudePresence,
+            })),
+          },
+          {
+            name: "Copilot instructions",
+            type: "bar",
+            stack: "pulse-ai-files",
+            barMaxWidth: 28,
+            itemStyle: { color: "#9e1b32", borderRadius: [0, 0, 0, 0] },
+            data: visibleRows.map((row) => ({
+              value:
+                pulseValueMode === "ratio"
+                  ? (row.repositoryCount > 0 ? row.copilotPresence / row.repositoryCount : 0)
+                  : row.copilotPresence,
+            })),
+          },
+          {
+            name: "Generic AI docs",
+            type: "bar",
+            stack: "pulse-ai-files",
+            barMaxWidth: 28,
+            itemStyle: { color: "#652f6c", borderRadius: [0, 0, 0, 0] },
+            data: visibleRows.map((row) => ({
+              value:
+                pulseValueMode === "ratio"
+                  ? (row.repositoryCount > 0 ? row.genericPresence / row.repositoryCount : 0)
+                  : row.genericPresence,
+            })),
+          },
+        ],
+      },
+      true,
+    );
   };
 
   const renderPulseDashboard = () => {
@@ -950,7 +1552,10 @@ export function initPulseDashboard() {
     renderSizeChart(visibleRepos);
     renderWeeklyChart(visibleRepos);
     renderLanguageChart(visibleRepos);
-    renderFailureTable(visibleRepos);
+    renderComplexityChart(visibleRepos);
+    renderDocumentationPostureChart(visibleRepos);
+    renderRecencyChart(visibleRepos);
+    renderAiFilesChart(visibleRepos);
   };
 
   if (teamTrigger instanceof HTMLButtonElement) {
@@ -1048,6 +1653,10 @@ export function initPulseDashboard() {
     sizeChartInstance?.resize();
     weeklyChartInstance?.resize();
     languageChartInstance?.resize();
+    complexityChartInstance?.resize();
+    documentationPostureChartInstance?.resize();
+    recencyChartInstance?.resize();
+    aiFilesChartInstance?.resize();
   });
 
   document.addEventListener(

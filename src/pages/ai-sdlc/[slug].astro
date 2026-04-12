@@ -35,6 +35,13 @@ const pulseDataset = topic?.slug === "pulse" ? await getPulseDataset() : undefin
 const skillsPageCopy = topic?.skillsPage;
 const harnessToolGroups = topic?.slug === "harness-tools" ? await getAiSdlcResolvedToolGroups(topic) : undefined;
 const harnessTools = harnessToolGroups?.flatMap((group) => group.tools) ?? [];
+const harnessInstallPlatforms = Array.from(
+  new Set(
+    harnessTools.flatMap((tool) =>
+      tool.install.map((entry) => (entry.platform === "macos" ? "macos" : entry.platform === "windows" ? "windows" : ""))
+    )
+  )
+).filter(Boolean);
 const introPills = [
   { label: "Status", value: topic?.status ?? "" },
   {
@@ -51,13 +58,45 @@ const introPills = [
             : "",
   },
 ].filter((item) => item.value);
-const harnessCycleMermaid = `
-flowchart LR
-  A["Generate Code"] --> B["Validate Changes"]
-  B --> C["Release And Rollout"]
-  C --> D["Verify In Production"]
-  D --> A
-`;
+function getHarnessInstallMode(
+  installEntries: { label: string; snippet: string; notes: string }[],
+) {
+  const installText = installEntries
+    .flatMap((entry) => [entry.label, entry.snippet, entry.notes])
+    .join(" ")
+    .toLowerCase();
+
+  if (installText.includes("request") || installText.includes("pilot") || installText.includes("managed")) {
+    return "Managed access";
+  }
+
+  return "Local setup";
+}
+
+function getHarnessPlatformSummary(platforms: string[]) {
+  if (platforms.includes("macos") && platforms.includes("windows")) {
+    return "macOS and Windows";
+  }
+
+  if (platforms.includes("macos")) {
+    return "macOS";
+  }
+
+  if (platforms.includes("windows")) {
+    return "Windows";
+  }
+
+  return "Platform-specific";
+}
+
+function getHarnessStageId(stageTitle: string) {
+  return `harness-stage-${stageTitle
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")}`;
+}
+const harnessAdoptCount = harnessTools.filter((tool) => tool.entry.ring.toLowerCase() === "adopt").length;
+const harnessExploreCount = harnessTools.filter((tool) => tool.entry.ring.toLowerCase() === "explore").length;
 
 function getPrimarySkillLink(skill: NonNullable<typeof skillsCatalog>["skills"][number]) {
   if (skill.sourceUrl) {
@@ -216,26 +255,26 @@ const aiSdlcSectionNavItems = [
       </>
     ) : topic.slug === "harness-tools" && harnessToolGroups ? (
       <>
-        <section class="harness-cycle-grid">
-          <article class="bat-card harness-cycle-card harness-cycle-card-full">
+        <section class="harness-radar-summary" aria-label="Harness Tech Radar posture">
+          <article class="bat-card harness-summary-card">
             <div class="bat-card-bar">
-              <span class="bat-card-file">ai-sdlc-cycle.mmd</span>
-              <span class="bat-card-lang">mmd</span>
+              <span class="bat-card-file">data/ai-sdlc.yaml</span>
+              <span class="bat-card-lang">YAML</span>
             </div>
-
             <div class="bat-card-body bat-card-body-stack">
               <div class="bat-line">
                 <span class="bat-gutter">1</span>
                 <div class="bat-code">
-                  <p class="bat-heading">Software delivery cycle</p>
-                  <p class="bat-copy">
-                    Read this page from left to right: generate code, validate the change, release
-                    it through controlled delivery, and confirm behavior in production before the
-                    next iteration.
-                  </p>
-                  <pre class="bat-mermaid-diagram mermaid" aria-label="AI SDLC harness tools cycle">
-{harnessCycleMermaid}
-                  </pre>
+                  <p class="bat-heading">Tech Radar posture</p>
+                  <p class="bat-copy">Prefer `Adopt` tools as the default stack. Use `Explore` tools selectively when the stage still needs evaluation.</p>
+                </div>
+              </div>
+              <div class="bat-line">
+                <span class="bat-gutter">2</span>
+                <div class="bat-code bat-meta-row">
+                  <span class="harness-group-ring-pill is-adopt">{harnessAdoptCount} adopt</span>
+                  <span class="harness-group-ring-pill is-explore">{harnessExploreCount} explore</span>
+                  <span>{harnessTools.length} tools total</span>
                 </div>
               </div>
             </div>
@@ -245,53 +284,127 @@ const aiSdlcSectionNavItems = [
         <section class="standard-section-heading">
           <div>
             <p class="eyebrow">Tools By Stage</p>
-            <h2>Harness tools across the SDLC cycle</h2>
+            <h2>Choose tools by stage and Tech Radar posture</h2>
           </div>
-          <p class="standard-section-meta">{harnessTools.length} radar-backed tools</p>
+          <div class="harness-tools-heading-meta">
+            <div class="harness-tools-heading-copy">
+              <p class="standard-section-meta">{harnessTools.length} radar-backed tools</p>
+              <p class="standard-section-meta" id="harness-platform-summary">Showing install guidance for all platforms.</p>
+            </div>
+            {harnessInstallPlatforms.length > 0 ? (
+              <div class="standard-toggle-group" id="harness-platform-filter" aria-label="Harness platform filter">
+                <button class="standard-toggle-button is-active" type="button" data-platform-filter="all" aria-pressed="true">
+                  All installs
+                </button>
+                {harnessInstallPlatforms.includes("macos") ? (
+                  <button class="standard-toggle-button" type="button" data-platform-filter="macos" aria-pressed="false">
+                    macOS
+                  </button>
+                ) : null}
+                {harnessInstallPlatforms.includes("windows") ? (
+                  <button class="standard-toggle-button" type="button" data-platform-filter="windows" aria-pressed="false">
+                    Windows
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         </section>
 
         <section class="harness-tools-groups" id="harness-tools-groups">
           {harnessToolGroups.map((group) => (
-            <article class="harness-tools-group" data-group-title={group.title.toLowerCase()}>
+            <article
+              class="harness-tools-group"
+              data-group-title={group.title.toLowerCase()}
+              id={getHarnessStageId(group.title)}
+            >
               <div class="harness-tools-group-header">
                 <div>
                   <p class="eyebrow">{group.title}</p>
                   <h3>{group.summary}</h3>
                 </div>
-                <p class="standard-section-meta harness-tools-group-count">
-                  {group.tools.length} tools in this stage
-                </p>
+                <div class="harness-tools-group-summary">
+                  <span class="harness-group-ring-pill is-adopt">
+                    {group.tools.filter((tool) => tool.entry.ring.toLowerCase() === "adopt").length} adopt
+                  </span>
+                  <span class="harness-group-ring-pill is-explore">
+                    {group.tools.filter((tool) => tool.entry.ring.toLowerCase() === "explore").length} explore
+                  </span>
+                </div>
               </div>
 
-              <div class="harness-tools-grid">
+              <div class="harness-tools-grid" data-tool-count={String(group.tools.length)}>
                 {group.tools.map((tool) => (
-                  <article class="harness-tool-box">
-                    <div class="harness-tool-box-topline">
-                      <a class="skills-card-file-link" href={withBasePath(`/tech-radar/${tool.entry.slug}/`)}>
-                        <span class="bat-card-file">{tool.entry.name}</span>
-                      </a>
+                  <article
+                    class={`bat-card bat-entry harness-tool-box harness-tool-box-${tool.entry.ring.toLowerCase().replace(/\s+/g, "-")}`}
+                    data-platforms={Array.from(new Set(tool.install.map((entry) => entry.platform))).join(" ")}
+                  >
+                    <div class="bat-card-bar">
+                      <span class="bat-card-file">{tool.entry.slug}.yaml</span>
                       <span class={`harness-ring-pill harness-ring-pill-${tool.entry.ring.toLowerCase().replace(/\s+/g, "-")}`}>
                         {tool.entry.ring}
                       </span>
                     </div>
 
-                    <div class="harness-tool-box-body">
-                      <p class="ai-sdlc-card-copy">{tool.entry.summary}</p>
-                      <div class="skills-metadata-list">
-                        <span class="skills-metadata-pill">scope: {tool.entry.primaryScope}</span>
-                        <span class="skills-metadata-pill">owner: {tool.entry.owner}</span>
-                        <span class="skills-tag-pill is-muted">status: {tool.entry.status}</span>
+                    <div class="bat-card-body bat-card-body-stack">
+                      <div class="bat-line">
+                        <span class="bat-gutter">1</span>
+                        <div class="bat-code bat-entry-heading">
+                          <h3 class="bat-entry-title">{tool.entry.name}</h3>
+                          <span class="bat-meta">{tool.entry.primaryScope}</span>
+                        </div>
                       </div>
-                      <p class="bat-heading bat-heading-inline">Role in this stage</p>
-                      <p class="ai-sdlc-card-copy">{tool.role}</p>
-                      <div class="skills-metadata-list">
-                        <span class="skills-metadata-pill">focus: {tool.focus}</span>
-                        <span class="skills-tag-pill is-muted">updated: {tool.entry.updated}</span>
+                      <div class="bat-line">
+                        <span class="bat-gutter">2</span>
+                        <div class="bat-code">
+                          <p class="bat-copy">{tool.entry.summary}</p>
+                        </div>
                       </div>
-                      <p class="bat-heading bat-heading-inline">Production signal</p>
-                      <p class="ai-sdlc-card-copy">{tool.productionSignal}</p>
-                      <div class="bat-link-row">
-                        <a href={withBasePath(`/tech-radar/${tool.entry.slug}/`)}>Open Tech Radar detail</a>
+                      <div class="bat-line">
+                        <span class="bat-gutter">3</span>
+                        <div class="bat-code bat-meta-row">
+                          <span>owner: {tool.entry.owner}</span>
+                          <span>setup: {getHarnessInstallMode(tool.install)}</span>
+                          <span
+                            data-platform-summary
+                            data-platform-summary-all={getHarnessPlatformSummary(Array.from(new Set(tool.install.map((entry) => entry.platform))))}
+                            data-platform-summary-macos="macOS"
+                            data-platform-summary-windows="Windows"
+                          >
+                            platforms: {getHarnessPlatformSummary(Array.from(new Set(tool.install.map((entry) => entry.platform))))}
+                          </span>
+                        </div>
+                      </div>
+                      <div class="bat-line">
+                        <span class="bat-gutter">4</span>
+                        <div class="bat-code">
+                          <p class="bat-copy">{tool.role}</p>
+                        </div>
+                      </div>
+                      {tool.install.length > 0 ? (
+                        <div class="bat-line">
+                          <span class="bat-gutter">5</span>
+                          <div class="bat-code">
+                            <p class="bat-heading bat-heading-inline">Install</p>
+                            <div class="harness-install-list">
+                              {tool.install.map((install) => (
+                                <section class="harness-install-block" data-install-platform={install.platform}>
+                                  <div class="harness-install-block-header">
+                                    <span class="skills-tag-pill">{install.platform === "macos" ? "macOS" : "Windows"}</span>
+                                    <span class="standard-section-meta">{install.label}</span>
+                                  </div>
+                                  <pre class="skills-install-code"><code>{install.snippet}</code></pre>
+                                </section>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+                      <div class="bat-line">
+                        <span class="bat-gutter">6</span>
+                        <div class="bat-code bat-link-row">
+                          <a href={withBasePath(`/tech-radar/${tool.entry.slug}/`)}>Open Tech Radar detail</a>
+                        </div>
                       </div>
                     </div>
                   </article>
@@ -616,18 +729,16 @@ const aiSdlcSectionNavItems = [
 
         <section class="standard-section-heading">
           <div>
-            <p class="eyebrow">Failures</p>
-            <h2>Failure ledger</h2>
+            <p class="eyebrow">Complexity</p>
+            <h2>Repository complexity map</h2>
           </div>
-          <p class="standard-section-meta" id="pulse-failure-meta">
-            {pulseDataset.failures.length} failed repositories in the current export
-          </p>
+          <p class="standard-section-meta">Files versus lines per repository, using team colors to expose dense outliers</p>
         </section>
 
         <section class="bat-grid bat-grid-detail metrics-full-width-chart-grid">
           <article class="bat-card bat-card-wide">
             <div class="bat-card-bar">
-              <span class="bat-card-file">pulse-failures.json</span>
+              <span class="bat-card-file">pulse-repository-complexity.json</span>
               <span class="bat-card-lang">json</span>
             </div>
 
@@ -635,30 +746,131 @@ const aiSdlcSectionNavItems = [
               <div class="bat-line">
                 <span class="bat-gutter">1</span>
                 <div class="bat-code">
-                  <div class="pulse-failure-table-wrap">
-                    <table class="pulse-failure-table">
-                      <thead>
-                        <tr>
-                          <th scope="col">Repository</th>
-                          <th scope="col">Stage</th>
-                          <th scope="col">Status</th>
-                          <th scope="col">Updated</th>
-                          <th scope="col">Detail</th>
-                        </tr>
-                      </thead>
-                      <tbody id="pulse-failure-table-body">
-                        {pulseDataset.failures.map((failure) => (
-                          <tr>
-                            <td>{failure.repoName}</td>
-                            <td>{failure.stage}</td>
-                            <td>{failure.status}</td>
-                            <td>{failure.updatedAt || "n/a"}</td>
-                            <td>{failure.detail}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <p class="bat-heading">Repository complexity by files and lines</p>
+                  <p class="bat-copy">
+                    Fifth view: each repository becomes a point using total files on the x-axis and
+                    total lines on the y-axis. Team colors make heavy or unusually dense
+                    repositories easy to spot without losing repository-level detail.
+                  </p>
+                </div>
+              </div>
+              <div class="bat-line">
+                <span class="bat-gutter">2</span>
+                <div class="bat-code">
+                  <div class="metrics-platform-chart pulse-complexity-chart" id="pulse-complexity-chart"></div>
+                </div>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="standard-section-heading">
+          <div>
+            <p class="eyebrow">Documentation</p>
+            <h2>AI documentation posture by team</h2>
+          </div>
+          <p class="standard-section-meta">Stacked maturity view for missing, minimal, guided, and operational repository guidance</p>
+        </section>
+
+        <section class="bat-grid bat-grid-detail metrics-full-width-chart-grid">
+          <article class="bat-card bat-card-wide">
+            <div class="bat-card-bar">
+              <span class="bat-card-file">pulse-doc-posture.json</span>
+              <span class="bat-card-lang">json</span>
+            </div>
+
+            <div class="bat-card-body bat-card-body-stack">
+              <div class="bat-line">
+                <span class="bat-gutter">1</span>
+                <div class="bat-code">
+                  <p class="bat-heading">Documentation posture by team</p>
+                  <p class="bat-copy">
+                    Sixth view: repositories are grouped into posture bands. Operational means the
+                    repo combines a README with agent-oriented guidance and broader AI support
+                    signals; guided means partial guidance; minimal means a single signal only.
+                  </p>
+                </div>
+              </div>
+              <div class="bat-line">
+                <span class="bat-gutter">2</span>
+                <div class="bat-code">
+                  <div class="metrics-platform-chart pulse-chart" id="pulse-doc-posture-chart"></div>
+                </div>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="standard-section-heading">
+          <div>
+            <p class="eyebrow">History</p>
+            <h2>Historical activity posture</h2>
+          </div>
+          <p class="standard-section-meta">Recency buckets relative to the latest observed activity week in the current export</p>
+        </section>
+
+        <section class="bat-grid bat-grid-detail metrics-full-width-chart-grid">
+          <article class="bat-card bat-card-wide">
+            <div class="bat-card-bar">
+              <span class="bat-card-file">pulse-activity-recency.json</span>
+              <span class="bat-card-lang">json</span>
+            </div>
+
+            <div class="bat-card-body bat-card-body-stack">
+              <div class="bat-line">
+                <span class="bat-gutter">1</span>
+                <div class="bat-code">
+                  <p class="bat-heading">Historical activity by recency bucket</p>
+                  <p class="bat-copy">
+                    Seventh view: repositories are grouped by how recently they showed weekly
+                    commit activity. This separates currently warm teams from long-tail historical
+                    code that still dominates size or language distribution.
+                  </p>
+                </div>
+              </div>
+              <div class="bat-line">
+                <span class="bat-gutter">2</span>
+                <div class="bat-code">
+                  <div class="metrics-platform-chart pulse-chart" id="pulse-recency-chart"></div>
+                </div>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="standard-section-heading">
+          <div>
+            <p class="eyebrow">AI Files</p>
+            <h2>Current AI document presence by team</h2>
+          </div>
+          <p class="standard-section-meta" id="pulse-ai-files-meta">
+            Snapshot-only presence of AGENTS, CLAUDE, Copilot instructions, and generic AI markdown
+          </p>
+        </section>
+
+        <section class="bat-grid bat-grid-detail metrics-full-width-chart-grid">
+          <article class="bat-card bat-card-wide">
+            <div class="bat-card-bar">
+              <span class="bat-card-file">pulse-ai-files.json</span>
+              <span class="bat-card-lang">json</span>
+            </div>
+
+            <div class="bat-card-body bat-card-body-stack">
+              <div class="bat-line">
+                <span class="bat-gutter">1</span>
+                <div class="bat-code">
+                  <p class="bat-heading">Current AI document presence</p>
+                  <p class="bat-copy">
+                    Current Pulse exports do not include commit history per file, so this view stays
+                    at the latest snapshot only. It shows how many repositories per team currently
+                    expose each AI guidance entrypoint instead of estimating edits over time.
+                  </p>
+                </div>
+              </div>
+              <div class="bat-line">
+                <span class="bat-gutter">2</span>
+                <div class="bat-code">
+                  <div class="metrics-platform-chart pulse-chart" id="pulse-ai-files-chart"></div>
                 </div>
               </div>
             </div>
@@ -1217,22 +1429,93 @@ const aiSdlcSectionNavItems = [
   </script>
 ) : topic.slug === "harness-tools" ? (
   <script type="module" is:inline>
-    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.esm.min.mjs";
+    const platformFilter = document.querySelector("#harness-platform-filter");
+    const platformButtons = platformFilter ? [...platformFilter.querySelectorAll("[data-platform-filter]")] : [];
+    const toolCards = [...document.querySelectorAll(".harness-tool-box")];
+    const platformSummary = document.querySelector("#harness-platform-summary");
+    const params = new URLSearchParams(window.location.search);
+    let activePlatform = params.get("platform") === "macos" || params.get("platform") === "windows" ? (params.get("platform") ?? "all") : "all";
 
-    mermaid.initialize({
-      startOnLoad: true,
-      securityLevel: "loose",
-      theme: "base",
-      themeVariables: {
-        background: "#ffffff",
-        primaryTextColor: "#162028",
-        primaryBorderColor: "#cfd7de",
-        lineColor: "#57636e",
-        tertiaryColor: "#f7f7f7",
-        fontFamily: "Cascadia Code, Fira Code, monospace",
-        fontSize: "16px",
-      },
+    const syncPlatformButtons = () => {
+      platformButtons.forEach((button) => {
+        if (!(button instanceof HTMLButtonElement)) {
+          return;
+        }
+
+        const isActive = (button.getAttribute("data-platform-filter") ?? "all") === activePlatform;
+        button.classList.toggle("is-active", isActive);
+        button.setAttribute("aria-pressed", String(isActive));
+      });
+    };
+
+    const syncPlatformFilter = () => {
+      toolCards.forEach((card) => {
+        if (!(card instanceof HTMLElement)) {
+          return;
+        }
+
+        const platforms = (card.dataset.platforms ?? "").split(/\s+/).filter(Boolean);
+        const showCard = activePlatform === "all" || platforms.length === 0 || platforms.includes(activePlatform);
+
+        card.toggleAttribute("hidden", !showCard);
+
+        const installBlocks = [...card.querySelectorAll(".harness-install-block")];
+        installBlocks.forEach((block) => {
+          if (!(block instanceof HTMLElement)) {
+            return;
+          }
+
+          const blockPlatform = block.dataset.installPlatform ?? "";
+          const showBlock = activePlatform === "all" || !blockPlatform || blockPlatform === activePlatform;
+          block.toggleAttribute("hidden", !showBlock);
+        });
+
+        const platformSummaryText = card.querySelector("[data-platform-summary]");
+        if (platformSummaryText instanceof HTMLElement) {
+          const summaryValue =
+            activePlatform === "macos"
+              ? platformSummaryText.dataset.platformSummaryMacos
+              : activePlatform === "windows"
+                ? platformSummaryText.dataset.platformSummaryWindows
+                : platformSummaryText.dataset.platformSummaryAll;
+
+          if (summaryValue) {
+            platformSummaryText.textContent = `platforms: ${summaryValue}`;
+          }
+        }
+      });
+
+      if (platformSummary instanceof HTMLElement) {
+        platformSummary.textContent =
+          activePlatform === "macos"
+            ? "Showing only macOS install guidance."
+            : activePlatform === "windows"
+              ? "Showing only Windows install guidance."
+              : "Showing install guidance for all platforms.";
+      }
+    };
+
+    platformButtons.forEach((button) => {
+      if (!(button instanceof HTMLButtonElement)) {
+        return;
+      }
+
+      button.addEventListener("click", () => {
+        activePlatform = button.getAttribute("data-platform-filter") ?? "all";
+        if (activePlatform === "all") {
+          params.delete("platform");
+        } else {
+          params.set("platform", activePlatform);
+        }
+        const nextUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
+        window.history.replaceState({}, "", nextUrl);
+        syncPlatformButtons();
+        syncPlatformFilter();
+      });
     });
+
+    syncPlatformButtons();
+    syncPlatformFilter();
   </script>
 ) : topic.slug === "pulse" && pulseDataset ? (
   <>

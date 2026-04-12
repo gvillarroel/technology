@@ -1,4 +1,4 @@
-generated_at: 2026-04-10T00:40:28.910Z
+generated_at: 2026-04-12T00:28:36.123Z
 repositories:
   - slug: agent-marketplace
     skills:
@@ -61,6 +61,34 @@ repositories:
           styling, theme integration, responsive design, and mui-specific hooks.
           use when working with mui components, styling with sx prop, theme
           customization, or mui utilities.  agent marketplace  skills/mui "
+      - id: agent-marketplace:refactor-method-complexity-reduce
+        slug: refactor-method-complexity-reduce
+        name: refactor-method-complexity-reduce
+        description: Refactor given method `${input:methodName}` to reduce its cognitive
+          complexity to `${input:complexityThreshold}` or below, by extracting
+          helper methods.
+        repositorySlug: agent-marketplace
+        repositoryName: Agent Marketplace
+        repositorySource: local
+        repositoryPurpose: Shared local skills used across agent workflows
+        repositoryLabel: Agent Marketplace
+        repositoryUrl: ""
+        repositoryRef: main
+        localPath: C:/Users/villa/.agents/skills/refactor-method-complexity-reduce
+        relativePath: refactor-method-complexity-reduce
+        installPath: skills/refactor-method-complexity-reduce
+        sourcePath: C:/Users/villa/.agents/skills/refactor-method-complexity-reduce
+        sourceUrl: ""
+        tags: []
+        metadata: {}
+        metadataPairs: []
+        installSnippet: ""
+        installAvailable: false
+        searchText: "refactor-method-complexity-reduce refactor given method
+          `${input:methodname}` to reduce its cognitive complexity to
+          `${input:complexitythreshold}` or below, by extracting helper
+          methods.  agent marketplace  skills/refactor-method-complexity-reduce
+          "
   - slug: anthropic-skills
     skills:
       - id: anthropic-skills:algorithmic-art
@@ -937,6 +965,40 @@ repositories:
           prefer a docs-first workflow by invoking the openai-docs skill or
           openai developer docs mcp tools before generating code. curated openai
           curated skills openai/skills skills/.curated/chatgpt-apps "
+      - id: openai-curated-skills:cli-creator
+        slug: cli-creator
+        name: cli-creator
+        description: Build a composable CLI for Codex from API docs, an OpenAPI spec,
+          existing curl examples, an SDK, a web app, an admin tool, or a local
+          script. Use when the user wants Codex to create a command-line tool
+          that can run from any repo, expose composable read/write commands,
+          return stable JSON, manage auth, and pair with a companion skill.
+        repositorySlug: openai-curated-skills
+        repositoryName: OpenAI Curated Skills
+        repositorySource: github
+        repositoryPurpose: Curated Codex skills approved for explicit installation from
+          the OpenAI skills catalog
+        repositoryLabel: openai/skills
+        repositoryUrl: https://github.com/openai/skills
+        repositoryRef: main
+        localPath: ""
+        relativePath: cli-creator
+        installPath: skills/.curated/cli-creator
+        sourcePath: skills/.curated/cli-creator
+        sourceUrl: https://github.com/openai/skills/tree/main/skills/.curated/cli-creator
+        tags:
+          - curated
+        metadata: {}
+        metadataPairs: []
+        installSnippet: npx skills add openai/skills@cli-creator
+        installAvailable: true
+        searchText: "cli-creator build a composable cli for codex from api docs, an
+          openapi spec, existing curl examples, an sdk, a web app, an admin
+          tool, or a local script. use when the user wants codex to create a
+          command-line tool that can run from any repo, expose composable
+          read/write commands, return stable json, manage auth, and pair with a
+          companion skill. curated openai curated skills openai/skills
+          skills/.curated/cli-creator "
       - id: openai-curated-skills:cloudflare-deploy
         slug: cloudflare-deploy
         name: cloudflare-deploy

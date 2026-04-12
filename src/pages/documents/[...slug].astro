@@ -246,9 +246,21 @@ const documentEyebrow = page.pageType === "document" ? "Documentation" : "Sectio
       />
     </div>
 
-    <section class:list={["shell", "docs-shell", "docs-reference-layout", page.pageType === "repository" && "is-repository-layout"]}>
-      <aside class="docs-reference-sidebar">
+    <section
+      class:list={["shell", "docs-shell", "docs-reference-layout", page.pageType === "repository" && "is-repository-layout"]}
+      data-docs-reference-layout
+    >
+      <aside class="docs-reference-sidebar" id="docs-reference-sidebar-panel">
         <div class="docs-reference-sidebar-shell">
+          <button
+            type="button"
+            class="docs-reference-sidebar-toggle"
+            data-docs-sidebar-toggle
+            aria-expanded="true"
+            aria-controls="docs-reference-sidebar-panel"
+          >
+            <span class="material-symbols-rounded docs-reference-sidebar-toggle-icon" aria-hidden="true">left_panel_close</span>
+          </button>
           <div class="docs-reference-sidebar-top">
             <p class="docs-reference-sidebar-label">Documentation</p>
             {page.pageType === "repository" ? (
@@ -267,6 +279,14 @@ const documentEyebrow = page.pageType === "document" ? "Documentation" : "Sectio
           <div class="docs-reference-sidebar-tree">
             <DocumentsTree nodes={sidebarTree} variant="reference" />
           </div>
+          <a
+            class="docs-reference-sidebar-home"
+            href={withBasePath("/documents/")}
+            aria-label="Back to documentation"
+            title="Back to documentation"
+          >
+            <span class="material-symbols-rounded docs-reference-sidebar-home-icon" aria-hidden="true">library_books</span>
+          </a>
         </div>
       </aside>
 
@@ -522,11 +542,6 @@ const documentEyebrow = page.pageType === "document" ? "Documentation" : "Sectio
       </aside>
     </section>
 
-    <section class="shell docs-shell standard-footer-actions docs-footer-actions">
-      <a class="button button-secondary" href={withBasePath("/documents/")}>
-        Back to documentation
-      </a>
-    </section>
   </main>
 </BaseLayout>
 
@@ -551,6 +566,10 @@ const documentEyebrow = page.pageType === "document" ? "Documentation" : "Sectio
   const outlineList = document.querySelector(".docs-outline-list");
   const mobileTools = Array.from(document.querySelectorAll(".docs-mobile-tool[data-mobile-tool]"));
   const mobileToolStorageKey = `docs-mobile-tool:${window.location.pathname}`;
+  const referenceLayout = document.querySelector("[data-docs-reference-layout]");
+  const sidebarToggle = document.querySelector("[data-docs-sidebar-toggle]");
+  const sidebarToggleIcon = sidebarToggle?.querySelector(".docs-reference-sidebar-toggle-icon");
+  const sidebarStorageKey = "docs-reference-sidebar:collapsed";
   const outlineTargets = outlineLinks
     .map((link) => {
       const id = link.getAttribute("href")?.replace(/^#/, "") ?? "";
@@ -588,6 +607,32 @@ const documentEyebrow = page.pageType === "document" ? "Documentation" : "Sectio
 
     setActiveOutlineLink();
     document.addEventListener("scroll", setActiveOutlineLink, { passive: true });
+  }
+
+  if (referenceLayout && sidebarToggle) {
+    const syncSidebarState = (isCollapsed) => {
+      referenceLayout.classList.toggle("is-sidebar-collapsed", isCollapsed);
+      sidebarToggle.setAttribute("aria-expanded", String(!isCollapsed));
+      sidebarToggle.setAttribute("aria-label", isCollapsed ? "Show navigation" : "Hide navigation");
+      sidebarToggle.setAttribute("title", isCollapsed ? "Show navigation" : "Hide navigation");
+
+      if (sidebarToggleIcon) {
+        sidebarToggleIcon.textContent = isCollapsed ? "left_panel_open" : "left_panel_close";
+      }
+    };
+
+    const restoreSidebarState = () => {
+      const savedValue = window.localStorage.getItem(sidebarStorageKey);
+      syncSidebarState(savedValue === "true");
+    };
+
+    restoreSidebarState();
+
+    sidebarToggle.addEventListener("click", () => {
+      const nextState = !referenceLayout.classList.contains("is-sidebar-collapsed");
+      syncSidebarState(nextState);
+      window.localStorage.setItem(sidebarStorageKey, String(nextState));
+    });
   }
 
   if (mobileTools.length > 0) {

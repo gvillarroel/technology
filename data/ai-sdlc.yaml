@@ -62,6 +62,19 @@ topics:
             role: Governed workflow layer for prompt templates, eval loops, and model routing in AI-assisted engineering flows.
             focus: Code generation patterns with explicit evaluation gates and human review.
             production_signal: Use only in bounded internal workflows until evaluation standards and security posture mature further.
+            install:
+              - platform: macos
+                label: Managed internal access
+                snippet: |-
+                  # Managed internal access
+                  # Request the OpenAI Workflows workspace template from Decision Intelligence.
+                notes: Access is provisioned centrally because prompts, evaluations, and model routes are governed assets.
+              - platform: windows
+                label: Managed internal access
+                snippet: |-
+                  # Managed internal access
+                  # Request the OpenAI Workflows workspace template from Decision Intelligence.
+                notes: Access is provisioned centrally because prompts, evaluations, and model routes are governed assets.
       - title: Regression and delivery validation
         summary: Tools that confirm generated code still works before it reaches production.
         tools:
@@ -69,10 +82,36 @@ topics:
             role: Default CI orchestration for running checks, protected deployments, and repeatable release gates.
             focus: Central place to run automated validation for AI-assisted changes.
             production_signal: Preferred delivery control point for required checks, environment gates, and audited releases.
+            install:
+              - platform: macos
+                label: Repository setup
+                snippet: |-
+                  mkdir -p .github/workflows
+                  ${EDITOR:-code} .github/workflows/ci.yml
+                notes: GitHub Actions runs in GitHub-hosted or self-hosted runners, so there is no local package to install on the workstation.
+              - platform: windows
+                label: Repository setup
+                snippet: |-
+                  New-Item -ItemType Directory -Force .github\workflows | Out-Null
+                  code .github\workflows\ci.yml
+                notes: GitHub Actions runs in GitHub-hosted or self-hosted runners, so there is no local package to install on the workstation.
           - slug: playwright
             role: Browser-based regression and screenshot verification for high-value interfaces touched by generated code.
             focus: Catch UI and workflow regressions before release.
             production_signal: Use on critical user flows first and review flaky scenarios before expanding coverage.
+            install:
+              - platform: macos
+                label: Local browser test runner
+                snippet: |-
+                  npm install -D @playwright/test
+                  npx playwright install chromium
+                notes: Add WebKit or Firefox when cross-browser coverage is part of the release gate.
+              - platform: windows
+                label: Local browser test runner
+                snippet: |-
+                  npm install -D @playwright/test
+                  npx playwright install chromium
+                notes: Run the install from PowerShell and commit the test config with the scenarios it validates.
       - title: Production verification
         summary: Tools used after deployment to confirm the code is behaving correctly in the real operating environment.
         tools:
@@ -80,10 +119,36 @@ topics:
             role: Shared metrics and dashboard layer for quality, operational health, and trend visibility after rollout.
             focus: Confirm whether the released code is meeting runtime expectations.
             production_signal: Use certified dashboards and owned KPIs to validate production outcomes instead of anecdotal checks.
+            install:
+              - platform: macos
+                label: Managed service access
+                snippet: |-
+                  # Managed service access
+                  # Request dashboard viewer or editor access from Decision Intelligence.
+                notes: Certified dashboards are published centrally, so onboarding is an access step instead of a local package install.
+              - platform: windows
+                label: Managed service access
+                snippet: |-
+                  # Managed service access
+                  # Request dashboard viewer or editor access from Decision Intelligence.
+                notes: Certified dashboards are published centrally, so onboarding is an access step instead of a local package install.
           - slug: internal-ops-copilot
             role: Internal assistant for deployment triage, incident guidance, and operational lookup once code is live.
             focus: Help operators investigate failures or suspicious behavior in production.
             production_signal: Keep humans in the loop and audit every operational suggestion while trust remains in pilot mode.
+            install:
+              - platform: macos
+                label: Pilot enrollment
+                snippet: |-
+                  # Pilot enrollment
+                  # Request SSO access and pilot enrollment from Developer Experience.
+                notes: The copilot stays behind an allowlist while trust, grounding quality, and audit controls are still in pilot.
+              - platform: windows
+                label: Pilot enrollment
+                snippet: |-
+                  # Pilot enrollment
+                  # Request SSO access and pilot enrollment from Developer Experience.
+                notes: The copilot stays behind an allowlist while trust, grounding quality, and audit controls are still in pilot.
     links:
       - label: Tech Radar
         url: /tech-radar/

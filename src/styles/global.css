@@ -1049,6 +1049,11 @@ code {
   height: 19rem;
 }
 
+.pulse-complexity-chart {
+  min-height: 21rem;
+  height: 21rem;
+}
+
 .metrics-full-width-chart-grid .bat-card-wide {
   grid-column: 1 / -1;
 }
@@ -2608,6 +2613,14 @@ code {
   gap: 1.9rem;
 }
 
+.docs-reference-layout.is-sidebar-collapsed {
+  grid-template-columns: 2.9rem minmax(0, 1fr) minmax(14rem, 16rem);
+}
+
+.docs-reference-layout.is-repository-layout.is-sidebar-collapsed {
+  grid-template-columns: 2.9rem minmax(0, 1fr);
+}
+
 .docs-detail-page {
   gap: 0.45rem;
 }
@@ -2743,17 +2756,26 @@ code {
   color: var(--muted);
 }
 
-.docs-reference-sidebar,
+.docs-reference-sidebar {
+  align-self: stretch;
+  border-right: 1px solid rgba(51, 62, 72, 0.08);
+}
+
 .docs-reference-toc {
   position: sticky;
   top: 0.95rem;
 }
 
 .docs-reference-sidebar-shell {
+  position: sticky;
+  top: 0.95rem;
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 1rem;
-  padding: 0.8rem 1rem 1rem 0;
-  border-right: 1px solid rgba(51, 62, 72, 0.08);
+  margin-top: -0.55rem;
+  padding: 0.1rem 1rem 1rem 0;
+  min-height: calc(100vh - 1.35rem);
+  position: relative;
 }
 
 .docs-reference-sidebar-top {
@@ -2794,16 +2816,116 @@ code {
   gap: 0.5rem;
 }
 
+.docs-reference-sidebar-home {
+  align-self: end;
+  justify-self: end;
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  margin-right: 0.55rem;
+  border: 1px solid rgba(51, 62, 72, 0.1);
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.74);
+  color: var(--heading);
+  text-decoration: none;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.docs-reference-sidebar-home:hover,
+.docs-reference-sidebar-home:focus-visible {
+  background: rgba(0, 114, 152, 0.06);
+  border-color: rgba(0, 114, 152, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(0, 114, 152, 0.08);
+}
+
+.docs-reference-sidebar-home:focus-visible {
+  outline: 2px solid rgba(0, 114, 152, 0.18);
+  outline-offset: 2px;
+}
+
+.docs-reference-sidebar-home-icon {
+  font-size: 1rem;
+  color: var(--muted);
+}
+
 .docs-reference-main {
   min-width: 0;
   display: grid;
   gap: 1rem;
 }
 
+.docs-reference-sidebar-toggle {
+  position: absolute;
+  top: 0;
+  right: 0.55rem;
+  z-index: 1;
+  display: inline-grid;
+  place-items: center;
+  align-items: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid rgba(51, 62, 72, 0.1);
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.74);
+  color: var(--heading);
+  cursor: pointer;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.docs-reference-sidebar-toggle:hover,
+.docs-reference-sidebar-toggle:focus-visible {
+  background: rgba(0, 114, 152, 0.06);
+  border-color: rgba(0, 114, 152, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(0, 114, 152, 0.08);
+}
+
+.docs-reference-sidebar-toggle:focus-visible {
+  outline: 2px solid rgba(0, 114, 152, 0.18);
+  outline-offset: 2px;
+}
+
+.docs-reference-sidebar-toggle-icon {
+  font-size: 1rem;
+  color: var(--muted);
+}
+
+.docs-reference-layout.is-sidebar-collapsed .docs-reference-sidebar-shell {
+  gap: 0;
+  margin-top: -0.55rem;
+  padding: 0.1rem 0 0.65rem;
+}
+
+.docs-reference-layout.is-sidebar-collapsed .docs-reference-sidebar-toggle {
+  position: sticky;
+  top: 0.8rem;
+  right: auto;
+  margin: 0 auto;
+}
+
+.docs-reference-layout.is-sidebar-collapsed .docs-reference-sidebar-top,
+.docs-reference-layout.is-sidebar-collapsed .docs-reference-sidebar-tree {
+  display: none;
+}
+
+.docs-reference-layout.is-sidebar-collapsed .docs-reference-sidebar-home {
+  justify-self: center;
+  margin-right: 0;
+}
+
 .docs-reference-breadcrumb-block {
   display: grid;
   gap: 0.18rem;
-  margin-top: -0.55rem;
+  margin-top: 0;
 }
 
 .docs-reference-breadcrumb-context {
@@ -3367,6 +3489,13 @@ code {
   line-height: 1.65;
 }
 
+.docs-code-block pre.shiki,
+.docs-code-block pre.shiki code,
+.docs-code-block pre.shiki .line,
+.docs-code-block pre.shiki .line span {
+  font-family: "Cascadia Code", "Fira Code", monospace;
+}
+
 .docs-code-block pre.shiki .line {
   display: block;
 }
@@ -3407,6 +3536,63 @@ code {
   padding: 0.12rem 0.48rem;
   background: rgba(255, 255, 255, 0.76);
   color: var(--muted);
+}
+
+.code-copy-shell {
+  position: relative;
+}
+
+pre.code-copy-target {
+  padding-top: 2.85rem;
+}
+
+.code-copy-button {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.7rem;
+  z-index: 1;
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid rgba(51, 62, 72, 0.1);
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--heading);
+  cursor: pointer;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.code-copy-button:hover,
+.code-copy-button:focus-visible {
+  background: rgba(0, 114, 152, 0.06);
+  border-color: rgba(0, 114, 152, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(0, 114, 152, 0.08);
+}
+
+.code-copy-button:focus-visible {
+  outline: 2px solid rgba(0, 114, 152, 0.18);
+  outline-offset: 2px;
+}
+
+.code-copy-button.is-copied {
+  background: rgba(69, 132, 42, 0.12);
+  border-color: rgba(69, 132, 42, 0.18);
+  color: #214d12;
+}
+
+.code-copy-button-icon {
+  font-size: 1rem;
+  color: var(--muted);
+}
+
+.code-copy-button.is-copied .code-copy-button-icon {
+  color: inherit;
 }
 
 .docs-reference-pagination {
@@ -3486,9 +3672,31 @@ code {
   grid-column: 1 / -1;
 }
 
+.harness-radar-summary {
+  display: grid;
+}
+
+.harness-summary-card {
+  grid-column: 1 / -1;
+}
+
 .harness-tools-groups {
   display: grid;
   gap: 1.25rem;
+}
+
+.harness-tools-heading-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+}
+
+.harness-tools-heading-copy {
+  display: grid;
+  gap: 0.15rem;
+  justify-items: end;
 }
 
 .harness-tools-group {
@@ -3498,53 +3706,103 @@ code {
 
 .harness-tools-group-header {
   display: flex;
-  align-items: end;
   justify-content: space-between;
+  align-items: start;
   gap: 1rem;
 }
 
+.harness-tools-group-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .harness-tools-group-header h3 {
-  max-width: 46rem;
   font-size: 1.05rem;
   line-height: 1.45;
 }
 
-.harness-tools-group-count {
-  white-space: nowrap;
+.harness-group-ring-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.harness-group-ring-pill.is-adopt {
+  background: #e5f4dd;
+  color: #214d12;
+}
+
+.harness-group-ring-pill.is-explore {
+  background: #dff2fa;
+  color: #0d4f68;
 }
 
 .harness-tools-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.9rem;
+}
+
+.harness-tools-grid[data-tool-count="1"] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.harness-tools-grid[data-tool-count="1"] .harness-tool-box {
+  max-width: none;
 }
 
 .harness-tool-box {
-  display: grid;
-  gap: 0.9rem;
-  padding: 1.1rem;
-  border-radius: 1.1rem;
-  border: 1px solid rgba(51, 62, 72, 0.12);
-  background: rgba(255, 255, 255, 0.84);
-  box-shadow: 0 24px 60px rgba(22, 32, 40, 0.08);
+  min-height: 100%;
 }
 
-.harness-tool-box-topline {
+.harness-tool-box-adopt {
+  box-shadow: inset 0 0 0 1px rgba(69, 132, 42, 0.12);
+}
+
+.harness-tool-box-explore {
+  box-shadow: inset 0 0 0 1px rgba(0, 114, 152, 0.12);
+}
+
+.harness-install-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.harness-install-block {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.9rem;
+  border: 1px solid rgba(51, 62, 72, 0.1);
+  background: rgba(247, 249, 251, 0.96);
+}
+
+.harness-install-block[hidden] {
+  display: none !important;
+}
+
+.harness-install-block-header {
   display: flex;
-  align-items: start;
+  align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
-.harness-tool-box-body {
-  display: grid;
-  gap: 0.7rem;
+.harness-install-block .skills-install-code {
+  margin: 0;
 }
 
 .harness-ring-pill {
   display: inline-flex;
   align-items: center;
   min-height: 1.9rem;
+  width: fit-content;
   padding: 0.28rem 0.7rem;
   border-radius: 999px;
   font-size: 0.75rem;
@@ -6122,11 +6380,12 @@ h3 {
   .docs-reference-sidebar {
     order: 3;
     position: static;
+    border-right: 0;
   }
 
   .docs-reference-sidebar-shell {
+    min-height: 0;
     padding: 0;
-    border-right: 0;
     border-top: 1px solid rgba(51, 62, 72, 0.08);
     padding-top: 1rem;
   }
@@ -6140,14 +6399,22 @@ h3 {
     grid-template-columns: 1fr;
   }
 
-  .harness-tools-group-header {
-    flex-direction: column;
-    align-items: start;
-  }
-
-  .harness-cycle-grid,
+  .harness-radar-summary,
+  .harness-tools-heading-meta,
   .harness-tools-grid {
     grid-template-columns: 1fr;
+  }
+
+  .harness-tools-heading-copy {
+    justify-items: start;
+  }
+
+  .harness-tools-heading-meta {
+    justify-content: flex-start;
+  }
+
+  .harness-tools-group-header {
+    flex-direction: column;
   }
 
   .community-grid {
