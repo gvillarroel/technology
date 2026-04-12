@@ -10,6 +10,7 @@ import {
   getRadarBlipLayouts,
   getRadarEntries,
   getRingDefinition,
+  getRadarSourceTypes,
   getRadarRingToken,
   radarArchetypes,
   radarQuadrants,
@@ -17,6 +18,7 @@ import {
 } from "../lib/tech-radar";
 
 const entries = await getRadarEntries();
+const sourceTypes = await getRadarSourceTypes();
 const intro = await getStandardPageIntro("tech-radar");
 const sourceCard = await getStandardPageSource("tech-radar");
 const radarLayouts = getRadarBlipLayouts(entries);
@@ -72,7 +74,7 @@ class Retired retired
 
 <BaseLayout
   title="Tech Radar | e*f(x) Technology"
-  description="The technology radar for evaluated, exploratory, retired, and not yet evaluated technologies at e*f(x)."
+  description={intro.summary}
 >
   <main
     class="shell shell-narrow standard-page"
@@ -120,15 +122,11 @@ class Retired retired
                   <button class="standard-toggle-button is-active" type="button" data-source-filter="">
                     All
                   </button>
-                  <button class="standard-toggle-button" type="button" data-source-filter="oss">
-                    OSS
-                  </button>
-                  <button class="standard-toggle-button" type="button" data-source-filter="non-oss">
-                    Vendor
-                  </button>
-                  <button class="standard-toggle-button" type="button" data-source-filter="internal">
-                    Internal
-                  </button>
+                  {sourceTypes.map((sourceType) => (
+                    <button class="standard-toggle-button" type="button" data-source-filter={sourceType}>
+                      {sourceType === "oss" ? "OSS" : sourceType === "non-oss" ? "Vendor" : "Internal"}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
@@ -152,8 +150,8 @@ class Retired retired
                 <div>
                   <p class="bat-heading">Lifecycle radial</p>
                   <p class="bat-meta" id="radar-visual-meta">
-                    Default view shows Adopt, Explore, To evaluate, and Endure. Extended view adds
-                    Retired.
+                    Default view shows Adopt, Explore, and Endure. Extended view adds To evaluate
+                    and Retired.
                   </p>
                 </div>
                 <button class="standard-toggle-button radar-extended-toggle" id="radar-extended-toggle" type="button">
@@ -408,8 +406,8 @@ class Retired retired
   const ringRadius = new Map([
     ["Adopt", 18],
     ["Explore", 34],
-    ["To evaluate", 50],
-    ["Endure", 68],
+    ["Endure", 50],
+    ["To evaluate", 68],
     ["Retired", 86],
   ]);
   const fullViewBox = "-120 -120 240 240";
@@ -769,18 +767,49 @@ class Retired retired
 <script type="module" is:inline>
   import mermaid from "https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.esm.min.mjs";
 
-  mermaid.initialize({
-    startOnLoad: true,
-    securityLevel: "loose",
-    theme: "base",
-    themeVariables: {
-      background: "#ffffff",
-      primaryTextColor: "#162028",
-      primaryBorderColor: "#cfd7de",
-      lineColor: "#57636e",
-      tertiaryColor: "#f7f7f7",
-      fontFamily: "Cascadia Code, Fira Code, monospace",
-      fontSize: "16px",
-    },
+  const diagrams = document.querySelectorAll(".mermaid");
+
+  for (const diagram of diagrams) {
+    if (!diagram.dataset.mermaidSource) {
+      diagram.dataset.mermaidSource = diagram.textContent?.trim() ?? "";
+    }
+  }
+
+  async function renderRadarMermaid() {
+    if (diagrams.length === 0) {
+      return;
+    }
+
+    const isDarkTheme = document.documentElement.dataset.theme === "dark";
+
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: "loose",
+      theme: "base",
+      themeVariables: {
+        background: isDarkTheme ? "#0d1720" : "#ffffff",
+        primaryTextColor: isDarkTheme ? "#edf3f6" : "#162028",
+        primaryBorderColor: isDarkTheme ? "#365165" : "#cfd7de",
+        lineColor: isDarkTheme ? "#9bb0bd" : "#57636e",
+        tertiaryColor: isDarkTheme ? "#13212c" : "#f7f7f7",
+        fontFamily: "Cascadia Code, Fira Code, monospace",
+        fontSize: "16px",
+      },
+    });
+
+    for (const diagram of diagrams) {
+      diagram.removeAttribute("data-processed");
+      diagram.innerHTML = diagram.dataset.mermaidSource ?? "";
+    }
+
+    await mermaid.run({
+      nodes: Array.from(diagrams),
+    });
+  }
+
+  await renderRadarMermaid();
+
+  document.addEventListener("site-theme-change", () => {
+    void renderRadarMermaid();
   });
 </script>

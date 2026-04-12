@@ -15,6 +15,11 @@ export interface TechCommunity {
   linkLabel: string;
 }
 
+export interface TechCommunitiesCatalog {
+  communities: TechCommunity[];
+  tracks: string[];
+}
+
 const techCommunitiesYamlPath = join(process.cwd(), "data", "tech-communities.yaml");
 
 function toScalar(value: unknown) {
@@ -32,12 +37,10 @@ function toList(value: unknown) {
     .filter(Boolean);
 }
 
-export async function getTechCommunities(): Promise<TechCommunity[]> {
+export async function getTechCommunitiesCatalog(): Promise<TechCommunitiesCatalog> {
   const rawFile = await readFile(techCommunitiesYamlPath, "utf-8");
   const document = parse(rawFile) as { communities?: Array<Record<string, unknown>> };
-  const communities = document.communities ?? [];
-
-  return communities
+  const communities = (document.communities ?? [])
     .map((community) => ({
       slug: toScalar(community.slug),
       name: toScalar(community.name),
@@ -59,4 +62,17 @@ export async function getTechCommunities(): Promise<TechCommunity[]> {
 
       return left.name.localeCompare(right.name);
     });
+  const tracks = [...new Set(communities.map((community) => community.track).filter(Boolean))].sort((left, right) =>
+    left.localeCompare(right),
+  );
+
+  return {
+    communities,
+    tracks,
+  };
+}
+
+export async function getTechCommunities(): Promise<TechCommunity[]> {
+  const catalog = await getTechCommunitiesCatalog();
+  return catalog.communities;
 }

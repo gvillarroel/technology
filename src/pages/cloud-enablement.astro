@@ -3,14 +3,14 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import StandardPageHeader from "../components/StandardPageHeader.astro";
 import StandardPageIntro from "../components/StandardPageIntro.astro";
 import StandardSourceCard from "../components/StandardSourceCard.astro";
-import { getCloudEnablementProviders } from "../lib/cloud-enablement";
+import { getCloudEnablementArchetypes, getCloudEnablementProviders } from "../lib/cloud-enablement";
 import { getStandardPageIntro } from "../lib/page-intros";
 import { getStandardPageSource } from "../lib/page-sources";
 
 const providers = await getCloudEnablementProviders();
 const intro = await getStandardPageIntro("cloud-enablement");
 const sourceCard = await getStandardPageSource("cloud-enablement");
-const archetypes = ["Infrastructure", "Tool", "Product"] as const;
+const archetypes = await getCloudEnablementArchetypes();
 const entries = providers.flatMap((provider) =>
   provider.products.map((product) => ({
     ...product,
@@ -25,7 +25,7 @@ const entries = providers.flatMap((provider) =>
 
 <BaseLayout
   title="Cloud Enablement | e*f(x) Technology"
-  description="Google Cloud and AWS enablement inventory with official catalog sources and seeded known features."
+  description={intro.summary}
 >
   <main class="shell shell-narrow standard-page">
     <StandardPageHeader

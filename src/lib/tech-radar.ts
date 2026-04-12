@@ -30,6 +30,7 @@ export interface RadarEntry {
 }
 
 export type RadarArchetype = "Infrastructure" | "Tool" | "Product";
+export type RadarSourceType = RadarEntry["sourceType"];
 
 export interface RadarRingDefinition {
   name: RadarEntry["ring"];
@@ -63,8 +64,9 @@ export function getRadarRingToken(ring: RadarEntry["ring"]) {
   return ring.toLowerCase().replace(/\s+/g, "-");
 }
 
-export const defaultVisibleRings: RadarEntry["ring"][] = ["Adopt", "Explore", "To evaluate", "Endure"];
+export const defaultVisibleRings: RadarEntry["ring"][] = ["Adopt", "Explore", "Endure"];
 export const radarArchetypes: RadarArchetype[] = ["Infrastructure", "Tool", "Product"];
+export const radarSourceTypes: RadarSourceType[] = ["oss", "non-oss", "internal"];
 
 const radarYamlPath = join(process.cwd(), "data", "tech-radar.yaml");
 
@@ -87,16 +89,16 @@ export const radarRings: RadarRingDefinition[] = [
   },
   {
     name: "To evaluate",
-    order: 2,
-    radius: 0.5,
+    order: 3,
+    radius: 0.68,
     color: "var(--primary-yellow)",
     accent: "#ffe698",
     description: "Known candidate with no formal recommendation yet.",
   },
   {
     name: "Endure",
-    order: 3,
-    radius: 0.68,
+    order: 2,
+    radius: 0.5,
     color: "var(--primary-orange)",
     accent: "#ffd5ae",
     description: "Keep running with restraint while planning the next move.",
@@ -206,6 +208,11 @@ export async function getRadarEntries(): Promise<RadarEntry[]> {
 export async function getRadarEntryBySlug(slug: string) {
   const entries = await getRadarEntries();
   return entries.find((entry) => entry.slug === slug);
+}
+
+export async function getRadarSourceTypes() {
+  const entries = await getRadarEntries();
+  return radarSourceTypes.filter((sourceType) => entries.some((entry) => entry.sourceType === sourceType));
 }
 
 export function getRingDefinition(ring: RadarEntry["ring"]) {

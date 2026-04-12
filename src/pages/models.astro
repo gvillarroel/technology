@@ -10,12 +10,12 @@ import { getStandardPageSource } from "../lib/page-sources";
 const catalog = await getModelCatalogData();
 const intro = await getStandardPageIntro("models");
 const sourceCard = await getStandardPageSource("models");
-const statusFilters = ["approved", "explore", "blacklisted"] as const;
+const statusFilters = Object.keys(catalog.statuses);
 ---
 
 <BaseLayout
   title="Models | e*f(x) Technology"
-  description="Governed model-family catalog for Vertex AI Model Garden and approved local Ollama runtimes."
+  description={catalog.summary}
 >
   <main class="shell shell-narrow standard-page">
     <StandardPageHeader

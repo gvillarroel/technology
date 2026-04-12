@@ -12,7 +12,7 @@ The following files are the most important for day-to-day maintenance:
 - `data/tech-radar.yaml`: technology inventory and radar metadata
 - `data/products.yaml`: products referenced across the site
 - `data/models.yaml`: model catalog used by AI-facing content
-- `data/ai-communities.yaml` and `data/tech-communities.yaml`: community inventories
+- `data/tech-communities.yaml`: community inventory used by the communities page
 - `data/skills-repositories.yaml` and `data/skill-evaluations.yaml`: skills catalog sources
 - `data/terminal-commands.yaml`: command definitions shown by the fake terminal
 
@@ -112,6 +112,8 @@ Use this update model when maintaining the site:
 - update `src/lib/*.ts` when composition logic, URL rewriting, or derived metadata changes
 - update `src/pages/*.astro` when information architecture or page layout changes
 - keep `src/pages/models.astro` and `src/pages/models.md.ts` aligned when the model catalog surface changes
+
+For the concrete "add a new record" workflow, use [Content Authoring Guide](./content-authoring.md).
 
 ## Build Guardrails
 

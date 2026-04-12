@@ -548,19 +548,42 @@ const documentEyebrow = page.pageType === "document" ? "Documentation" : "Sectio
 <script is:inline type="module">
   import mermaid from "https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.esm.min.mjs";
 
-  mermaid.initialize({
-    startOnLoad: false,
-    securityLevel: "loose",
-    theme: "neutral",
-  });
-
   const diagrams = document.querySelectorAll(".docs-reference-markdown .mermaid");
 
-  if (diagrams.length > 0) {
+  for (const diagram of diagrams) {
+    if (!diagram.dataset.mermaidSource) {
+      diagram.dataset.mermaidSource = diagram.textContent?.trim() ?? "";
+    }
+  }
+
+  async function renderMermaidDiagrams() {
+    if (diagrams.length === 0) {
+      return;
+    }
+
+    const isDarkTheme = document.documentElement.dataset.theme === "dark";
+
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: "loose",
+      theme: isDarkTheme ? "dark" : "neutral",
+    });
+
+    for (const diagram of diagrams) {
+      diagram.removeAttribute("data-processed");
+      diagram.innerHTML = diagram.dataset.mermaidSource ?? "";
+    }
+
     await mermaid.run({
       nodes: Array.from(diagrams),
     });
   }
+
+  await renderMermaidDiagrams();
+
+  document.addEventListener("site-theme-change", () => {
+    void renderMermaidDiagrams();
+  });
 
   const outlineLinks = Array.from(document.querySelectorAll(".docs-outline-list a"));
   const outlineList = document.querySelector(".docs-outline-list");

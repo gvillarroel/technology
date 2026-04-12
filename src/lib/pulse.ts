@@ -114,6 +114,19 @@ export interface PulseAiFileActivity extends PulseTeamScopedRow {
   genericAiDocCount: number;
 }
 
+export interface PulseAiDocWeeklyActivityPoint {
+  weekStart: string;
+  commitCount: number;
+}
+
+export interface PulseAiDocWeeklyActivitySeries extends PulseTeamScopedRow {
+  repoKey: string;
+  repoName: string;
+  repoSlug: string;
+  totalCommits: number;
+  points: PulseAiDocWeeklyActivityPoint[];
+}
+
 export interface PulseDataset {
   overview: PulseOverview;
   filters: {
@@ -132,6 +145,7 @@ export interface PulseDataset {
   weeklyActivity: PulseWeeklyActivitySeries[];
   failures: PulseFailureLedgerRow[];
   aiFileActivity: PulseAiFileActivity[];
+  aiDocWeeklyActivity: PulseAiDocWeeklyActivitySeries[];
 }
 
 interface PulseTeamConfig {
@@ -371,6 +385,10 @@ weekly_rows = read_rows("""
     select repo_key, week_start, commit_count, active_contributors
     from weekly_evolution
 """)
+ai_doc_weekly_rows = read_rows("""
+    select repo_key, week_start, commits
+    from ai_doc_weekly_activity
+""")
 fetch_rows = read_rows("""
     select repo_key, remote_url, fetched_revision, fetched_at
     from fetch_state
@@ -434,6 +452,8 @@ for repo_key, row in latest_repo_snapshots.items():
 repo_languages = defaultdict(lambda: defaultdict(int))
 repo_weekly_points = defaultdict(list)
 repo_weekly_totals = defaultdict(int)
+repo_ai_doc_weekly_points = defaultdict(list)
+repo_ai_doc_weekly_totals = defaultdict(int)
 repo_conventions = defaultdict(lambda: {
     "hasAgentsMd": False,
     "hasClaudeMd": False,
@@ -519,6 +539,17 @@ for row in weekly_rows:
         "activeContributors": to_int(row.get("active_contributors")),
     })
 
+for row in ai_doc_weekly_rows:
+    repo = update_repo(registry, row.get("repo_key"))
+    if repo is None:
+        continue
+    commit_count = to_int(row.get("commits"))
+    repo_ai_doc_weekly_totals[repo["repoKey"]] += commit_count
+    repo_ai_doc_weekly_points[repo["repoKey"]].append({
+        "weekStart": str(row.get("week_start") or ""),
+        "commitCount": commit_count,
+    })
+
 conventions_by_repo = []
 for repo_key, repo in registry.items():
     convention = repo_conventions[repo_key]
@@ -595,6 +626,20 @@ for repo_key, activity in repo_ai_files.items():
         "claudeCount": to_int(activity["claudeCount"]),
         "copilotCount": to_int(activity["copilotCount"]),
         "genericAiDocCount": to_int(activity["genericAiDocCount"]),
+    })
+
+ai_doc_weekly_activity = []
+for repo_key, points in repo_ai_doc_weekly_points.items():
+    repo = registry.get(repo_key) or update_repo(registry, repo_key)
+    ai_doc_weekly_activity.append({
+        "repoKey": repo["repoKey"],
+        "repoName": repo["repoName"],
+        "repoSlug": repo["repoSlug"],
+        "teamSlug": repo["teamSlug"],
+        "teamName": repo["teamName"],
+        "teamColor": repo["teamColor"],
+        "totalCommits": to_int(repo_ai_doc_weekly_totals[repo_key]),
+        "points": sorted(points, key=lambda point: point["weekStart"]),
     })
 
 failures = []
@@ -693,6 +738,10 @@ result = {
         ai_file_activity,
         key=lambda row: (-row["aiFileCount"], -row["aiLineCount"], row["repoName"].lower()),
     ),
+    "aiDocWeeklyActivity": sorted(
+        ai_doc_weekly_activity,
+        key=lambda row: (-row["totalCommits"], row["repoName"].lower()),
+    ),
 }
 
 print(json.dumps(result))
@@ -728,6 +777,7 @@ function getEmptyPulseDataset(sourceNote: string): PulseDataset {
     weeklyActivity: [],
     failures: [],
     aiFileActivity: [],
+    aiDocWeeklyActivity: [],
   };
 }
 

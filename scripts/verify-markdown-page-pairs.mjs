@@ -48,6 +48,7 @@ const astroPages = files.filter((filePath) => filePath.endsWith(".astro"));
 const markdownPages = files.filter((filePath) => filePath.endsWith(".md.ts"));
 const markdownPageSet = new Set(markdownPages);
 const astroPageSet = new Set(astroPages);
+const searchMarkdownEndpointPath = join(pagesRoot, "search.md.ts");
 
 const missingMarkdownPages = astroPages
   .map((filePath) => replaceSuffix(filePath, ".astro", ".md.ts"))
@@ -80,6 +81,23 @@ if (missingMarkdownPages.length > 0 || orphanMarkdownPages.length > 0) {
 }
 
 console.log(`Markdown route parity OK: ${astroPages.length} Astro pages matched with Markdown endpoints.`);
+
+const searchMarkdownEndpointSource = await readFile(searchMarkdownEndpointPath, "utf-8");
+const searchMarkdownEndpointLooksDynamic =
+  searchMarkdownEndpointSource.includes("export const prerender = import.meta.env.PROD;") &&
+  searchMarkdownEndpointSource.includes("new URL(request.url)") &&
+  searchMarkdownEndpointSource.includes("searchParams.get(\"q\")") &&
+  searchMarkdownEndpointSource.includes("searchParams.get(\"scope\")") &&
+  searchMarkdownEndpointSource.includes("getSearchPageMarkdownResponse(query, scope)");
+
+if (!searchMarkdownEndpointLooksDynamic) {
+  console.error("Markdown route behavior check failed.");
+  console.error("");
+  console.error("The search Markdown endpoint must stay build-safe and read q and scope from request.url in development.");
+  process.exit(1);
+}
+
+console.log("Markdown route behavior OK: /search.md stays static-build-safe and reads q and scope from the request URL in development.");
 
 if (!shouldVerifyDist) {
   process.exit(0);

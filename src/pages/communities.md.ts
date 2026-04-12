@@ -1,17 +1,19 @@
 import { createMarkdownDocument, markdownLink, markdownResponse } from "../lib/markdown";
+import { getStandardPageIntro } from "../lib/page-intros";
 import { withBasePath } from "../lib/site-url";
 import { getTechCommunities } from "../lib/tech-communities";
 
 export async function GET() {
   const communities = await getTechCommunities();
+  const intro = await getStandardPageIntro("communities");
   const doc = createMarkdownDocument({
     title: "Technology Communities",
-    description: "Markdown companion for the technology communities directory.",
+    description: intro.summary,
     canonicalHtml: withBasePath("/communities/"),
   });
 
   doc.heading("Technology Communities");
-  doc.paragraph("Directory of Berkeley Facts communities across AI, InnerSource, product, data, and adjacent practices.");
+  doc.paragraph(intro.summary);
   doc.section("Community Index");
 
   for (const community of communities) {

@@ -143,6 +143,11 @@ export async function getCloudEnablementEntries(): Promise<CloudEnablementEntry[
   );
 }
 
+export async function getCloudEnablementArchetypes(): Promise<CloudEnablementProduct["archetype"][]> {
+  const entries = await getCloudEnablementEntries();
+  return [...new Set(entries.map((entry) => entry.archetype))];
+}
+
 export async function getCloudEnablementEntryBySlug(providerSlug: string, slug: string) {
   const entries = await getCloudEnablementEntries();
   return entries.find((entry) => entry.providerSlug === providerSlug && entry.slug === slug);

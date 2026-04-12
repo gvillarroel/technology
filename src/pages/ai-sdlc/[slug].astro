@@ -841,17 +841,17 @@ const aiSdlcSectionNavItems = [
         <section class="standard-section-heading">
           <div>
             <p class="eyebrow">AI Files</p>
-            <h2>Current AI document presence by team</h2>
+            <h2>Weekly AI document activity by team</h2>
           </div>
           <p class="standard-section-meta" id="pulse-ai-files-meta">
-            Snapshot-only presence of AGENTS, CLAUDE, Copilot instructions, and generic AI markdown
+            Weekly commits that touched AI documents, aggregated into one line per visible team
           </p>
         </section>
 
         <section class="bat-grid bat-grid-detail metrics-full-width-chart-grid">
           <article class="bat-card bat-card-wide">
             <div class="bat-card-bar">
-              <span class="bat-card-file">pulse-ai-files.json</span>
+              <span class="bat-card-file">pulse-ai-doc-weekly-activity.json</span>
               <span class="bat-card-lang">json</span>
             </div>
 
@@ -859,11 +859,11 @@ const aiSdlcSectionNavItems = [
               <div class="bat-line">
                 <span class="bat-gutter">1</span>
                 <div class="bat-code">
-                  <p class="bat-heading">Current AI document presence</p>
+                  <p class="bat-heading">Weekly activity on AI documents</p>
                   <p class="bat-copy">
-                    Current Pulse exports do not include commit history per file, so this view stays
-                    at the latest snapshot only. It shows how many repositories per team currently
-                    expose each AI guidance entrypoint instead of estimating edits over time.
+                    The refreshed Pulse export now includes weekly commit activity for files
+                    classified as AI documents. This view rolls that signal up by team so you can
+                    compare which groups are actively evolving AI guidance, not just hosting it.
                   </p>
                 </div>
               </div>
@@ -1612,6 +1612,23 @@ const aiSdlcSectionNavItems = [
       new Intl.NumberFormat("en-US", { style: "percent", maximumFractionDigits: 1 }).format(value || 0);
     const formatCompactInt = (value: number) =>
       new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(value || 0);
+    const isDarkTheme = () => document.documentElement.dataset.theme === "dark";
+    const getChartThemeTokens = () =>
+      isDarkTheme()
+        ? {
+            textStrong: "#d9e6f2",
+            textMuted: "#9fb3c8",
+            tooltipBackground: "rgba(8, 14, 22, 0.96)",
+            tooltipBorder: "rgba(171, 197, 216, 0.16)",
+            splitLine: "rgba(171, 197, 216, 0.14)",
+          }
+        : {
+            textStrong: "#162028",
+            textMuted: "#57636e",
+            tooltipBackground: "rgba(255, 255, 255, 0.96)",
+            tooltipBorder: "rgba(22, 32, 40, 0.12)",
+            splitLine: "rgba(87, 99, 110, 0.16)",
+          };
     const isIsoDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
     const formatIsoDate = (value: Date) =>
       `${value.getFullYear()}-${`${value.getMonth() + 1}`.padStart(2, "0")}-${`${value.getDate()}`.padStart(2, "0")}`;
@@ -1746,6 +1763,7 @@ const aiSdlcSectionNavItems = [
       if (!(platformChart instanceof HTMLElement)) {
         return;
       }
+      const chartTheme = getChartThemeTokens();
 
       if (!platformChartInstance) {
         platformChartInstance = echarts.init(platformChart, undefined, { renderer: "canvas" });
@@ -1806,7 +1824,7 @@ const aiSdlcSectionNavItems = [
             itemWidth: 12,
             itemHeight: 12,
             textStyle: {
-              color: "#162028",
+              color: chartTheme.textStrong,
               fontFamily: "Cascadia Code, Fira Code, monospace",
               fontSize: 12,
               fontWeight: 700,
@@ -1817,11 +1835,11 @@ const aiSdlcSectionNavItems = [
             axisPointer: {
               type: "shadow",
             },
-            backgroundColor: "rgba(255, 255, 255, 0.96)",
-            borderColor: "rgba(22, 32, 40, 0.12)",
+            backgroundColor: chartTheme.tooltipBackground,
+            borderColor: chartTheme.tooltipBorder,
             borderWidth: 1,
             textStyle: {
-              color: "#162028",
+              color: chartTheme.textStrong,
               fontFamily: "Cascadia Code, Fira Code, monospace",
             },
             formatter: (paramsList: unknown) => {
@@ -1851,12 +1869,12 @@ const aiSdlcSectionNavItems = [
             type: "value",
             max: valueMode === "ratio" ? 1 : undefined,
             axisLabel: {
-              color: "#57636e",
+              color: chartTheme.textMuted,
               formatter: (value: number) => (valueMode === "ratio" ? formatPercent(value) : formatInt(value)),
             },
             splitLine: {
               lineStyle: {
-                color: "rgba(87, 99, 110, 0.16)",
+                color: chartTheme.splitLine,
               },
             },
           },
@@ -1867,7 +1885,7 @@ const aiSdlcSectionNavItems = [
               show: false,
             },
             axisLabel: {
-              color: "#162028",
+              color: chartTheme.textStrong,
               fontFamily: "Cascadia Code, Fira Code, monospace",
               fontSize: 12,
               fontWeight: 700,
@@ -1935,6 +1953,7 @@ const aiSdlcSectionNavItems = [
         if (!(repositoryChart instanceof HTMLElement)) {
           return;
         }
+        const chartTheme = getChartThemeTokens();
 
         if (!repositoryChartInstance) {
           repositoryChartInstance = echarts.init(repositoryChart, undefined, { renderer: "canvas" });
@@ -1961,11 +1980,11 @@ const aiSdlcSectionNavItems = [
               axisPointer: {
                 type: "shadow",
               },
-              backgroundColor: "rgba(255, 255, 255, 0.96)",
-              borderColor: "rgba(22, 32, 40, 0.12)",
+              backgroundColor: chartTheme.tooltipBackground,
+              borderColor: chartTheme.tooltipBorder,
               borderWidth: 1,
               textStyle: {
-                color: "#162028",
+                color: chartTheme.textStrong,
                 fontFamily: "Cascadia Code, Fira Code, monospace",
               },
               formatter: (paramsList: unknown) => {
@@ -1984,12 +2003,12 @@ const aiSdlcSectionNavItems = [
               type: "value",
               max: valueMode === "ratio" ? 1 : undefined,
               axisLabel: {
-                color: "#57636e",
+                color: chartTheme.textMuted,
                 formatter: (value: number) => (valueMode === "ratio" ? formatPercent(value) : formatInt(value)),
               },
               splitLine: {
                 lineStyle: {
-                  color: "rgba(87, 99, 110, 0.16)",
+                  color: chartTheme.splitLine,
                 },
               },
             },
@@ -2000,7 +2019,7 @@ const aiSdlcSectionNavItems = [
                 show: false,
               },
               axisLabel: {
-                color: "#162028",
+                color: chartTheme.textStrong,
                 fontFamily: "Cascadia Code, Fira Code, monospace",
                 fontSize: 12,
                 fontWeight: 700,
@@ -2026,7 +2045,7 @@ const aiSdlcSectionNavItems = [
                 label: {
                   show: true,
                   position: "right",
-                  color: "#162028",
+                  color: chartTheme.textStrong,
                   fontFamily: "Cascadia Code, Fira Code, monospace",
                   fontSize: 11,
                   formatter: (params: { data: { rawRepositories: number; value: number } }) =>
@@ -2045,6 +2064,7 @@ const aiSdlcSectionNavItems = [
         if (!(modelChart instanceof HTMLElement)) {
           return;
         }
+        const chartTheme = getChartThemeTokens();
 
         if (!modelChartInstance) {
           modelChartInstance = echarts.init(modelChart, undefined, { renderer: "canvas" });
@@ -2116,7 +2136,7 @@ const aiSdlcSectionNavItems = [
               itemWidth: 12,
               itemHeight: 12,
               textStyle: {
-                color: "#162028",
+                color: chartTheme.textStrong,
                 fontFamily: "Cascadia Code, Fira Code, monospace",
                 fontSize: 12,
                 fontWeight: 700,
@@ -2127,11 +2147,11 @@ const aiSdlcSectionNavItems = [
               axisPointer: {
                 type: "shadow",
               },
-              backgroundColor: "rgba(255, 255, 255, 0.96)",
-              borderColor: "rgba(22, 32, 40, 0.12)",
+              backgroundColor: chartTheme.tooltipBackground,
+              borderColor: chartTheme.tooltipBorder,
               borderWidth: 1,
               textStyle: {
-                color: "#162028",
+                color: chartTheme.textStrong,
                 fontFamily: "Cascadia Code, Fira Code, monospace",
               },
               formatter: (paramsList: unknown) => {
@@ -2163,12 +2183,12 @@ const aiSdlcSectionNavItems = [
               type: "value",
               max: valueMode === "ratio" ? 1 : undefined,
               axisLabel: {
-                color: "#57636e",
+                color: chartTheme.textMuted,
                 formatter: (value: number) => (valueMode === "ratio" ? formatPercent(value) : formatInt(value)),
               },
               splitLine: {
                 lineStyle: {
-                  color: "rgba(87, 99, 110, 0.16)",
+                  color: chartTheme.splitLine,
                 },
               },
             },
@@ -2179,7 +2199,7 @@ const aiSdlcSectionNavItems = [
                 show: false,
               },
               axisLabel: {
-                color: "#162028",
+                color: chartTheme.textStrong,
                 fontFamily: "Cascadia Code, Fira Code, monospace",
                 fontSize: 12,
                 fontWeight: 700,
@@ -2296,6 +2316,9 @@ const aiSdlcSectionNavItems = [
         platformChartInstance?.resize();
         repositoryChartInstance?.resize();
         modelChartInstance?.resize();
+      });
+      document.addEventListener("site-theme-change", () => {
+        renderAll();
       });
       document.addEventListener("pointerdown", (event) => {
         if (!(teamFilter instanceof HTMLElement) || !(event.target instanceof Node)) {

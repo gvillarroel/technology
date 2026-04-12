@@ -966,12 +966,18 @@ async function renderCodeFenceToHtml(code: string, language: string) {
   try {
     return await codeToHtml(code, {
       lang: resolvedLanguage,
-      theme: "github-light",
+      themes: {
+        light: "github-light",
+        dark: "github-dark",
+      },
     });
   } catch {
     return await codeToHtml(code, {
       lang: "text",
-      theme: "github-light",
+      themes: {
+        light: "github-light",
+        dark: "github-dark",
+      },
     });
   }
 }

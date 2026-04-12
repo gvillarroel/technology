@@ -13,6 +13,7 @@ the build uses them to compose the final site.
 ## Pages
 
 - [Data Sources and Build Composition](./data-sources-and-build.md)
+- [Content Authoring Guide](./content-authoring.md)
 
 ## Reading Order
 

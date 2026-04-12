@@ -4,7 +4,7 @@ import type { EChartsType } from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
 import { GridComponent, LegendComponent, TooltipComponent } from "echarts/components";
 import type {
-  PulseAiFileActivity,
+  PulseAiDocWeeklyActivitySeries,
   PulseConventionCoverage,
   PulseDataset,
   PulseLanguageShare,
@@ -57,6 +57,7 @@ function getEmptyDataset(): PulseDataset {
     weeklyActivity: [],
     failures: [],
     aiFileActivity: [],
+    aiDocWeeklyActivity: [],
   };
 }
 
@@ -164,6 +165,25 @@ export function initPulseDashboard() {
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#39;");
+  const isDarkTheme = () => document.documentElement.dataset.theme === "dark";
+  const getChartThemeTokens = () =>
+    isDarkTheme()
+      ? {
+          textStrong: "#d9e6f2",
+          textMuted: "#9fb3c8",
+          tooltipBackground: "rgba(8, 14, 22, 0.96)",
+          tooltipBorder: "rgba(171, 197, 216, 0.16)",
+          splitLine: "rgba(171, 197, 216, 0.14)",
+          pointBorder: "rgba(8, 14, 22, 0.6)",
+        }
+      : {
+          textStrong: "#162028",
+          textMuted: "#57636e",
+          tooltipBackground: "rgba(255, 255, 255, 0.96)",
+          tooltipBorder: "rgba(22, 32, 40, 0.12)",
+          splitLine: "rgba(87, 99, 110, 0.16)",
+          pointBorder: "rgba(22, 32, 40, 0.18)",
+        };
   const parseWeekStart = (value: string) => {
     const parsed = new Date(`${value}T00:00:00Z`);
     return Number.isNaN(parsed.getTime()) ? null : parsed;
@@ -406,10 +426,13 @@ export function initPulseDashboard() {
     }
 
     if (pulseAiFilesMeta) {
-      const visibleAiRepos = pulseDataset.aiFileActivity.filter(
-        (activity: PulseAiFileActivity) => visibleRepoKeys.has(activity.repoKey) && activity.aiFileCount > 0,
+      const visibleAiRepos = pulseDataset.aiDocWeeklyActivity.filter((activity: PulseAiDocWeeklyActivitySeries) =>
+        visibleRepoKeys.has(activity.repoKey),
       ).length;
-      pulseAiFilesMeta.textContent = `${visibleAiRepos} repositories in the visible selection contain AI files`;
+      const totalAiDocCommits = pulseDataset.aiDocWeeklyActivity
+        .filter((activity: PulseAiDocWeeklyActivitySeries) => visibleRepoKeys.has(activity.repoKey))
+        .reduce((sum, activity) => sum + activity.totalCommits, 0);
+      pulseAiFilesMeta.textContent = `${visibleAiRepos} repositories in the visible selection show AI-document history, totaling ${formatInt(totalAiDocCommits)} commits`;
     }
   };
 
@@ -417,6 +440,7 @@ export function initPulseDashboard() {
     if (!(conventionsChartElement instanceof HTMLElement)) {
       return;
     }
+    const chartTheme = getChartThemeTokens();
 
     if (!conventionsChartInstance) {
       conventionsChartInstance = echarts.init(conventionsChartElement, undefined, { renderer: "canvas" });
@@ -471,7 +495,7 @@ export function initPulseDashboard() {
           itemWidth: 12,
           itemHeight: 12,
           textStyle: {
-            color: "#162028",
+            color: chartTheme.textStrong,
             fontFamily: "Cascadia Code, Fira Code, monospace",
             fontSize: 12,
             fontWeight: 700,
@@ -480,11 +504,11 @@ export function initPulseDashboard() {
         tooltip: {
           trigger: "axis",
           axisPointer: { type: "shadow" },
-          backgroundColor: "rgba(255, 255, 255, 0.96)",
-          borderColor: "rgba(22, 32, 40, 0.12)",
+          backgroundColor: chartTheme.tooltipBackground,
+          borderColor: chartTheme.tooltipBorder,
           borderWidth: 1,
           textStyle: {
-            color: "#162028",
+            color: chartTheme.textStrong,
             fontFamily: "Cascadia Code, Fira Code, monospace",
           },
           formatter: (paramsList: unknown) => {
@@ -511,11 +535,11 @@ export function initPulseDashboard() {
           type: "value",
           max: pulseValueMode === "ratio" ? 1 : undefined,
           axisLabel: {
-            color: "#57636e",
+            color: chartTheme.textMuted,
             formatter: (value: number) => (pulseValueMode === "ratio" ? formatPercent(value) : formatInt(value)),
           },
           splitLine: {
-            lineStyle: { color: "rgba(87, 99, 110, 0.16)" },
+            lineStyle: { color: chartTheme.splitLine },
           },
         },
         yAxis: {
@@ -524,7 +548,7 @@ export function initPulseDashboard() {
           data: conventionOrder.map((convention) => convention.label),
           axisTick: { show: false },
           axisLabel: {
-            color: "#162028",
+            color: chartTheme.textStrong,
             fontFamily: "Cascadia Code, Fira Code, monospace",
             fontSize: 12,
             fontWeight: 700,
@@ -556,6 +580,7 @@ export function initPulseDashboard() {
     if (!(sizeChartElement instanceof HTMLElement)) {
       return;
     }
+    const chartTheme = getChartThemeTokens();
 
     if (!sizeChartInstance) {
       sizeChartInstance = echarts.init(sizeChartElement, undefined, { renderer: "canvas" });
@@ -591,11 +616,11 @@ export function initPulseDashboard() {
         tooltip: {
           trigger: "axis",
           axisPointer: { type: "shadow" },
-          backgroundColor: "rgba(255, 255, 255, 0.96)",
-          borderColor: "rgba(22, 32, 40, 0.12)",
+          backgroundColor: chartTheme.tooltipBackground,
+          borderColor: chartTheme.tooltipBorder,
           borderWidth: 1,
           textStyle: {
-            color: "#162028",
+            color: chartTheme.textStrong,
             fontFamily: "Cascadia Code, Fira Code, monospace",
           },
           formatter: (paramsList: unknown) => {
@@ -620,11 +645,11 @@ export function initPulseDashboard() {
           type: "value",
           max: pulseValueMode === "ratio" ? 1 : undefined,
           axisLabel: {
-            color: "#57636e",
+            color: chartTheme.textMuted,
             formatter: (value: number) => (pulseValueMode === "ratio" ? formatPercent(value) : formatCompactInt(value)),
           },
           splitLine: {
-            lineStyle: { color: "rgba(87, 99, 110, 0.16)" },
+            lineStyle: { color: chartTheme.splitLine },
           },
         },
         yAxis: {
@@ -633,7 +658,7 @@ export function initPulseDashboard() {
           data: visibleRows.map((row) => row.name),
           axisTick: { show: false },
           axisLabel: {
-            color: "#162028",
+            color: chartTheme.textStrong,
             fontFamily: "Cascadia Code, Fira Code, monospace",
             fontSize: 12,
             fontWeight: 700,
@@ -654,7 +679,7 @@ export function initPulseDashboard() {
             label: {
               show: true,
               position: "right",
-              color: "#162028",
+              color: chartTheme.textStrong,
               fontFamily: "Cascadia Code, Fira Code, monospace",
               fontSize: 11,
               formatter: (params: { value: number }) =>
@@ -671,6 +696,7 @@ export function initPulseDashboard() {
     if (!(weeklyChartElement instanceof HTMLElement)) {
       return;
     }
+    const chartTheme = getChartThemeTokens();
 
     if (!weeklyChartInstance) {
       weeklyChartInstance = echarts.init(weeklyChartElement, undefined, { renderer: "canvas" });
@@ -729,7 +755,7 @@ export function initPulseDashboard() {
           itemWidth: 12,
           itemHeight: 12,
           textStyle: {
-            color: "#162028",
+            color: chartTheme.textStrong,
             fontFamily: "Cascadia Code, Fira Code, monospace",
             fontSize: 12,
             fontWeight: 700,
@@ -737,11 +763,11 @@ export function initPulseDashboard() {
         },
         tooltip: {
           trigger: "axis",
-          backgroundColor: "rgba(255, 255, 255, 0.96)",
-          borderColor: "rgba(22, 32, 40, 0.12)",
+          backgroundColor: chartTheme.tooltipBackground,
+          borderColor: chartTheme.tooltipBorder,
           borderWidth: 1,
           textStyle: {
-            color: "#162028",
+            color: chartTheme.textStrong,
             fontFamily: "Cascadia Code, Fira Code, monospace",
           },
           formatter: (paramsList: unknown) => {
@@ -765,7 +791,7 @@ export function initPulseDashboard() {
           type: "category",
           data: weekOrder,
           axisLabel: {
-            color: "#57636e",
+            color: chartTheme.textMuted,
             rotate: 30,
           },
           axisLine: {
@@ -775,11 +801,11 @@ export function initPulseDashboard() {
         yAxis: {
           type: "value",
           axisLabel: {
-            color: "#57636e",
+            color: chartTheme.textMuted,
             formatter: (value: number) => formatInt(value),
           },
           splitLine: {
-            lineStyle: { color: "rgba(87, 99, 110, 0.16)" },
+            lineStyle: { color: chartTheme.splitLine },
           },
         },
         series: visibleRows.map((row) => {
@@ -816,6 +842,7 @@ export function initPulseDashboard() {
     if (!(languageChartElement instanceof HTMLElement)) {
       return;
     }
+    const chartTheme = getChartThemeTokens();
 
     if (!languageChartInstance) {
       languageChartInstance = echarts.init(languageChartElement, undefined, { renderer: "canvas" });
@@ -863,11 +890,11 @@ export function initPulseDashboard() {
         tooltip: {
           trigger: "axis",
           axisPointer: { type: "shadow" },
-          backgroundColor: "rgba(255, 255, 255, 0.96)",
-          borderColor: "rgba(22, 32, 40, 0.12)",
+          backgroundColor: chartTheme.tooltipBackground,
+          borderColor: chartTheme.tooltipBorder,
           borderWidth: 1,
           textStyle: {
-            color: "#162028",
+            color: chartTheme.textStrong,
             fontFamily: "Cascadia Code, Fira Code, monospace",
           },
           formatter: (paramsList: unknown) => {
@@ -899,11 +926,11 @@ export function initPulseDashboard() {
           type: "value",
           max: pulseValueMode === "ratio" ? 1 : undefined,
           axisLabel: {
-            color: "#57636e",
+            color: chartTheme.textMuted,
             formatter: (value: number) => (pulseValueMode === "ratio" ? formatPercent(value) : formatCompactInt(value)),
           },
           splitLine: {
-            lineStyle: { color: "rgba(87, 99, 110, 0.16)" },
+            lineStyle: { color: chartTheme.splitLine },
           },
         },
         yAxis: {
@@ -912,7 +939,7 @@ export function initPulseDashboard() {
           data: rows.map((row) => row.language),
           axisTick: { show: false },
           axisLabel: {
-            color: "#162028",
+            color: chartTheme.textStrong,
             fontFamily: "Cascadia Code, Fira Code, monospace",
             fontSize: 12,
             fontWeight: 700,
@@ -926,7 +953,7 @@ export function initPulseDashboard() {
           itemWidth: 12,
           itemHeight: 12,
           textStyle: {
-            color: "#162028",
+            color: chartTheme.textStrong,
             fontFamily: "Cascadia Code, Fira Code, monospace",
             fontSize: 12,
             fontWeight: 700,
@@ -961,6 +988,7 @@ export function initPulseDashboard() {
     if (!(complexityChartElement instanceof HTMLElement)) {
       return;
     }
+    const chartTheme = getChartThemeTokens();
 
     if (!complexityChartInstance) {
       complexityChartInstance = echarts.init(complexityChartElement, undefined, { renderer: "canvas" });
@@ -992,7 +1020,7 @@ export function initPulseDashboard() {
           itemWidth: 12,
           itemHeight: 12,
           textStyle: {
-            color: "#162028",
+            color: chartTheme.textStrong,
             fontFamily: "Cascadia Code, Fira Code, monospace",
             fontSize: 12,
             fontWeight: 700,
@@ -1000,11 +1028,11 @@ export function initPulseDashboard() {
         },
         tooltip: {
           trigger: "item",
-          backgroundColor: "rgba(255, 255, 255, 0.96)",
-          borderColor: "rgba(22, 32, 40, 0.12)",
+          backgroundColor: chartTheme.tooltipBackground,
+          borderColor: chartTheme.tooltipBorder,
           borderWidth: 1,
           textStyle: {
-            color: "#162028",
+            color: chartTheme.textStrong,
             fontFamily: "Cascadia Code, Fira Code, monospace",
           },
           formatter: (params: unknown) => {
@@ -1041,11 +1069,11 @@ export function initPulseDashboard() {
           nameGap: 32,
           max: pulseValueMode === "ratio" ? 1 : undefined,
           axisLabel: {
-            color: "#57636e",
+            color: chartTheme.textMuted,
             formatter: (value: number) => (pulseValueMode === "ratio" ? formatPercent(value) : formatCompactInt(value)),
           },
           splitLine: {
-            lineStyle: { color: "rgba(87, 99, 110, 0.16)" },
+            lineStyle: { color: chartTheme.splitLine },
           },
         },
         yAxis: {
@@ -1055,11 +1083,11 @@ export function initPulseDashboard() {
           nameGap: 52,
           max: pulseValueMode === "ratio" ? 1 : undefined,
           axisLabel: {
-            color: "#57636e",
+            color: chartTheme.textMuted,
             formatter: (value: number) => (pulseValueMode === "ratio" ? formatPercent(value) : formatCompactInt(value)),
           },
           splitLine: {
-            lineStyle: { color: "rgba(87, 99, 110, 0.16)" },
+            lineStyle: { color: chartTheme.splitLine },
           },
         },
         series: visibleTeams.map((team) => ({
@@ -1075,7 +1103,7 @@ export function initPulseDashboard() {
           },
           itemStyle: {
             color: team.color,
-            borderColor: "rgba(22, 32, 40, 0.18)",
+            borderColor: chartTheme.pointBorder,
             borderWidth: 1,
           },
           data: visibleRows
@@ -1102,6 +1130,7 @@ export function initPulseDashboard() {
     if (!(documentationPostureChartElement instanceof HTMLElement)) {
       return;
     }
+    const chartTheme = getChartThemeTokens();
 
     if (!documentationPostureChartInstance) {
       documentationPostureChartInstance = echarts.init(documentationPostureChartElement, undefined, {
@@ -1148,7 +1177,7 @@ export function initPulseDashboard() {
           itemWidth: 12,
           itemHeight: 12,
           textStyle: {
-            color: "#162028",
+            color: chartTheme.textStrong,
             fontFamily: "Cascadia Code, Fira Code, monospace",
             fontSize: 12,
             fontWeight: 700,
@@ -1157,11 +1186,11 @@ export function initPulseDashboard() {
         tooltip: {
           trigger: "axis",
           axisPointer: { type: "shadow" },
-          backgroundColor: "rgba(255, 255, 255, 0.96)",
-          borderColor: "rgba(22, 32, 40, 0.12)",
+          backgroundColor: chartTheme.tooltipBackground,
+          borderColor: chartTheme.tooltipBorder,
           borderWidth: 1,
           textStyle: {
-            color: "#162028",
+            color: chartTheme.textStrong,
             fontFamily: "Cascadia Code, Fira Code, monospace",
           },
           formatter: (paramsList: unknown) => {
@@ -1187,11 +1216,11 @@ export function initPulseDashboard() {
           type: "value",
           max: pulseValueMode === "ratio" ? 1 : undefined,
           axisLabel: {
-            color: "#57636e",
+            color: chartTheme.textMuted,
             formatter: (value: number) => (pulseValueMode === "ratio" ? formatPercent(value) : formatInt(value)),
           },
           splitLine: {
-            lineStyle: { color: "rgba(87, 99, 110, 0.16)" },
+            lineStyle: { color: chartTheme.splitLine },
           },
         },
         yAxis: {
@@ -1200,7 +1229,7 @@ export function initPulseDashboard() {
           data: visibleTeamGroups.map((row) => row.name),
           axisTick: { show: false },
           axisLabel: {
-            color: "#162028",
+            color: chartTheme.textStrong,
             fontFamily: "Cascadia Code, Fira Code, monospace",
             fontSize: 12,
             fontWeight: 700,
@@ -1231,6 +1260,7 @@ export function initPulseDashboard() {
     if (!(recencyChartElement instanceof HTMLElement)) {
       return;
     }
+    const chartTheme = getChartThemeTokens();
 
     if (!recencyChartInstance) {
       recencyChartInstance = echarts.init(recencyChartElement, undefined, { renderer: "canvas" });
@@ -1297,7 +1327,7 @@ export function initPulseDashboard() {
           itemWidth: 12,
           itemHeight: 12,
           textStyle: {
-            color: "#162028",
+            color: chartTheme.textStrong,
             fontFamily: "Cascadia Code, Fira Code, monospace",
             fontSize: 12,
             fontWeight: 700,
@@ -1306,11 +1336,11 @@ export function initPulseDashboard() {
         tooltip: {
           trigger: "axis",
           axisPointer: { type: "shadow" },
-          backgroundColor: "rgba(255, 255, 255, 0.96)",
-          borderColor: "rgba(22, 32, 40, 0.12)",
+          backgroundColor: chartTheme.tooltipBackground,
+          borderColor: chartTheme.tooltipBorder,
           borderWidth: 1,
           textStyle: {
-            color: "#162028",
+            color: chartTheme.textStrong,
             fontFamily: "Cascadia Code, Fira Code, monospace",
           },
           formatter: (paramsList: unknown) => {
@@ -1337,11 +1367,11 @@ export function initPulseDashboard() {
           type: "value",
           max: pulseValueMode === "ratio" ? 1 : undefined,
           axisLabel: {
-            color: "#57636e",
+            color: chartTheme.textMuted,
             formatter: (value: number) => (pulseValueMode === "ratio" ? formatPercent(value) : formatInt(value)),
           },
           splitLine: {
-            lineStyle: { color: "rgba(87, 99, 110, 0.16)" },
+            lineStyle: { color: chartTheme.splitLine },
           },
         },
         yAxis: {
@@ -1350,7 +1380,7 @@ export function initPulseDashboard() {
           data: visibleTeamGroups.map((row) => row.name),
           axisTick: { show: false },
           axisLabel: {
-            color: "#162028",
+            color: chartTheme.textStrong,
             fontFamily: "Cascadia Code, Fira Code, monospace",
             fontSize: 12,
             fontWeight: 700,
@@ -1381,6 +1411,7 @@ export function initPulseDashboard() {
     if (!(aiFilesChartElement instanceof HTMLElement)) {
       return;
     }
+    const chartTheme = getChartThemeTokens();
 
     if (!aiFilesChartInstance) {
       aiFilesChartInstance = echarts.init(aiFilesChartElement, undefined, { renderer: "canvas" });
@@ -1389,33 +1420,45 @@ export function initPulseDashboard() {
     const visibleRepoKeys = new Set(visibleRepos.map((repo: PulseRepoFilter) => repo.repoKey));
     const visibleRows = getVisibleTeamGroups(visibleRepos)
       .map((team) => {
-        const aiRows = pulseDataset.aiFileActivity.filter(
-          (activity: PulseAiFileActivity) => visibleRepoKeys.has(activity.repoKey) && activity.teamSlug === team.slug,
+        const aiRows = pulseDataset.aiDocWeeklyActivity.filter(
+          (activity: PulseAiDocWeeklyActivitySeries) => visibleRepoKeys.has(activity.repoKey) && activity.teamSlug === team.slug,
         );
+        const weeklyCommits = new Map<string, number>();
+        let totalCommits = 0;
+
+        aiRows.forEach((row) => {
+          row.points.forEach((point) => {
+            totalCommits += point.commitCount;
+            weeklyCommits.set(point.weekStart, (weeklyCommits.get(point.weekStart) ?? 0) + point.commitCount);
+          });
+        });
+
         return {
           ...team,
           repositoryCount: team.repositories.length,
-          aiRepositories: aiRows.filter((row) => row.aiFileCount > 0).length,
-          aiFileCount: aiRows.reduce((sum, row) => sum + row.aiFileCount, 0),
-          aiLineCount: aiRows.reduce((sum, row) => sum + row.aiLineCount, 0),
-          aiBytes: aiRows.reduce((sum, row) => sum + row.aiBytes, 0),
-          agentsPresence: aiRows.filter((row) => row.agentsCount > 0).length,
-          claudePresence: aiRows.filter((row) => row.claudeCount > 0).length,
-          copilotPresence: aiRows.filter((row) => row.copilotCount > 0).length,
-          genericPresence: aiRows.filter((row) => row.genericAiDocCount > 0).length,
+          aiRepositories: aiRows.length,
+          totalCommits,
+          weeklyCommits,
         };
       })
-      .sort((left, right) => right.aiRepositories - left.aiRepositories || right.aiFileCount - left.aiFileCount || left.name.localeCompare(right.name));
+      .sort((left, right) => right.totalCommits - left.totalCommits || right.aiRepositories - left.aiRepositories || left.name.localeCompare(right.name));
+
+    const weeks = Array.from(new Set(visibleRows.flatMap((row) => Array.from(row.weeklyCommits.keys())))).sort((left, right) =>
+      left.localeCompare(right),
+    );
+    const weeklyTotals = weeks.map((week) =>
+      visibleRows.reduce((sum, row) => sum + (row.weeklyCommits.get(week) ?? 0), 0),
+    );
 
     aiFilesChartInstance.setOption(
       {
         animationDuration: 250,
         animationDurationUpdate: 250,
         grid: {
-          left: 132,
+          left: 72,
           right: 32,
           top: 72,
-          bottom: 14,
+          bottom: 48,
         },
         legend: {
           type: "scroll",
@@ -1425,7 +1468,7 @@ export function initPulseDashboard() {
           itemWidth: 12,
           itemHeight: 12,
           textStyle: {
-            color: "#162028",
+            color: chartTheme.textStrong,
             fontFamily: "Cascadia Code, Fira Code, monospace",
             fontSize: 12,
             fontWeight: 700,
@@ -1433,109 +1476,86 @@ export function initPulseDashboard() {
         },
         tooltip: {
           trigger: "axis",
-          axisPointer: { type: "shadow" },
-          backgroundColor: "rgba(255, 255, 255, 0.96)",
-          borderColor: "rgba(22, 32, 40, 0.12)",
+          axisPointer: { type: "line" },
+          backgroundColor: chartTheme.tooltipBackground,
+          borderColor: chartTheme.tooltipBorder,
           borderWidth: 1,
           textStyle: {
-            color: "#162028",
+            color: chartTheme.textStrong,
             fontFamily: "Cascadia Code, Fira Code, monospace",
           },
           formatter: (paramsList: unknown) => {
             const points = Array.isArray(paramsList) ? paramsList : [paramsList];
-            const teamName = String((points[0] as { axisValueLabel?: string })?.axisValueLabel ?? "");
-            const row = visibleRows.find((entry) => entry.name === teamName);
-            if (!row) {
-              return teamName;
-            }
+            const week = String((points[0] as { axisValueLabel?: string })?.axisValueLabel ?? "");
+            const weekIndex = weeks.findIndex((entry) => entry === week);
+            const weekTotal = weekIndex >= 0 ? weeklyTotals[weekIndex] ?? 0 : 0;
+            const lines = points
+              .map((point) => {
+                const seriesPoint = point as { seriesName?: string };
+                const row = visibleRows.find((entry) => entry.name === seriesPoint.seriesName);
+                if (!row) {
+                  return "";
+                }
+                const raw = row.weeklyCommits.get(week) ?? 0;
+                const value = pulseValueMode === "ratio" ? (weekTotal > 0 ? raw / weekTotal : 0) : raw;
+                return `${escapeHtml(row.name)}: ${pulseValueMode === "ratio" ? formatPercent(value) : formatInt(raw)} (${formatInt(row.aiRepositories)} repos)`;
+              })
+              .filter(Boolean);
+
             return [
-              `<strong>${escapeHtml(row.name)}</strong>`,
-              `Repositories in view: ${formatInt(row.repositoryCount)}`,
-              `Repositories with AI files: ${formatInt(row.aiRepositories)}`,
-              `AI files: ${formatInt(row.aiFileCount)}`,
-              `AI lines: ${formatCompactInt(row.aiLineCount)}`,
-              `AI bytes: ${formatCompactInt(row.aiBytes)}`,
-              `AGENTS repos: ${formatInt(row.agentsPresence)} • CLAUDE repos: ${formatInt(row.claudePresence)} • Copilot repos: ${formatInt(row.copilotPresence)} • Generic repos: ${formatInt(row.genericPresence)}`,
+              `<strong>${escapeHtml(week)}</strong>`,
+              `Visible AI-doc commits: ${formatInt(weekTotal)}`,
+              ...lines,
             ].join("<br/>");
           },
         },
         xAxis: {
-          type: "value",
-          max: pulseValueMode === "ratio" ? 1 : undefined,
+          type: "category",
+          data: weeks,
+          boundaryGap: false,
           axisLabel: {
-            color: "#57636e",
-            formatter: (value: number) => (pulseValueMode === "ratio" ? formatPercent(value) : formatInt(value)),
+            color: chartTheme.textMuted,
+            rotate: 30,
           },
           splitLine: {
-            lineStyle: { color: "rgba(87, 99, 110, 0.16)" },
+            lineStyle: { color: chartTheme.splitLine },
           },
         },
         yAxis: {
-          type: "category",
-          inverse: true,
-          data: visibleRows.map((row) => row.name),
-          axisTick: { show: false },
+          type: "value",
+          max: pulseValueMode === "ratio" ? 1 : undefined,
           axisLabel: {
-            color: "#162028",
-            fontFamily: "Cascadia Code, Fira Code, monospace",
-            fontSize: 12,
-            fontWeight: 700,
+            color: chartTheme.textMuted,
+            formatter: (value: number) => (pulseValueMode === "ratio" ? formatPercent(value) : formatInt(value)),
+          },
+          splitLine: {
+            lineStyle: { color: chartTheme.splitLine },
           },
         },
-        series: [
-          {
-            name: "AGENTS.md",
-            type: "bar",
-            stack: "pulse-ai-files",
-            barMaxWidth: 28,
-            itemStyle: { color: "#007298", borderRadius: [0, 0, 0, 0] },
-            data: visibleRows.map((row) => ({
-              value:
-                pulseValueMode === "ratio"
-                  ? (row.repositoryCount > 0 ? row.agentsPresence / row.repositoryCount : 0)
-                  : row.agentsPresence,
-            })),
+        series: visibleRows.map((row) => ({
+          name: row.name,
+          type: "line",
+          smooth: false,
+          symbol: "circle",
+          symbolSize: 8,
+          showSymbol: weeks.length <= 18,
+          lineStyle: {
+            width: 3,
+            color: row.color,
           },
-          {
-            name: "CLAUDE.md",
-            type: "bar",
-            stack: "pulse-ai-files",
-            barMaxWidth: 28,
-            itemStyle: { color: "#45842a", borderRadius: [0, 0, 0, 0] },
-            data: visibleRows.map((row) => ({
-              value:
-                pulseValueMode === "ratio"
-                  ? (row.repositoryCount > 0 ? row.claudePresence / row.repositoryCount : 0)
-                  : row.claudePresence,
-            })),
+          itemStyle: {
+            color: row.color,
+            borderColor: chartTheme.pointBorder,
+            borderWidth: 1,
           },
-          {
-            name: "Copilot instructions",
-            type: "bar",
-            stack: "pulse-ai-files",
-            barMaxWidth: 28,
-            itemStyle: { color: "#9e1b32", borderRadius: [0, 0, 0, 0] },
-            data: visibleRows.map((row) => ({
-              value:
-                pulseValueMode === "ratio"
-                  ? (row.repositoryCount > 0 ? row.copilotPresence / row.repositoryCount : 0)
-                  : row.copilotPresence,
-            })),
+          emphasis: {
+            focus: "series",
           },
-          {
-            name: "Generic AI docs",
-            type: "bar",
-            stack: "pulse-ai-files",
-            barMaxWidth: 28,
-            itemStyle: { color: "#652f6c", borderRadius: [0, 0, 0, 0] },
-            data: visibleRows.map((row) => ({
-              value:
-                pulseValueMode === "ratio"
-                  ? (row.repositoryCount > 0 ? row.genericPresence / row.repositoryCount : 0)
-                  : row.genericPresence,
-            })),
-          },
-        ],
+          data: weeks.map((week, index) => {
+            const raw = row.weeklyCommits.get(week) ?? 0;
+            return pulseValueMode === "ratio" ? (weeklyTotals[index] > 0 ? raw / weeklyTotals[index] : 0) : raw;
+          }),
+        })),
       },
       true,
     );
@@ -1657,6 +1677,10 @@ export function initPulseDashboard() {
     documentationPostureChartInstance?.resize();
     recencyChartInstance?.resize();
     aiFilesChartInstance?.resize();
+  });
+
+  document.addEventListener("site-theme-change", () => {
+    renderPulseDashboard();
   });
 
   document.addEventListener(

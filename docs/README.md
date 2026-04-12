@@ -88,8 +88,8 @@ The Communities area tracks internal and external groups that shape technical pr
 shared standards, and cross-team knowledge exchange.
 
 - Route: [`/communities/`](/communities/)
-- Data source: `data/ai-communities.yaml`
-- Implementation: `src/pages/communities.*`
+- Data source: `data/tech-communities.yaml`
+- Implementation: `src/lib/tech-communities.ts`, `src/pages/communities.*`
 
 ## Documentation
 

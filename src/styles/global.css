@@ -21,6 +21,15 @@
   --muted: #57636e;
   --border: rgba(51, 62, 72, 0.16);
   --shadow: 0 24px 80px rgba(34, 44, 52, 0.12);
+  --panel-surface: rgba(255, 255, 255, 0.96);
+  --panel-surface-soft: rgba(255, 255, 255, 0.78);
+  --panel-surface-strong: rgba(255, 255, 255, 0.92);
+  --panel-elevated: rgba(255, 255, 255, 0.98);
+  --page-gradient-top: #ffffff;
+  --page-gradient-bottom: #fbfbfb;
+  --page-glow-primary: rgba(0, 114, 152, 0.06);
+  --page-glow-secondary: rgba(51, 62, 72, 0.06);
+  --code-block-background: #ffffff;
   --terminal-bg: #171a2f;
   --terminal-panel: #1f2340;
   --terminal-border: rgba(190, 199, 255, 0.16);
@@ -30,6 +39,27 @@
   --terminal-green: #77d88a;
   --terminal-blue: #8dc8ff;
   font-family: var(--font-family-open-sans);
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --page-background: #071018;
+  --surface: rgba(12, 24, 34, 0.78);
+  --surface-strong: rgba(12, 24, 34, 0.94);
+  --text: #d4dde5;
+  --heading: #eef4f8;
+  --muted: #96a8b6;
+  --border: rgba(171, 197, 216, 0.16);
+  --shadow: 0 28px 90px rgba(0, 0, 0, 0.34);
+  --panel-surface: rgba(12, 24, 34, 0.96);
+  --panel-surface-soft: rgba(17, 31, 43, 0.82);
+  --panel-surface-strong: rgba(15, 28, 39, 0.92);
+  --panel-elevated: rgba(18, 33, 45, 0.98);
+  --page-gradient-top: #0a141d;
+  --page-gradient-bottom: #071018;
+  --page-glow-primary: rgba(0, 114, 152, 0.16);
+  --page-glow-secondary: rgba(158, 27, 50, 0.12);
+  --code-block-background: #0d1720;
 }
 
 * {
@@ -62,9 +92,9 @@ body::before {
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(circle at 10vw 8vh, rgba(0, 114, 152, 0.06), transparent 18rem),
-    radial-gradient(circle at calc(100vw - 12vw) 12vh, rgba(51, 62, 72, 0.06), transparent 18rem),
-    linear-gradient(180deg, #ffffff 0%, #fbfbfb 100%);
+    radial-gradient(circle at 10vw 8vh, var(--page-glow-primary), transparent 18rem),
+    radial-gradient(circle at calc(100vw - 12vw) 12vh, var(--page-glow-secondary), transparent 18rem),
+    linear-gradient(180deg, var(--page-gradient-top) 0%, var(--page-gradient-bottom) 100%);
   background-repeat: no-repeat;
 }
 
@@ -89,6 +119,54 @@ code {
   word-wrap: normal;
   direction: ltr;
   -webkit-font-smoothing: antialiased;
+}
+
+.theme-toggle {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.75rem;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel-surface) 92%, transparent);
+  color: var(--heading);
+  box-shadow: 0 16px 40px rgba(22, 32, 40, 0.16);
+  backdrop-filter: blur(18px) saturate(1.08);
+  -webkit-backdrop-filter: blur(18px) saturate(1.08);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease;
+}
+
+.theme-toggle:hover,
+.theme-toggle:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(0, 114, 152, 0.22);
+  box-shadow: 0 18px 44px rgba(22, 32, 40, 0.22);
+}
+
+.theme-toggle:focus-visible {
+  outline: 2px solid rgba(0, 114, 152, 0.22);
+  outline-offset: 3px;
+}
+
+.theme-toggle-icon {
+  font-size: 1.1rem;
+}
+
+.theme-toggle-label {
+  font-size: 0.85rem;
+  line-height: 1;
 }
 
 .shell {
@@ -3479,6 +3557,7 @@ code {
   border-radius: 1rem;
   border: 1px solid rgba(51, 62, 72, 0.08);
   box-shadow: 0 16px 36px rgba(22, 32, 40, 0.04);
+  background: var(--code-block-background) !important;
   overflow: auto;
 }
 
@@ -3498,6 +3577,18 @@ code {
 
 .docs-code-block pre.shiki .line {
   display: block;
+}
+
+html[data-theme="light"] .docs-code-block pre.shiki,
+html[data-theme="light"] .docs-code-block pre.shiki span {
+  color: var(--shiki-light) !important;
+  background-color: var(--shiki-light-bg) !important;
+}
+
+html[data-theme="dark"] .docs-code-block pre.shiki,
+html[data-theme="dark"] .docs-code-block pre.shiki span {
+  color: var(--shiki-dark) !important;
+  background-color: var(--shiki-dark-bg) !important;
 }
 
 .docs-code-block-header {
@@ -3614,6 +3705,420 @@ pre.code-copy-target {
 
 .docs-reference-pagination-link.is-next {
   text-align: right;
+}
+
+html[data-theme="dark"] .standard-nav-group-panel,
+html[data-theme="dark"] .standard-search,
+html[data-theme="dark"] .standard-subnav-link,
+html[data-theme="dark"] .standard-page-intro-pill,
+html[data-theme="dark"] .standard-toggle-group,
+html[data-theme="dark"] .standard-floating-rail.is-inline-top .standard-toggle-group,
+html[data-theme="dark"] .standard-select,
+html[data-theme="dark"] .models-region-chip,
+html[data-theme="dark"] .metrics-team-panel,
+html[data-theme="dark"] .docs-code-block-title,
+html[data-theme="dark"] .docs-code-block-meta,
+html[data-theme="dark"] .code-copy-button,
+html[data-theme="dark"] .docs-reference-pagination-link,
+html[data-theme="dark"] .button-secondary,
+html[data-theme="dark"] .info-card {
+  background: var(--panel-surface-soft);
+  border-color: var(--border);
+  color: var(--heading);
+}
+
+html[data-theme="dark"] .standard-search:hover,
+html[data-theme="dark"] .standard-search:focus-within,
+html[data-theme="dark"] .standard-nav-group-panel,
+html[data-theme="dark"] .metrics-team-panel {
+  background: var(--panel-surface);
+}
+
+html[data-theme="dark"] .standard-nav-link:hover,
+html[data-theme="dark"] .standard-nav-link:focus-visible,
+html[data-theme="dark"] .standard-nav-group-summary:hover,
+html[data-theme="dark"] .standard-nav-group-summary:focus-visible,
+html[data-theme="dark"] .standard-subnav-link:hover,
+html[data-theme="dark"] .standard-subnav-link:focus-visible,
+html[data-theme="dark"] .code-copy-button:hover,
+html[data-theme="dark"] .code-copy-button:focus-visible,
+html[data-theme="dark"] .button-secondary:hover,
+html[data-theme="dark"] .button-secondary:focus-visible {
+  background: rgba(0, 114, 152, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(0, 114, 152, 0.18);
+}
+
+html[data-theme="dark"] .standard-nav-link[aria-current="page"],
+html[data-theme="dark"] .standard-nav-group[data-current="true"] > .standard-nav-group-summary,
+html[data-theme="dark"] .standard-nav-group-panel a[aria-current="page"],
+html[data-theme="dark"] .standard-subnav-link[aria-current="page"],
+html[data-theme="dark"] .standard-toggle-button.is-active {
+  background: rgba(0, 114, 152, 0.2);
+  box-shadow: inset 0 0 0 1px rgba(0, 114, 152, 0.24);
+}
+
+html[data-theme="dark"] .docs-code-block-badge {
+  background: rgba(0, 114, 152, 0.18);
+  color: #9edfff;
+}
+
+html[data-theme="dark"] .docs-code-block-title {
+  background: rgba(171, 197, 216, 0.08);
+}
+
+html[data-theme="dark"] .docs-code-block-meta,
+html[data-theme="dark"] .code-copy-button-icon,
+html[data-theme="dark"] .metrics-team-trigger-hint,
+html[data-theme="dark"] .standard-nav-group-icon {
+  color: var(--muted);
+}
+
+html[data-theme="dark"] .models-source-pill-vertex-ai-model-garden,
+html[data-theme="dark"] .models-status-pill.is-explore {
+  color: #9edfff;
+}
+
+html[data-theme="dark"] .models-source-pill-ollama,
+html[data-theme="dark"] .models-status-pill.is-approved,
+html[data-theme="dark"] .status-pill {
+  color: #a7d79a;
+}
+
+html[data-theme="dark"] .models-status-pill.is-blacklisted {
+  color: #ffb9c7;
+}
+
+html[data-theme="dark"] .radar-ring-pill-adopt {
+  background: rgba(69, 132, 42, 0.18);
+  border-color: rgba(167, 215, 154, 0.26);
+  color: #a7d79a;
+}
+
+html[data-theme="dark"] .radar-ring-pill-explore {
+  background: rgba(0, 114, 152, 0.18);
+  border-color: rgba(158, 223, 255, 0.22);
+  color: #9edfff;
+}
+
+html[data-theme="dark"] .radar-ring-pill-to-evaluate {
+  background: rgba(241, 195, 25, 0.18);
+  border-color: rgba(255, 228, 128, 0.24);
+  color: #ffe480;
+}
+
+html[data-theme="dark"] .radar-ring-pill-endure {
+  background: rgba(231, 114, 4, 0.16);
+  border-color: rgba(255, 188, 121, 0.22);
+  color: #ffbc79;
+}
+
+html[data-theme="dark"] .radar-ring-pill-retired {
+  background: rgba(158, 27, 50, 0.18);
+  border-color: rgba(255, 185, 199, 0.24);
+  color: #ffb9c7;
+}
+
+html[data-theme="dark"] .docs-markdown pre:not(.shiki),
+html[data-theme="dark"] .docs-markdown code:not(pre code) {
+  background: rgba(171, 197, 216, 0.08);
+}
+
+html[data-theme="dark"] .standard-empty-state {
+  border-color: rgba(255, 185, 199, 0.24);
+  background: rgba(158, 27, 50, 0.16);
+  color: #ffd7df;
+}
+
+html[data-theme="dark"] .docs-index-metric-card,
+html[data-theme="dark"] .docs-library-card,
+html[data-theme="dark"] .docs-article,
+html[data-theme="dark"] .docs-recent-card,
+html[data-theme="dark"] .docs-search-result-card,
+html[data-theme="dark"] .docs-page-card,
+html[data-theme="dark"] .ai-sdlc-card,
+html[data-theme="dark"] .community-card,
+html[data-theme="dark"] .adr-card,
+html[data-theme="dark"] .docs-index-view-toggle,
+html[data-theme="dark"] .docs-reference-toc-card,
+html[data-theme="dark"] .docs-mobile-tool,
+html[data-theme="dark"] .docs-reference-section-link,
+html[data-theme="dark"] .docs-repo-pages-link,
+html[data-theme="dark"] .cloud-provider-section,
+html[data-theme="dark"] .skills-toggle,
+html[data-theme="dark"] .harness-install-block {
+  border-color: rgba(171, 197, 216, 0.14);
+  background: rgba(15, 28, 39, 0.88);
+  box-shadow: 0 22px 56px rgba(0, 0, 0, 0.2);
+}
+
+html[data-theme="dark"] .ai-sdlc-card:hover,
+html[data-theme="dark"] .ai-sdlc-card:focus-within {
+  border-color: rgba(88, 198, 234, 0.24);
+  background: rgba(18, 33, 46, 0.94);
+  box-shadow: 0 26px 60px rgba(0, 0, 0, 0.26);
+}
+
+html[data-theme="dark"] .ai-sdlc-card .community-card-index {
+  color: rgba(171, 197, 216, 0.52);
+}
+
+html[data-theme="dark"] .ai-sdlc-card-file,
+html[data-theme="dark"] .ai-sdlc-card-link-arrow {
+  color: #89daf6;
+}
+
+html[data-theme="dark"] .ai-sdlc-card-file-link:hover .ai-sdlc-card-file,
+html[data-theme="dark"] .ai-sdlc-card-file-link:focus-visible .ai-sdlc-card-file,
+html[data-theme="dark"] .ai-sdlc-card-file-link:hover .ai-sdlc-card-link-arrow,
+html[data-theme="dark"] .ai-sdlc-card-file-link:focus-visible .ai-sdlc-card-link-arrow {
+  color: #d9f5ff;
+}
+
+html[data-theme="dark"] .docs-index-view-button {
+  color: var(--muted);
+}
+
+html[data-theme="dark"] .docs-index-view-button:hover,
+html[data-theme="dark"] .docs-index-view-button:focus-visible {
+  background: rgba(0, 114, 152, 0.12);
+  color: var(--heading);
+}
+
+html[data-theme="dark"] .docs-index-view-button.is-active {
+  background: rgba(0, 114, 152, 0.22);
+  color: #d9f5ff;
+  box-shadow:
+    inset 0 0 0 1px rgba(88, 198, 234, 0.22),
+    0 8px 22px rgba(0, 0, 0, 0.18);
+}
+
+html[data-theme="dark"] .docs-library-meta-pill,
+html[data-theme="dark"] .docs-reference-sidebar-home,
+html[data-theme="dark"] .docs-reference-sidebar-toggle,
+html[data-theme="dark"] .docs-tree-icon,
+html[data-theme="dark"] .docs-reference-card-actions a,
+html[data-theme="dark"] .community-card-meta-pill,
+html[data-theme="dark"] .adr-card-pill,
+html[data-theme="dark"] .skills-install-code {
+  border-color: rgba(171, 197, 216, 0.12);
+  background: rgba(171, 197, 216, 0.08);
+  color: var(--heading);
+}
+
+html[data-theme="dark"] .docs-reference-status.is-scanned,
+html[data-theme="dark"] .docs-reference-status.is-published,
+html[data-theme="dark"] .docs-status-scanned,
+html[data-theme="dark"] .docs-status-published,
+html[data-theme="dark"] .skills-repository-pill,
+html[data-theme="dark"] .harness-ring-pill-explore {
+  background: rgba(0, 114, 152, 0.18);
+  color: #9edfff;
+}
+
+html[data-theme="dark"] .docs-status-approved,
+html[data-theme="dark"] .docs-status-accepted,
+html[data-theme="dark"] .harness-ring-pill-adopt,
+html[data-theme="dark"] .skills-evaluation-pill.is-evaluated,
+html[data-theme="dark"] .skills-metadata-pill,
+html[data-theme="dark"] .community-tag-pill-software {
+  background: rgba(69, 132, 42, 0.18);
+  color: #a7d79a;
+}
+
+html[data-theme="dark"] .docs-status-in-review,
+html[data-theme="dark"] .skills-tag-pill,
+html[data-theme="dark"] .harness-ring-pill-to-evaluate {
+  background: rgba(241, 195, 25, 0.18);
+  color: #ffe480;
+}
+
+html[data-theme="dark"] .docs-status-draft,
+html[data-theme="dark"] .skills-evaluation-pill.is-not-evaluated {
+  background: rgba(158, 27, 50, 0.18);
+  color: #ffb9c7;
+}
+
+html[data-theme="dark"] .community-tag-pill-ai {
+  background: rgba(0, 114, 152, 0.18);
+  color: #9edfff;
+}
+
+html[data-theme="dark"] .community-tag-pill-products,
+html[data-theme="dark"] .harness-ring-pill-endure {
+  background: rgba(231, 114, 4, 0.16);
+  color: #ffbc79;
+}
+
+html[data-theme="dark"] .docs-library-copy,
+html[data-theme="dark"] .docs-page-card-copy,
+html[data-theme="dark"] .docs-search-result-copy,
+html[data-theme="dark"] .docs-recent-card-copy,
+html[data-theme="dark"] .docs-reference-summary,
+html[data-theme="dark"] .community-card-copy,
+html[data-theme="dark"] .adr-card-copy,
+html[data-theme="dark"] .docs-markdown p,
+html[data-theme="dark"] .docs-markdown li,
+html[data-theme="dark"] .docs-markdown blockquote,
+html[data-theme="dark"] .docs-markdown-table-wrap td,
+html[data-theme="dark"] .bat-definition-list dd,
+html[data-theme="dark"] .cloud-iam-empty {
+  color: var(--text);
+}
+
+html[data-theme="dark"] .docs-reference-card-copy,
+html[data-theme="dark"] .docs-reference-sidebar-copy,
+html[data-theme="dark"] .docs-repo-pages-link-meta,
+html[data-theme="dark"] .docs-related-link small,
+html[data-theme="dark"] .docs-mobile-tool-copy,
+html[data-theme="dark"] .docs-mobile-tool-list a small,
+html[data-theme="dark"] .docs-reference-section-link-meta,
+html[data-theme="dark"] .community-card-meta,
+html[data-theme="dark"] .adr-card-reference,
+html[data-theme="dark"] .skills-toggle-hint,
+html[data-theme="dark"] .docs-index-metric-copy,
+html[data-theme="dark"] .docs-page-card-note {
+  color: var(--muted);
+}
+
+html[data-theme="dark"] .community-card:hover,
+html[data-theme="dark"] .community-card:focus-within {
+  border-color: rgba(88, 198, 234, 0.24);
+  background: rgba(18, 33, 46, 0.94);
+  box-shadow: 0 26px 60px rgba(0, 0, 0, 0.26);
+}
+
+html[data-theme="dark"] .adr-card:hover,
+html[data-theme="dark"] .adr-card:focus-within {
+  border-color: rgba(88, 198, 234, 0.24);
+  background: rgba(18, 33, 46, 0.94);
+  box-shadow: 0 26px 60px rgba(0, 0, 0, 0.26);
+}
+
+html[data-theme="dark"] .community-card .community-card-index {
+  color: rgba(171, 197, 216, 0.52);
+}
+
+html[data-theme="dark"] .adr-card .community-card-index {
+  color: rgba(171, 197, 216, 0.52);
+}
+
+html[data-theme="dark"] .community-card-link:hover,
+html[data-theme="dark"] .community-card-link:focus-visible {
+  color: #d9f5ff;
+}
+
+html[data-theme="dark"] .adr-card-title-link:hover::after,
+html[data-theme="dark"] .adr-card-title-link:focus-visible::after,
+html[data-theme="dark"] .adr-card-footer-link:hover,
+html[data-theme="dark"] .adr-card-footer-link:focus-visible {
+  color: #d9f5ff;
+}
+
+html[data-theme="dark"] .docs-markdown blockquote {
+  border-left-color: rgba(0, 114, 152, 0.35);
+  background: rgba(0, 114, 152, 0.1);
+}
+
+html[data-theme="dark"] .docs-markdown-table-wrap {
+  border-color: rgba(171, 197, 216, 0.12);
+  background: rgba(15, 28, 39, 0.88);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.18);
+}
+
+html[data-theme="dark"] .docs-markdown-table-wrap thead {
+  background: rgba(0, 114, 152, 0.12);
+}
+
+html[data-theme="dark"] .docs-markdown-table-wrap th,
+html[data-theme="dark"] .docs-markdown-table-wrap td,
+html[data-theme="dark"] .docs-reference-definition-list dt,
+html[data-theme="dark"] .docs-reference-definition-list dd,
+html[data-theme="dark"] .bat-definition-list div {
+  border-color: rgba(171, 197, 216, 0.08);
+}
+
+html[data-theme="dark"] .docs-tree-link.is-reference,
+html[data-theme="dark"] .docs-reference-breadcrumb-link.is-section,
+html[data-theme="dark"] .docs-reference-breadcrumb-current.is-section {
+  color: var(--text);
+}
+
+html[data-theme="dark"] .docs-reference-generated-note {
+  border-color: rgba(241, 195, 25, 0.24);
+  background: rgba(241, 195, 25, 0.12);
+  color: #ffe480;
+}
+
+html[data-theme="dark"] .docs-repo-grid .bat-card,
+html[data-theme="dark"] .docs-repo-grid .bat-card-body,
+html[data-theme="dark"] .docs-index-config-preview,
+html[data-theme="dark"] .adrs-yaml-preview {
+  background: rgba(15, 28, 39, 0.9);
+}
+
+html[data-theme="dark"] .skills-install-code {
+  background:
+    linear-gradient(180deg, rgba(0, 114, 152, 0.1), rgba(0, 114, 152, 0.03)),
+    rgba(171, 197, 216, 0.06);
+  color: #e8f1f7;
+}
+
+html[data-theme="dark"] .skills-toggle-track {
+  background: rgba(150, 168, 182, 0.36);
+}
+
+html[data-theme="dark"] .skills-toggle-track::after {
+  background: #e8f1f7;
+}
+
+html[data-theme="dark"] .bat-card {
+  border-color: rgba(171, 197, 216, 0.14);
+  background: rgba(15, 28, 39, 0.9);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.24);
+}
+
+html[data-theme="dark"] .bat-card-bar {
+  border-bottom-color: rgba(171, 197, 216, 0.1);
+  background: rgba(171, 197, 216, 0.05);
+}
+
+html[data-theme="dark"] .bat-line + .bat-line {
+  border-top-color: rgba(171, 197, 216, 0.08);
+}
+
+html[data-theme="dark"] .bat-gutter {
+  color: rgba(150, 168, 182, 0.82);
+  border-right-color: rgba(171, 197, 216, 0.08);
+  background: rgba(171, 197, 216, 0.04);
+}
+
+html[data-theme="dark"] .bat-copy,
+html[data-theme="dark"] .bat-list-block {
+  color: var(--text);
+}
+
+html[data-theme="dark"] .bat-definition-list dt {
+  color: #5bc7f1;
+}
+
+html[data-theme="dark"] .bat-mermaid-diagram,
+html[data-theme="dark"] .radar-svg-wrap-light {
+  border-color: rgba(171, 197, 216, 0.1);
+  background:
+    linear-gradient(180deg, rgba(171, 197, 216, 0.04), rgba(171, 197, 216, 0.02)),
+    radial-gradient(circle at center, rgba(0, 114, 152, 0.12), transparent 48%);
+}
+
+@media (max-width: 760px) {
+  .theme-toggle {
+    top: auto;
+    bottom: 1rem;
+    right: 0.85rem;
+  }
+
+  .theme-toggle-label {
+    display: none;
+  }
 }
 
 .docs-reference-pagination-label {

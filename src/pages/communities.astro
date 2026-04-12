@@ -3,19 +3,19 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import StandardPageHeader from "../components/StandardPageHeader.astro";
 import StandardPageIntro from "../components/StandardPageIntro.astro";
 import StandardSourceCard from "../components/StandardSourceCard.astro";
-import { getTechCommunities } from "../lib/tech-communities";
+import { getTechCommunitiesCatalog } from "../lib/tech-communities";
 import { getStandardPageIntro } from "../lib/page-intros";
 import { getStandardPageSource } from "../lib/page-sources";
 
-const communities = await getTechCommunities();
+const catalog = await getTechCommunitiesCatalog();
+const { communities, tracks } = catalog;
 const intro = await getStandardPageIntro("communities");
 const sourceCard = await getStandardPageSource("communities");
-const tracks = ["Software", "AI", "Products"];
 ---
 
 <BaseLayout
   title="Tech Communities | e*f(x) Technology"
-  description="Directory of technology communities across AI, software, product, data, and adjacent practices."
+  description={intro.summary}
 >
   <main class="shell shell-narrow standard-page">
     <StandardPageHeader
