@@ -70,11 +70,9 @@ These files provide the stable shell:
 
 `data/` is the single structured content root for the repository. It contains:
 
-- page-driving YAML such as `tech-radar.yaml`, `products.yaml`, `models.yaml`, and
-  `document-repositories.yaml`
+- page-driving YAML such as `tech-radar.yaml`, `models.yaml`, and `document-repositories.yaml`
 - interaction-driving YAML such as `terminal-commands.yaml`, which also feeds the Markdown landing
   page command list
-- contextual nested Markdown and data under `data/context/**`
 - spike inputs and route source material under `data/spikes/**`
 
 ### `scripts/`

@@ -10,7 +10,6 @@ The following files are the most important for day-to-day maintenance:
 
 - `data/document-repositories.yaml`: repository scanning rules for documentation pages
 - `data/tech-radar.yaml`: technology inventory and radar metadata
-- `data/products.yaml`: products referenced across the site
 - `data/models.yaml`: model catalog used by AI-facing content
 - `data/tech-communities.yaml`: community inventory used by the communities page
 - `data/skills-repositories.yaml` and `data/skill-evaluations.yaml`: skills catalog sources
