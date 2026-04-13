@@ -4,6 +4,14 @@ dist/
 .DS_Store
 coverage/
 .tmp/
+.tmp-*.log
+.tmp-*.out.log
+.tmp-*.err.log
+.tmp-*.json
+.tmp-*.html
 test-results/
 tmp-*.log
 tmp-*.err.log
+tmp-*.out
+tmp-*.err
+tmp-*.html
