@@ -205,11 +205,41 @@ function getGitHubRawUrl(repository: string, ref: string, filePath: string) {
   return `https://raw.githubusercontent.com/${repository}/${encodeURIComponent(ref)}/${encodedPath}`;
 }
 
+function rewriteRelativeAdrLinks(
+  markdownSource: string,
+  repository: string,
+  ref: string,
+  filePath: string,
+) {
+  const sourceDirectory = posix.dirname(normalizePath(filePath));
+
+  return markdownSource.replace(
+    /(!?\[[^\]]+\]\()([^)\s]+)([^)]*\))/g,
+    (match, prefix: string, href: string, suffix: string) => {
+      if (/^(?:[a-z][a-z\d+.-]*:|#|\/)/i.test(href)) {
+        return match;
+      }
+
+      const hrefMatch = href.match(/^([^?#]*)([?#].*)?$/);
+      const relativePath = hrefMatch?.[1] ?? href;
+      const queryOrFragment = hrefMatch?.[2] ?? "";
+      const resolvedPath = normalizePath(posix.join(sourceDirectory, relativePath));
+      const resolvedUrl = prefix.startsWith("!")
+        ? getGitHubRawUrl(repository, ref, resolvedPath)
+        : getGitHubBlobUrl(repository, ref, resolvedPath);
+
+      return `${prefix}${resolvedUrl}${queryOrFragment}${suffix}`;
+    },
+  );
+}
+
 async function fetchJson<T>(url: string) {
+  const githubToken = process.env.GITHUB_TOKEN;
   const response = await fetch(url, {
     headers: {
       "User-Agent": "codex-technology",
       Accept: "application/vnd.github+json",
+      ...(githubToken ? { Authorization: `Bearer ${githubToken}` } : {}),
     },
   });
 
@@ -782,6 +812,12 @@ async function buildAdrPage(source: ResolvedAdrRepository, filePath: string): Pr
   }
 
   const { data, body } = parseFrontmatter(markdownSource);
+  const bodyWithResolvedLinks = rewriteRelativeAdrLinks(
+    body,
+    source.repository,
+    source.ref,
+    normalizedPath,
+  );
   const heading = toScalar(data.title, getHeadingTitle(body) || toLabel(posix.basename(normalizedPath, ".md")));
   const parsedHeading = parseAdrHeading(heading);
   const date = toScalar(data.date) || (await getGitHubCommitDate(source.repository, source.ref, normalizedPath));
@@ -800,8 +836,8 @@ async function buildAdrPage(source: ResolvedAdrRepository, filePath: string): Pr
     owner: toScalar(data.owner, source.owner),
     area,
     tags: toStringArray(data.tags),
-    body,
-    bodyHtml: renderMarkdownToHtml(body),
+    body: bodyWithResolvedLinks,
+    bodyHtml: renderMarkdownToHtml(bodyWithResolvedLinks),
     relativePath: normalizedPath,
     slugSegments,
     htmlUrl,
