@@ -6,6 +6,7 @@ Astro `7.1.1` static site published to GitHub Pages.
 
 - `npm install`
 - `npm run data:pull`
+- `npm run data:push`
 - `npm run dev`
 - `npm run check`
 - `npm run check:markdown-pages`
@@ -35,6 +36,10 @@ Maintainers with access to the bucket can synchronize it into the ignored local 
 gcloud auth login
 npm run data:pull
 ```
+
+After editing local data, an authorized maintainer can replace the private archive with `npm run data:push`.
+The archive-based transfer deliberately avoids granting the CI identity permission to list unrelated object
+names elsewhere in the shared bucket.
 
 The deployment workflow uses GitHub OIDC and Google Cloud Workload Identity Federation. It receives a
 short-lived, read-only identity restricted to this repository's `main` deployment workflow and to the

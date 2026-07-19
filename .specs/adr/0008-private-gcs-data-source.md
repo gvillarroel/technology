@@ -23,7 +23,8 @@ Authenticate the deployment workflow with direct GitHub OIDC Workload Identity F
   `1200854389`, the `main` ref, and `.github/workflows/deploy.yml` on `main`.
 - Principal access: `roles/storage.objectViewer` on the `technology/` Cloud Storage managed folder only.
 - Workflow actions: `google-github-actions/auth@v3` followed by `google-github-actions/setup-gcloud@v3`.
-- Data transfer: `gcloud storage rsync` with checksum comparison and deletion of unmatched local files.
+- Data transfer: download the exact `technology/technology-data.tar.gz` object and extract it into `data/`.
+  Maintainers publish a replacement archive with `npm run data:push`.
 
 Do not create, download, or store a Google Cloud service-account key for this workflow.
 
@@ -31,8 +32,10 @@ Do not create, download, or store a Google Cloud service-account key for this wo
 
 - GitHub obtains short-lived credentials for an explicitly constrained workflow instead of holding a
   reusable cloud secret.
-- The build identity can list and read objects only within the managed folder; it cannot write objects or
-  read sibling bucket prefixes through this grant.
+- The build identity can read objects only within the managed folder; it cannot write objects or read
+  sibling bucket prefixes through this grant.
+- CI does not list the shared bucket. An exact-object archive download avoids the bucket-level
+  `storage.objects.list` permission required by recursive Cloud Storage synchronization.
 - Local builds require an authenticated Google Cloud identity with access to the managed folder before
   running `npm run data:pull`.
 - Historical Git commits may still contain data that was committed before this decision. Removing it from

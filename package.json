@@ -7,7 +7,8 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "data:pull": "gcloud storage rsync gs://limited-502918-cheap-gcs/technology/ data --recursive --checksums-only --delete-unmatched-destination-objects",
+    "data:pull": "node ./scripts/sync-private-data.mjs pull",
+    "data:push": "node ./scripts/sync-private-data.mjs push",
     "dev": "astro dev",
     "start": "astro dev",
     "build": "npm run check:markdown-pages && astro build && npm run check:markdown-pages:dist",
