@@ -4,9 +4,10 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=22.12.0"
   },
   "scripts": {
+    "data:pull": "gcloud storage rsync gs://limited-502918-cheap-gcs/technology data --recursive --checksums-only --delete-unmatched-destination-objects",
     "dev": "astro dev",
     "start": "astro dev",
     "build": "npm run check:markdown-pages && astro build && npm run check:markdown-pages:dist",
@@ -17,16 +18,13 @@
     "prepare": "node ./scripts/install-git-hooks.mjs"
   },
   "devDependencies": {
-    "@astrojs/check": "0.9.8",
+    "@astrojs/check": "0.9.9",
     "@types/node": "^24.6.1",
-    "astro": "6.1.1",
+    "astro": "7.1.1",
     "typescript": "5.9.3"
   },
   "dependencies": {
     "echarts": "^6.0.0",
     "yaml": "^2.8.3"
-  },
-  "optionalDependencies": {
-    "@rollup/rollup-linux-x64-gnu": "4.60.0"
   }
 }

@@ -26,4 +26,5 @@ export default defineConfig({
   output: "static",
   site,
   base,
+  compressHTML: true,
 });
