@@ -1,6 +1,4 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-import { parse } from "yaml";
+import { getSiteRoute } from "./site-catalog";
 
 export type StandardIntroPageKey =
   | "adrs"
@@ -16,28 +14,18 @@ export interface StandardPageIntroContent {
   summary: string;
 }
 
-const pageIntrosPath = join(process.cwd(), "data", "page-intros.yaml");
-
-function toScalar(value: unknown) {
-  return String(value ?? "").trim();
-}
-
 export async function getStandardPageIntro(
   pageKey: StandardIntroPageKey,
 ): Promise<StandardPageIntroContent> {
-  const rawFile = await readFile(pageIntrosPath, "utf-8");
-  const document = parse(rawFile) as {
-    pages?: Record<string, Record<string, unknown>>;
-  };
-  const entry = document.pages?.[pageKey];
+  const entry = (await getSiteRoute(pageKey)).intro;
 
   if (!entry) {
     throw new Error(`Missing standard page intro for "${pageKey}".`);
   }
 
   return {
-    eyebrow: toScalar(entry.eyebrow),
-    title: toScalar(entry.title),
-    summary: toScalar(entry.summary),
+    eyebrow: entry.eyebrow,
+    title: entry.title,
+    summary: entry.summary,
   };
 }

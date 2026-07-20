@@ -1,7 +1,8 @@
 import { posix } from "node:path";
-import { readFile, readdir } from "node:fs/promises";
 import { parse as parseYaml } from "yaml";
+import { readSourceJson, readSourceText } from "./connectors";
 import { createMarkdownDocument, markdownLink } from "./markdown";
+import { getDataset } from "./site-catalog";
 import { withBasePath } from "./site-url";
 
 interface GitHubTreeEntry {
@@ -48,7 +49,6 @@ interface ResolvedAdrRepository {
   account: string;
   repository: string;
   ref: string;
-  localPath?: string;
   product: string;
   owner: string;
   domains: string[];
@@ -96,9 +96,7 @@ interface AdrsData {
   scannedRepositories: ResolvedAdrRepository[];
 }
 
-const adrSourcesYamlPath = posix.join(process.cwd().replaceAll("\\", "/"), "data", "adr-repositories.yaml");
 const githubTreeCache = new Map<string, GitHubTreeEntry[]>();
-const githubTextCache = new Map<string, string>();
 const githubCommitDateCache = new Map<string, string>();
 const githubAccountRepositoriesCache = new Map<string, ResolvedAdrRepository[]>();
 let adrsDataPromise: Promise<AdrsData> | undefined;
@@ -132,10 +130,6 @@ function toLabel(value: string) {
 
 function normalizePath(value: string) {
   return value.replaceAll("\\", "/").replace(/^\/+|\/+$/g, "");
-}
-
-function getLocalWorkspaceRoot() {
-  return posix.dirname(process.cwd().replaceAll("\\", "/"));
 }
 
 function escapeRegex(value: string) {
@@ -233,46 +227,6 @@ function rewriteRelativeAdrLinks(
   );
 }
 
-async function fetchJson<T>(url: string) {
-  const githubToken = process.env.GITHUB_TOKEN;
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": "codex-technology",
-      Accept: "application/vnd.github+json",
-      ...(githubToken ? { Authorization: `Bearer ${githubToken}` } : {}),
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ${url}: ${response.status}`);
-  }
-
-  return (await response.json()) as T;
-}
-
-async function fetchText(url: string) {
-  const cached = githubTextCache.get(url);
-
-  if (cached) {
-    return cached;
-  }
-
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": "codex-technology",
-      Accept: "text/plain",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ${url}: ${response.status}`);
-  }
-
-  const text = await response.text();
-  githubTextCache.set(url, text);
-  return text;
-}
-
 function matchesGitHubStatus(message: string, statuses: number[]) {
   return statuses.some((status) => message.includes(`: ${status}`));
 }
@@ -289,7 +243,7 @@ async function getGitHubTree(repository: string, ref: string) {
   let payload: GitHubTreeResponse;
 
   try {
-    payload = await fetchJson<GitHubTreeResponse>(treeUrl);
+    payload = await readSourceJson<GitHubTreeResponse>(treeUrl);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
 
@@ -321,7 +275,7 @@ async function getGitHubCommitDate(repository: string, ref: string, filePath: st
   let payload: GitHubCommitResponse[];
 
   try {
-    payload = await fetchJson<GitHubCommitResponse[]>(commitsUrl);
+    payload = await readSourceJson<GitHubCommitResponse[]>(commitsUrl);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
 
@@ -355,7 +309,6 @@ async function getGitHubAccountRepositories(source: AdrSourceConfig) {
         account: source.account,
         repository: source.repository,
         ref: source.ref ?? "main",
-        localPath: undefined,
         product: source.product,
         owner: source.owner,
         domains: source.domains,
@@ -369,21 +322,7 @@ async function getGitHubAccountRepositories(source: AdrSourceConfig) {
 
   const userRepositoriesUrl =
     `https://api.github.com/users/${encodeURIComponent(source.account)}/repos?per_page=100&sort=updated`;
-  let payload: GitHubRepositoryResponse[];
-
-  try {
-    payload = await fetchJson<GitHubRepositoryResponse[]>(userRepositoriesUrl);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-
-    if (matchesGitHubStatus(message, [403, 429])) {
-      const localFallback = await getLocalAccountRepositories(source);
-      githubAccountRepositoriesCache.set(cacheKey, localFallback);
-      return localFallback;
-    }
-
-    throw error;
-  }
+  const payload = await readSourceJson<GitHubRepositoryResponse[]>(userRepositoriesUrl);
 
   const repositories = payload
     .filter((repository) => repository.full_name)
@@ -404,74 +343,6 @@ async function getGitHubAccountRepositories(source: AdrSourceConfig) {
 
   githubAccountRepositoriesCache.set(cacheKey, repositories);
   return repositories;
-}
-
-function parseGitHubRepositoryFromRemote(url: string, account: string) {
-  const trimmed = url.trim();
-  const match = trimmed.match(/github\.com[:/]([^/]+)\/(.+?)(?:\.git)?$/i);
-
-  if (!match) {
-    return "";
-  }
-
-  const owner = match[1];
-  const repo = match[2];
-
-  if (owner.toLowerCase() !== account.toLowerCase()) {
-    return "";
-  }
-
-  return `${owner}/${repo}`;
-}
-
-async function getLocalAccountRepositories(source: AdrSourceConfig) {
-  const workspaceRoot = getLocalWorkspaceRoot();
-  const entries = await readdir(workspaceRoot, { withFileTypes: true });
-  const repositories: ResolvedAdrRepository[] = [];
-
-  for (const entry of entries) {
-    if (!entry.isDirectory()) {
-      continue;
-    }
-
-    const repositoryRoot = posix.join(workspaceRoot, entry.name);
-    const gitConfigPath = posix.join(repositoryRoot, ".git", "config");
-    const gitHeadPath = posix.join(repositoryRoot, ".git", "HEAD");
-
-    try {
-      const [gitConfig, gitHead] = await Promise.all([
-        readFile(gitConfigPath, "utf-8"),
-        readFile(gitHeadPath, "utf-8"),
-      ]);
-      const remoteMatch = gitConfig.match(/\[remote "origin"\][\s\S]*?url = (.+)/);
-      const repository = parseGitHubRepositoryFromRemote(remoteMatch?.[1] ?? "", source.account);
-
-      if (!repository) {
-        continue;
-      }
-
-      const headMatch = gitHead.match(/ref:\s+refs\/heads\/(.+)\s*$/);
-      const currentRef = headMatch?.[1]?.trim() || source.ref || "main";
-
-      repositories.push({
-        slug: repository.replace("/", "-"),
-        name: repository,
-        account: source.account,
-        repository,
-        ref: currentRef,
-        localPath: repositoryRoot,
-        product: toLabel(repository.split("/").at(-1) ?? source.account),
-        owner: source.owner,
-        domains: source.domains,
-        include: source.include,
-        exclude: source.exclude,
-      });
-    } catch {
-      continue;
-    }
-  }
-
-  return repositories.sort((left, right) => left.repository.localeCompare(right.repository));
 }
 
 function parseFrontmatter(markdownSource: string) {
@@ -718,8 +589,7 @@ function matchesConfiguredPath(source: ResolvedAdrRepository, filePath: string) 
 }
 
 async function getAdrSourceConfigs() {
-  const rawFile = await readFile(adrSourcesYamlPath, "utf-8");
-  const document = (parseYaml(rawFile) as AdrSourcesDocument | null) ?? {};
+  const document = await getDataset<AdrSourcesDocument>("adr-repositories");
   const repositories = document.repositories ?? [];
 
   return repositories
@@ -739,53 +609,12 @@ async function getAdrSourceConfigs() {
 }
 
 async function getRepositoryAdrPaths(source: ResolvedAdrRepository) {
-  let tree: GitHubTreeEntry[] = [];
-
-  try {
-    tree = await getGitHubTree(source.repository, source.ref);
-  } catch (error) {
-    if (!source.localPath) {
-      throw error;
-    }
-  }
-
-  if (tree.length === 0 && source.localPath) {
-    const localPaths = await listLocalRepositoryFiles(source.localPath);
-    return localPaths.filter((path) => matchesConfiguredPath(source, path));
-  }
+  const tree = await getGitHubTree(source.repository, source.ref);
 
   return tree
     .filter((entry) => entry.type === "blob")
     .map((entry) => entry.path)
     .filter((path) => matchesConfiguredPath(source, path));
-}
-
-async function listLocalRepositoryFiles(repositoryRoot: string, currentPath = ""): Promise<string[]> {
-  const absolutePath = currentPath
-    ? posix.join(repositoryRoot.replaceAll("\\", "/"), currentPath)
-    : repositoryRoot.replaceAll("\\", "/");
-  const entries = await readdir(absolutePath, { withFileTypes: true });
-  const files = await Promise.all(
-    entries.map(async (entry) => {
-      const relativePath = currentPath ? posix.join(currentPath, entry.name) : entry.name;
-
-      if (entry.isDirectory()) {
-        if (entry.name === ".git" || entry.name === "node_modules") {
-          return [];
-        }
-
-        return listLocalRepositoryFiles(repositoryRoot, relativePath);
-      }
-
-      if (entry.isFile()) {
-        return [relativePath.replaceAll("\\", "/")];
-      }
-
-      return [];
-    }),
-  );
-
-  return files.flat();
 }
 
 function buildSlugSegments(sourceSlug: string, filePath: string) {
@@ -800,7 +629,7 @@ async function buildAdrPage(source: ResolvedAdrRepository, filePath: string): Pr
   let markdownSource = "";
 
   try {
-    markdownSource = await fetchText(rawUrl);
+    markdownSource = await readSourceText(rawUrl);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
 
@@ -938,7 +767,7 @@ export function getAdrIndexMarkdown({
   });
 
   doc.heading("ADRs");
-  doc.paragraph("Architecture decision records fetched directly from GitHub repositories declared in `data/adr-repositories.yaml`.");
+  doc.paragraph("Architecture decision records fetched directly from GitHub repositories declared in the private remote site catalog.");
   doc.keyValueList([
     { label: "ADR count", value: String(pages.length) },
     { label: "Configuration entries", value: String(repositories.length) },

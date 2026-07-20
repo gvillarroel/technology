@@ -66,8 +66,8 @@ export async function getLandingMarkdownCommands(): Promise<string[]> {
   });
 }
 
-export function getLandingMarkdownPrimaryRoutes() {
-  return flattenStandardNavGroups(getStandardPageNavGroups("home")).map((item) =>
+export async function getLandingMarkdownPrimaryRoutes() {
+  return flattenStandardNavGroups(await getStandardPageNavGroups("home")).map((item) =>
     toMarkdownLink(item.label, item.href),
   );
 }

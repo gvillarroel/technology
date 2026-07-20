@@ -1,0 +1,129 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import StandardPageHeader from "../StandardPageHeader.astro";
+import StandardPageIntro from "../StandardPageIntro.astro";
+import StandardSourceCard from "../StandardSourceCard.astro";
+import { withBasePath } from "../../lib/site-url";
+import type { ResolvedCatalogRoute } from "../../lib/catalog-routes";
+
+interface Props extends ResolvedCatalogRoute {}
+
+const { route, items } = Astro.props;
+const intro = route.intro!;
+const source = route.source!;
+---
+
+<BaseLayout title={`${route.label} | e*f(x) Technology`} description={intro.summary}>
+  <main class="shell shell-narrow standard-page">
+    <StandardPageHeader
+      currentPage={route.id}
+      searchAction={withBasePath(route.path)}
+      searchPlaceholder={`Search ${route.label.toLowerCase()}`}
+    />
+
+    <StandardPageIntro
+      eyebrow={intro.eyebrow}
+      title={intro.title}
+      summary={intro.summary}
+      pills={[
+        { label: "Entries", value: String(items.length) },
+        { label: "Template", value: "Catalog" },
+        { label: "Source", value: "Remote JSON" },
+      ]}
+    />
+
+    <section class="bat-grid bat-grid-radar">
+      <StandardSourceCard
+        file={source.file}
+        lang={source.lang}
+        title={source.title}
+        summary={source.summary}
+        meta={[
+          { label: "entries", value: String(items.length) },
+          { label: "dataset", value: route.dataset ?? "" },
+          { label: "template", value: route.template },
+        ]}
+      />
+    </section>
+
+    <section class="standard-section-heading">
+      <div>
+        <p class="eyebrow">Directory</p>
+        <h2>{route.label} index</h2>
+      </div>
+      <p class="standard-section-meta" id="catalog-results-count">{items.length} entries visible</p>
+    </section>
+
+    <section class="community-grid" id="catalog-list">
+      {items.map((item, index) => (
+        <article class="community-card" data-search={item.searchText}>
+          <div class="community-card-topline">
+            <span class="community-card-category">{item.eyebrow}</span>
+            <span class="community-card-index">{String(index + 1).padStart(2, "0")}</span>
+          </div>
+          <div class="community-card-body">
+            <h3 class="community-card-title">{item.title}</h3>
+            <p class="community-card-copy">{item.summary}</p>
+            {item.metadata.length > 0 && (
+              <div class="community-card-meta" aria-label={`${item.title} metadata`}>
+                {item.metadata.map((field) => (
+                  <span class="community-card-meta-pill"><strong>{field.label}</strong>{field.value}</span>
+                ))}
+              </div>
+            )}
+            {item.tags.length > 0 && (
+              <div class="community-card-tags" aria-label={`${item.title} tags`}>
+                {item.tags.map((tag) => <span class="community-tag-pill">{tag}</span>)}
+              </div>
+            )}
+            {item.link && (
+              <a class="community-card-link" href={item.link} target="_blank" rel="noreferrer">
+                {item.linkLabel}
+              </a>
+            )}
+          </div>
+        </article>
+      ))}
+    </section>
+
+    <p class="standard-empty-state" id="catalog-empty-state" hidden>
+      No entries match the current search.
+    </p>
+  </main>
+</BaseLayout>
+
+<script is:inline>
+  const initCatalogPage = () => {
+    const searchInput = document.querySelector("#site-search");
+    const entries = [...document.querySelectorAll("#catalog-list .community-card")];
+    const countLabel = document.querySelector("#catalog-results-count");
+    const emptyState = document.querySelector("#catalog-empty-state");
+
+    if (!(searchInput instanceof HTMLInputElement)) return;
+
+    const updateResults = () => {
+      const query = searchInput.value.trim().toLowerCase();
+      const visible = entries.filter((entry) => {
+        const show = !query || (entry.getAttribute("data-search") ?? "").includes(query);
+        if (entry instanceof HTMLElement) entry.hidden = !show;
+        return show;
+      });
+
+      if (countLabel) {
+        countLabel.textContent = `${visible.length} ${visible.length === 1 ? "entry" : "entries"} visible`;
+      }
+      if (emptyState instanceof HTMLElement) emptyState.hidden = visible.length > 0;
+    };
+
+    const query = new URLSearchParams(window.location.search).get("q");
+    if (query) searchInput.value = query;
+    searchInput.addEventListener("input", updateResults);
+    updateResults();
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initCatalogPage, { once: true });
+  } else {
+    initCatalogPage();
+  }
+</script>

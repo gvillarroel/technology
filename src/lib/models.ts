@@ -1,7 +1,5 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-import { parse } from "yaml";
 import { createMarkdownDocument, markdownLink } from "./markdown";
+import { getDataset } from "./site-catalog";
 import { withBasePath } from "./site-url";
 
 export type ModelFamilyStatus = "approved" | "explore" | "blacklisted";
@@ -36,7 +34,6 @@ export interface ModelCatalogData {
   families: ModelFamily[];
 }
 
-const modelsYamlPath = join(process.cwd(), "data", "models.yaml");
 const allowedStatuses = new Set<ModelFamilyStatus>(["approved", "explore", "blacklisted"]);
 
 function toScalar(value: unknown) {
@@ -71,8 +68,7 @@ function toTitleCase(value: string) {
 }
 
 export async function getModelCatalogData(): Promise<ModelCatalogData> {
-  const rawFile = await readFile(modelsYamlPath, "utf-8");
-  const document = parse(rawFile) as {
+  const document = await getDataset<{
     catalog?: {
       title?: unknown;
       summary?: unknown;
@@ -81,7 +77,7 @@ export async function getModelCatalogData(): Promise<ModelCatalogData> {
       sources?: Array<Record<string, unknown>>;
       families?: Array<Record<string, unknown>>;
     };
-  };
+  }>("models");
   const catalog = document.catalog ?? {};
   const sources = (catalog.sources ?? []).map((source) => ({
     slug: toScalar(source.slug),

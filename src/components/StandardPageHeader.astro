@@ -35,10 +35,11 @@ const {
   sectionTrailItems = [],
   sectionTrailLabel = "Path",
 } = Astro.props;
+const navGroups = await getStandardPageNavGroups(currentPage);
 ---
 
 <StandardHeader
-  navGroups={getStandardPageNavGroups(currentPage)}
+  navGroups={navGroups}
   showSearch={showSearch}
   searchAction={searchAction}
   searchPlaceholder={searchPlaceholder}

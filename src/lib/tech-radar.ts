@@ -1,9 +1,7 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-import { parse } from "yaml";
 import { getScopedHtmlPageUrl, getScopedMarkdownPageUrl } from "./dual-format";
 import { withBasePath } from "./site-url";
 import { createMarkdownDocument, markdownLink } from "./markdown";
+import { getDataset } from "./site-catalog";
 
 export interface RadarEntry {
   slug: string;
@@ -67,8 +65,6 @@ export function getRadarRingToken(ring: RadarEntry["ring"]) {
 export const defaultVisibleRings: RadarEntry["ring"][] = ["Adopt", "Explore", "Endure"];
 export const radarArchetypes: RadarArchetype[] = ["Infrastructure", "Tool", "Product"];
 export const radarSourceTypes: RadarSourceType[] = ["oss", "non-oss", "internal"];
-
-const radarYamlPath = join(process.cwd(), "data", "tech-radar.yaml");
 
 export const radarRings: RadarRingDefinition[] = [
   {
@@ -159,8 +155,7 @@ function toArchetypes(value: unknown): RadarArchetype[] {
 }
 
 export async function getRadarEntries(): Promise<RadarEntry[]> {
-  const rawFile = await readFile(radarYamlPath, "utf-8");
-  const document = parse(rawFile) as { entries?: Array<Record<string, unknown>> };
+  const document = await getDataset<{ entries?: Array<Record<string, unknown>> }>("tech-radar");
   const entries = document.entries ?? [];
 
   return entries

@@ -5,10 +5,10 @@ the build uses them to compose the final site.
 
 ## What This Covers
 
-- the most important configuration files in `data/`
+- the private remote catalog contract
 - how configuration enters the page loaders
 - where external sources are queried during the static build
-- which files should be updated when the site inventory changes
+- which external dataset or route definition should be updated when the inventory changes
 
 ## Pages
 
@@ -17,5 +17,4 @@ the build uses them to compose the final site.
 
 ## Reading Order
 
-Read this section before changing repository scanning, page inventories, or route-backed
-YAML data.
+Read this section before changing repository scanning, page inventories, or route-backed JSON data.

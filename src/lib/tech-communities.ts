@@ -1,6 +1,4 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-import { parse } from "yaml";
+import { getDataset } from "./site-catalog";
 
 export interface TechCommunity {
   slug: string;
@@ -20,8 +18,6 @@ export interface TechCommunitiesCatalog {
   tracks: string[];
 }
 
-const techCommunitiesYamlPath = join(process.cwd(), "data", "tech-communities.yaml");
-
 function toScalar(value: unknown) {
   return String(value ?? "").trim();
 }
@@ -38,8 +34,7 @@ function toList(value: unknown) {
 }
 
 export async function getTechCommunitiesCatalog(): Promise<TechCommunitiesCatalog> {
-  const rawFile = await readFile(techCommunitiesYamlPath, "utf-8");
-  const document = parse(rawFile) as { communities?: Array<Record<string, unknown>> };
+  const document = await getDataset<{ communities?: Array<Record<string, unknown>> }>("tech-communities");
   const communities = (document.communities ?? [])
     .map((community) => ({
       slug: toScalar(community.slug),

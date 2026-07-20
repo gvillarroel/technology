@@ -1,6 +1,6 @@
 # ADR 0008: Private Google Cloud Storage Data Source
 
-- Status: Accepted
+- Status: Superseded by ADR 0009
 - Date: 2026-07-19
 
 ## Context
@@ -42,3 +42,6 @@ Do not create, download, or store a Google Cloud service-account key for this wo
   current tracking does not rewrite repository history.
 - GitHub Pages is public. Any content rendered into `dist/` becomes public even though the source bucket is
   private, so the source data must not contain secrets.
+
+ADR 0009 replaces the archive download and local `data/` synchronization with direct reads from one
+private JSON catalog. The OIDC and least-privilege access decision remains in force.

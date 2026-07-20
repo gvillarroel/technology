@@ -1,10 +1,11 @@
 import { posix } from "node:path";
-import { readFile, readdir } from "node:fs/promises";
 import { parse as parseYaml } from "yaml";
 import { codeToHtml } from "shiki";
 import { createMarkdownDocument, markdownLink, type MarkdownDocument } from "./markdown";
 import { toMarkdownHref } from "./dual-format";
 import { withBasePath } from "./site-url";
+import { readSourceJson, readSourceText } from "./connectors";
+import { getDataset } from "./site-catalog";
 
 interface GitHubTreeEntry {
   path: string;
@@ -58,7 +59,6 @@ interface ResolvedDocumentRepository {
   repository: string;
   account: string;
   ref: string;
-  localPath?: string;
   sourceSlugs: string[];
   sourceNames: string[];
   documentRules: DocumentScanRuleConfig[];
@@ -181,13 +181,7 @@ interface MutableFolderNode {
   documents: DocumentPage[];
 }
 
-const documentsRepositoriesYamlPath = posix.join(
-  process.cwd().replaceAll("\\", "/"),
-  "data",
-  "document-repositories.yaml",
-);
 const githubTreeCache = new Map<string, GitHubTreeEntry[]>();
-const githubTextCache = new Map<string, string>();
 const githubCommitDateCache = new Map<string, string>();
 const githubAccountRepositoriesCache = new Map<string, ResolvedDocumentRepository[]>();
 let documentsDataPromise: Promise<DocumentsData> | undefined;
@@ -212,7 +206,7 @@ const documentsIndexMarkdownTitle = "Repository-driven documentation.";
 const documentsIndexMarkdownSummary =
   "Browse repository docs as a single library, with one page per repository and folder-aware navigation for every Markdown section that was discovered during the build.";
 const documentsIndexConfigPreview = [
-  "data/document-repositories.yaml",
+  "gs://limited-502918-cheap-gcs/technology/site.json#datasets.document-repositories",
   "src/lib/documents.ts",
   "src/pages/documents.astro",
   "src/pages/documents/[...slug].astro",
@@ -296,10 +290,6 @@ function getGitHubRawUrl(repository: string, ref: string, filePath: string) {
   return `https://raw.githubusercontent.com/${repository}/${encodeURIComponent(ref)}/${encodedPath}`;
 }
 
-function getLocalWorkspaceRoot() {
-  return posix.dirname(process.cwd().replaceAll("\\", "/"));
-}
-
 function escapeRegex(value: string) {
   return value.replace(/[|\\{}()[\]^$+?.]/g, "\\$&");
 }
@@ -356,44 +346,6 @@ function matchesRepositoryPattern(repository: string, pattern: string) {
   return matchesPattern(leaf, normalizedPattern);
 }
 
-async function fetchJson<T>(url: string) {
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": "codex-technology",
-      Accept: "application/vnd.github+json",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ${url}: ${response.status}`);
-  }
-
-  return (await response.json()) as T;
-}
-
-async function fetchText(url: string) {
-  const cached = githubTextCache.get(url);
-
-  if (cached) {
-    return cached;
-  }
-
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": "codex-technology",
-      Accept: "text/plain",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ${url}: ${response.status}`);
-  }
-
-  const text = await response.text();
-  githubTextCache.set(url, text);
-  return text;
-}
-
 function matchesGitHubStatus(message: string, statuses: number[]) {
   return statuses.some((status) => message.includes(`: ${status}`));
 }
@@ -410,7 +362,7 @@ async function getGitHubTree(repository: string, ref: string) {
   let payload: GitHubTreeResponse;
 
   try {
-    payload = await fetchJson<GitHubTreeResponse>(treeUrl);
+    payload = await readSourceJson<GitHubTreeResponse>(treeUrl);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
 
@@ -442,7 +394,7 @@ async function getGitHubCommitDate(repository: string, ref: string, filePath: st
   let payload: GitHubCommitResponse[];
 
   try {
-    payload = await fetchJson<GitHubCommitResponse[]>(commitsUrl);
+    payload = await readSourceJson<GitHubCommitResponse[]>(commitsUrl);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
 
@@ -460,29 +412,10 @@ async function getGitHubCommitDate(repository: string, ref: string, filePath: st
   return date;
 }
 
-function parseGitHubRepositoryFromRemote(url: string, account: string) {
-  const trimmed = url.trim();
-  const match = trimmed.match(/github\.com[:/]([^/]+)\/(.+?)(?:\.git)?$/i);
-
-  if (!match) {
-    return "";
-  }
-
-  const owner = match[1];
-  const repo = match[2];
-
-  if (owner.toLowerCase() !== account.toLowerCase()) {
-    return "";
-  }
-
-  return `${owner}/${repo}`;
-}
-
 function buildResolvedRepository(
   source: DocumentSourceConfig,
   repository: string,
   ref: string,
-  localPath?: string,
 ) {
   const repositorySlug = repository.replace("/", "-");
 
@@ -492,49 +425,10 @@ function buildResolvedRepository(
     repository,
     account: source.account,
     ref,
-    localPath,
     sourceSlugs: [source.slug],
     sourceNames: [source.name],
     documentRules: [...source.documents],
   } satisfies ResolvedDocumentRepository;
-}
-
-async function getLocalAccountRepositories(source: DocumentSourceConfig) {
-  const workspaceRoot = getLocalWorkspaceRoot();
-  const entries = await readdir(workspaceRoot, { withFileTypes: true });
-  const repositories: ResolvedDocumentRepository[] = [];
-
-  for (const entry of entries) {
-    if (!entry.isDirectory()) {
-      continue;
-    }
-
-    const repositoryRoot = posix.join(workspaceRoot, entry.name);
-    const gitConfigPath = posix.join(repositoryRoot, ".git", "config");
-    const gitHeadPath = posix.join(repositoryRoot, ".git", "HEAD");
-
-    try {
-      const [gitConfig, gitHead] = await Promise.all([
-        readFile(gitConfigPath, "utf-8"),
-        readFile(gitHeadPath, "utf-8"),
-      ]);
-      const remoteMatch = gitConfig.match(/\[remote "origin"\][\s\S]*?url = (.+)/);
-      const repository = parseGitHubRepositoryFromRemote(remoteMatch?.[1] ?? "", source.account);
-
-      if (!repository) {
-        continue;
-      }
-
-      const headMatch = gitHead.match(/ref:\s+refs\/heads\/(.+)\s*$/);
-      const currentRef = headMatch?.[1]?.trim() || source.ref || "main";
-
-      repositories.push(buildResolvedRepository(source, repository, currentRef, repositoryRoot));
-    } catch {
-      continue;
-    }
-  }
-
-  return repositories.sort((left, right) => left.repository.localeCompare(right.repository));
 }
 
 function repositoryMatchesSource(source: DocumentSourceConfig, repository: string) {
@@ -554,10 +448,8 @@ async function getGitHubAccountRepositories(source: DocumentSourceConfig) {
   }
 
   if (source.repository) {
-    const localRepositories = await getLocalAccountRepositories(source);
-    const localMatch = localRepositories.find((repository) => repository.repository === source.repository);
     const repositories = repositoryMatchesSource(source, source.repository)
-      ? [buildResolvedRepository(source, source.repository, source.ref ?? "main", localMatch?.localPath)]
+      ? [buildResolvedRepository(source, source.repository, source.ref ?? "main")]
       : [];
     githubAccountRepositoriesCache.set(cacheKey, repositories);
     return repositories;
@@ -566,47 +458,29 @@ async function getGitHubAccountRepositories(source: DocumentSourceConfig) {
   const userRepositoriesUrl =
     `https://api.github.com/users/${encodeURIComponent(source.account)}/repos?per_page=100&sort=updated`;
   let payload: GitHubRepositoryResponse[];
-  const localRepositories = await getLocalAccountRepositories(source);
-  const localFallback = localRepositories.filter((repository) =>
-    repositoryMatchesSource(source, repository.repository),
-  );
 
   try {
-    payload = await fetchJson<GitHubRepositoryResponse[]>(userRepositoriesUrl);
+    payload = await readSourceJson<GitHubRepositoryResponse[]>(userRepositoriesUrl);
   } catch (error) {
-    githubAccountRepositoriesCache.set(cacheKey, localFallback);
-    return localFallback;
+    githubAccountRepositoriesCache.set(cacheKey, []);
+    return [];
   }
-
-  const localRepositoryMap = new Map(
-    localRepositories.map((repository) => [repository.repository, repository] as const),
-  );
 
   const repositories = payload
     .filter((repository) => repository.full_name)
     .filter((repository) => !repository.archived && !repository.disabled && !repository.fork)
-    .map((repository) => {
-      const resolved = buildResolvedRepository(
+    .map((repository) =>
+      buildResolvedRepository(
         source,
         repository.full_name ?? "",
         source.ref ?? repository.default_branch ?? "main",
-      );
-      const localMatch = localRepositoryMap.get(resolved.repository);
-
-      if (localMatch?.localPath) {
-        resolved.localPath = localMatch.localPath;
-        resolved.ref = localMatch.ref || resolved.ref;
-      }
-
-      return resolved;
-    })
+      ),
+    )
     .filter((repository) => repository.repository)
     .filter((repository) => repositoryMatchesSource(source, repository.repository));
 
-  const mergedRepositories = mergeResolvedRepositories([...repositories, ...localFallback]);
-
-  githubAccountRepositoriesCache.set(cacheKey, mergedRepositories);
-  return mergedRepositories;
+  githubAccountRepositoriesCache.set(cacheKey, repositories);
+  return repositories;
 }
 
 function mergeResolvedRepositories(repositories: ResolvedDocumentRepository[]) {
@@ -636,9 +510,6 @@ function mergeResolvedRepositories(repositories: ResolvedDocumentRepository[]) {
 
     existing.documentRules = [...ruleMap.values()];
 
-    if (!existing.localPath && repository.localPath) {
-      existing.localPath = repository.localPath;
-    }
   }
 
   return [...merged.values()].sort((left, right) => left.repository.localeCompare(right.repository));
@@ -771,14 +642,6 @@ function resolveRepositoryRelativePath(rawPath: string, repository: ResolvedDocu
 
   if (!slashNormalizedRawPath.startsWith("/") && !/^[a-z]:\//i.test(slashNormalizedRawPath)) {
     return normalizedRawPath;
-  }
-
-  const localPath = repository.localPath ? normalizePath(repository.localPath.replaceAll("\\", "/")) : "";
-  const localPathWithoutDrive = localPath.replace(/^[a-z]:/i, "");
-  const rawPathWithoutDrive = normalizedRawPath.replace(/^[a-z]:/i, "");
-
-  if (localPath && rawPathWithoutDrive.startsWith(localPathWithoutDrive)) {
-    return normalizePath(rawPathWithoutDrive.slice(localPathWithoutDrive.length));
   }
 
   const repositoryLeaf = repository.repository.split("/").at(-1)?.toLowerCase() ?? "";
@@ -1545,51 +1408,12 @@ function matchesDocumentRule(rule: DocumentScanRuleConfig, filePath: string) {
   return domainMatches && includeMatches && !excludeMatches && normalizedPath.endsWith(".md");
 }
 
-async function listLocalRepositoryFiles(repositoryRoot: string, currentPath = ""): Promise<string[]> {
-  const absolutePath = currentPath
-    ? posix.join(repositoryRoot.replaceAll("\\", "/"), currentPath)
-    : repositoryRoot.replaceAll("\\", "/");
-  const entries = await readdir(absolutePath, { withFileTypes: true });
-  const files = await Promise.all(
-    entries.map(async (entry) => {
-      const relativePath = currentPath ? posix.join(currentPath, entry.name) : entry.name;
-
-      if (entry.isDirectory()) {
-        if (entry.name === ".git" || entry.name === "node_modules" || entry.name === "dist") {
-          return [];
-        }
-
-        return listLocalRepositoryFiles(repositoryRoot, relativePath);
-      }
-
-      if (entry.isFile()) {
-        return [relativePath.replaceAll("\\", "/")];
-      }
-
-      return [];
-    }),
-  );
-
-  return files.flat();
-}
-
 async function getRepositoryFilePaths(repository: ResolvedDocumentRepository) {
-  try {
-    const tree = await getGitHubTree(repository.repository, repository.ref);
-    const remotePaths = [...new Set(
-      tree.filter((entry) => entry.type === "blob").map((entry) => normalizePath(entry.path)),
-    )].sort((left, right) => left.localeCompare(right));
+  const tree = await getGitHubTree(repository.repository, repository.ref);
 
-    if (remotePaths.length > 0 || !repository.localPath) {
-      return remotePaths;
-    }
-  } catch (error) {
-    if (!repository.localPath) {
-      throw error;
-    }
-  }
-
-  return [...new Set((await listLocalRepositoryFiles(repository.localPath)).map(normalizePath))].sort(
+  return [...new Set(
+    tree.filter((entry) => entry.type === "blob").map((entry) => normalizePath(entry.path)),
+  )].sort(
     (left, right) => left.localeCompare(right),
   );
 }
@@ -1624,28 +1448,11 @@ async function readDocumentSource(repository: ResolvedDocumentRepository, filePa
   const rawUrl = getGitHubRawUrl(repository.repository, repository.ref, normalizedPath);
   const sourceUrl = getGitHubBlobUrl(repository.repository, repository.ref, normalizedPath);
 
-  if (repository.localPath) {
-    const localPath = posix.join(repository.localPath.replaceAll("\\", "/"), normalizedPath);
-    try {
-      return {
-        markdownSource: await readFile(localPath, "utf-8"),
-        rawUrl,
-        sourceUrl,
-      };
-    } catch {
-      // Fall back to GitHub when the local workspace does not contain the file.
-    }
-  }
-
-  try {
-    return {
-      markdownSource: await fetchText(rawUrl),
-      rawUrl,
-      sourceUrl,
-    };
-  } catch (error) {
-    throw error;
-  }
+  return {
+    markdownSource: await readSourceText(rawUrl),
+    rawUrl,
+    sourceUrl,
+  };
 }
 
 async function buildDocumentPage(
@@ -2117,8 +1924,7 @@ async function buildRepositoryPage(
 }
 
 async function getDocumentSourceConfigs() {
-  const rawFile = await readFile(documentsRepositoriesYamlPath, "utf-8");
-  const document = (parseYaml(rawFile) as DocumentsSourceDocument | null) ?? {};
+  const document = await getDataset<DocumentsSourceDocument>("document-repositories");
   const repositories = document.repositories ?? [];
 
   return repositories
@@ -2398,7 +2204,7 @@ export function getDocumentsIndexMarkdown(data: DocumentsData) {
   doc.section("GitHub repositories", () => {
     doc.subheading("How repository discovery works", 3);
     doc.paragraph(
-      "The library starts from repository targets and account filters declared in `data/document-repositories.yaml`, expands the matching repositories, and then applies document rules to decide which Markdown files become published pages.",
+      "The library starts from repository targets and account filters declared in the private remote site catalog, expands the matching repositories, and then applies document rules to decide which Markdown files become published pages.",
     );
     doc.keyValueList([
       { label: "Config entries", value: String(sourceConfigs.length) },

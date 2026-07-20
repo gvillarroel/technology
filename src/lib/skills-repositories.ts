@@ -1,14 +1,15 @@
-import { access, readFile, readdir, writeFile } from "node:fs/promises";
-import { basename, dirname, isAbsolute, join, posix, relative } from "node:path";
-import { parse, stringify } from "yaml";
+import { basename, posix } from "node:path";
+import { parse } from "yaml";
 import {
   getSkillEvaluationsBySkillKey,
   summarizeSkillEvaluations,
   type SkillEvaluation,
   type SkillEvaluationSummary,
 } from "./skill-evaluations";
+import { readSourceJson, readSourceText } from "./connectors";
+import { getDataset } from "./site-catalog";
 
-type RepositorySource = "github" | "local";
+type RepositorySource = "github";
 
 interface GitHubTreeEntry {
   path: string;
@@ -64,11 +65,20 @@ export interface SkillsCatalogData {
   skills: ApprovedSkill[];
 }
 
-const skillsRepositoriesYamlPath = join(process.cwd(), "data", "skills-repositories.yaml");
-const skillsCatalogCacheYamlPath = join(process.cwd(), "data", "skills-catalog-cache.yaml");
-const githubTreeCache = new Map<string, GitHubTreeEntry[]>();
-const githubTextCache = new Map<string, string>();
+interface SkillsRepositoriesDocument {
+  repositories?: Array<Record<string, unknown>>;
+}
+
+interface SkillsCatalogCacheDocument {
+  repositories?: Array<{
+    slug?: string;
+    skills?: Array<Record<string, unknown>>;
+  }>;
+}
+
 type ApprovedSkillStatic = Omit<ApprovedSkill, "evaluations" | "evaluationSummary">;
+
+const githubTreeCache = new Map<string, GitHubTreeEntry[]>();
 
 function toScalar(value: unknown) {
   return String(value ?? "").trim();
@@ -78,23 +88,17 @@ function toBoolean(value: unknown) {
   return value !== false && String(value ?? "").trim().toLowerCase() !== "false";
 }
 
-function normalizeSource(value: unknown): RepositorySource {
-  return toScalar(value) === "github" ? "github" : "local";
-}
-
 function normalizeTag(segment: string) {
   return segment.replace(/^\.+/, "").replace(/[-_]+/g, " ").trim().toLowerCase();
 }
 
 function getDescriptionFallback(markdown: string) {
   const body = markdown.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
-  const lines = body
+  return body
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean)
-    .filter((line) => !line.startsWith("#"));
-
-  return lines[0] ?? "";
+    .find((line) => !line.startsWith("#")) ?? "";
 }
 
 function flattenMetadata(value: unknown, prefix = ""): Array<{ key: string; value: string }> {
@@ -103,7 +107,7 @@ function flattenMetadata(value: unknown, prefix = ""): Array<{ key: string; valu
   }
 
   if (Array.isArray(value)) {
-    const listValue = value.map((item) => toScalar(item)).filter(Boolean).join(", ");
+    const listValue = value.map(toScalar).filter(Boolean).join(", ");
     return listValue ? [{ key: prefix || "items", value: listValue }] : [];
   }
 
@@ -117,15 +121,6 @@ function flattenMetadata(value: unknown, prefix = ""): Array<{ key: string; valu
   return scalar ? [{ key: prefix || "value", value: scalar }] : [];
 }
 
-async function pathExists(filePath: string) {
-  try {
-    await access(filePath);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 function parseSkillDocument(markdown: string, skillDirName: string) {
   const frontmatterMatch = markdown.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
   const frontmatter = frontmatterMatch ? (parse(frontmatterMatch[1]) as Record<string, unknown>) : {};
@@ -137,67 +132,12 @@ function parseSkillDocument(markdown: string, skillDirName: string) {
   const metadataPairs = flattenMetadata(frontmatter).filter(
     (item) => item.key !== "name" && item.key !== "description",
   );
-  const metadata = Object.fromEntries(metadataPairs.map((item) => [item.key, item.value]));
 
-  return { name, description, metadata, metadataPairs };
-}
-
-async function findLocalSkillFiles(rootPath: string): Promise<string[]> {
-  const entries = await readdir(rootPath, { withFileTypes: true });
-  const matches: string[] = [];
-
-  for (const entry of entries) {
-    const entryPath = join(rootPath, entry.name);
-
-    if (entry.isDirectory()) {
-      matches.push(...(await findLocalSkillFiles(entryPath)));
-      continue;
-    }
-
-    if (entry.isFile() && entry.name === "SKILL.md") {
-      matches.push(entryPath);
-    }
-  }
-
-  return matches;
-}
-
-async function fetchJson<T>(url: string) {
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": "codex-technology",
-      Accept: "application/vnd.github+json",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ${url}: ${response.status}`);
-  }
-
-  return (await response.json()) as T;
-}
-
-async function fetchText(url: string) {
-  const cached = githubTextCache.get(url);
-
-  if (cached) {
-    return cached;
-  }
-
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": "codex-technology",
-      Accept: "text/plain",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ${url}: ${response.status}`);
-  }
-
-  const text = await response.text();
-  githubTextCache.set(url, text);
-  return text;
+  return {
+    name,
+    description,
+    metadata: Object.fromEntries(metadataPairs.map((item) => [item.key, item.value])),
+  };
 }
 
 async function getGitHubTree(repository: string, ref: string) {
@@ -209,7 +149,7 @@ async function getGitHubTree(repository: string, ref: string) {
   }
 
   const treeUrl = `https://api.github.com/repos/${repository}/git/trees/${encodeURIComponent(ref)}?recursive=1`;
-  const payload = await fetchJson<GitHubTreeResponse>(treeUrl);
+  const payload = await readSourceJson<GitHubTreeResponse>(treeUrl);
   const tree = payload.tree ?? [];
   githubTreeCache.set(cacheKey, tree);
   return tree;
@@ -226,38 +166,25 @@ async function findGitHubSkillFiles(repository: string, ref: string, skillRoot: 
 }
 
 function getRepositoryTags(repository: SkillRepositoryConfig) {
-  const segments = repository.skillRoot
-    .split(/[\\/]+/)
-    .map((segment) => normalizeTag(segment))
-    .filter(Boolean)
-    .filter((segment) => segment !== "skills");
-
-  return [...new Set(segments)];
+  return [...new Set(
+    repository.skillRoot
+      .split(/[\\/]+/)
+      .map(normalizeTag)
+      .filter((segment) => segment && segment !== "skills"),
+  )];
 }
 
 function getRepositoryUrl(repository: SkillRepositoryConfig) {
-  if (!repository.repository) {
-    return "";
-  }
-
   return `https://github.com/${repository.repository}`;
 }
 
 function getGitHubRawUrl(repository: string, ref: string, filePath: string) {
-  const encodedPath = filePath
-    .split("/")
-    .map((segment) => encodeURIComponent(segment))
-    .join("/");
-
+  const encodedPath = filePath.split("/").map(encodeURIComponent).join("/");
   return `https://raw.githubusercontent.com/${repository}/${encodeURIComponent(ref)}/${encodedPath}`;
 }
 
 function getGitHubTreeUrl(repository: string, ref: string, directoryPath: string) {
-  const encodedPath = directoryPath
-    .split("/")
-    .map((segment) => encodeURIComponent(segment))
-    .join("/");
-
+  const encodedPath = directoryPath.split("/").map(encodeURIComponent).join("/");
   return `https://github.com/${repository}/tree/${encodeURIComponent(ref)}/${encodedPath}`;
 }
 
@@ -267,44 +194,20 @@ function renderInstallSnippet(template: string, values: Record<string, string>) 
 
 function getUniqueMetadataPairs(metadataPairs: Array<{ key: string; value: string }>) {
   const seen = new Set<string>();
-
   return metadataPairs.filter((item) => {
     const cacheKey = `${item.key.toLowerCase()}:${item.value.toLowerCase()}`;
-
-    if (seen.has(cacheKey)) {
-      return false;
-    }
-
+    if (seen.has(cacheKey)) return false;
     seen.add(cacheKey);
     return true;
   });
 }
 
-function serializeCachedSkill(skill: ApprovedSkillStatic) {
-  return {
-    ...skill,
-  };
-}
-
 async function loadSkillsCatalogCache() {
-  if (!(await pathExists(skillsCatalogCacheYamlPath))) {
-    return new Map<string, ApprovedSkillStatic[]>();
-  }
-
-  const rawFile = await readFile(skillsCatalogCacheYamlPath, "utf-8");
-  const document = parse(rawFile) as {
-    repositories?: Array<{
-      slug?: string;
-      skills?: Array<Record<string, unknown>>;
-    }>;
-  };
+  const document = await getDataset<SkillsCatalogCacheDocument>("skills-catalog-cache");
 
   return (document.repositories ?? []).reduce((map, repository) => {
     const slug = toScalar(repository.slug);
-
-    if (!slug) {
-      return map;
-    }
+    if (!slug) return map;
 
     const skills = (repository.skills ?? []).map((skill) => ({
       id: toScalar(skill.id),
@@ -313,28 +216,22 @@ async function loadSkillsCatalogCache() {
       description: toScalar(skill.description),
       repositorySlug: toScalar(skill.repositorySlug),
       repositoryName: toScalar(skill.repositoryName),
-      repositorySource: normalizeSource(skill.repositorySource),
+      repositorySource: "github" as const,
       repositoryPurpose: toScalar(skill.repositoryPurpose),
       repositoryLabel: toScalar(skill.repositoryLabel),
       repositoryUrl: toScalar(skill.repositoryUrl),
       repositoryRef: toScalar(skill.repositoryRef),
-      localPath: toScalar(skill.localPath),
+      localPath: "",
       relativePath: toScalar(skill.relativePath),
       installPath: toScalar(skill.installPath),
       sourcePath: toScalar(skill.sourcePath),
       sourceUrl: toScalar(skill.sourceUrl),
-      tags: Array.isArray(skill.tags) ? skill.tags.map((tag) => toScalar(tag)).filter(Boolean) : [],
-      metadata:
-        skill.metadata && typeof skill.metadata === "object"
-          ? Object.fromEntries(
-              Object.entries(skill.metadata as Record<string, unknown>).map(([key, value]) => [key, toScalar(value)]),
-            )
-          : {},
+      tags: Array.isArray(skill.tags) ? skill.tags.map(toScalar).filter(Boolean) : [],
+      metadata: skill.metadata && typeof skill.metadata === "object"
+        ? Object.fromEntries(Object.entries(skill.metadata as Record<string, unknown>).map(([key, value]) => [key, toScalar(value)]))
+        : {},
       metadataPairs: Array.isArray(skill.metadataPairs)
-        ? skill.metadataPairs.map((item) => ({
-            key: toScalar(item.key),
-            value: toScalar(item.value),
-          }))
+        ? skill.metadataPairs.map((item) => ({ key: toScalar(item.key), value: toScalar(item.value) }))
         : [],
       installSnippet: toScalar(skill.installSnippet),
       installAvailable: toBoolean(skill.installAvailable),
@@ -346,41 +243,20 @@ async function loadSkillsCatalogCache() {
   }, new Map<string, ApprovedSkillStatic[]>());
 }
 
-async function writeSkillsCatalogCache(skillsByRepository: Map<string, ApprovedSkillStatic[]>) {
-  const payload = {
-    generated_at: new Date().toISOString(),
-    repositories: [...skillsByRepository.entries()]
-      .map(([slug, skills]) => ({
-        slug,
-        skills: skills.map((skill) => serializeCachedSkill(skill)),
-      }))
-      .sort((left, right) => left.slug.localeCompare(right.slug)),
-  };
-
-  await writeFile(skillsCatalogCacheYamlPath, stringify(payload), "utf-8");
-}
-
 function withEvaluations(skill: ApprovedSkillStatic, evaluationsBySkillKey: Map<string, SkillEvaluation[]>) {
   const evaluations = evaluationsBySkillKey.get(`${skill.repositorySlug}:${skill.slug}`) ?? [];
-
-  return {
-    ...skill,
-    evaluations,
-    evaluationSummary: summarizeSkillEvaluations(evaluations),
-  } satisfies ApprovedSkill;
+  return { ...skill, evaluations, evaluationSummary: summarizeSkillEvaluations(evaluations) } satisfies ApprovedSkill;
 }
 
 export async function getTrustedSkillRepositories(): Promise<SkillRepositoryConfig[]> {
-  const rawFile = await readFile(skillsRepositoriesYamlPath, "utf-8");
-  const document = parse(rawFile) as { repositories?: Array<Record<string, unknown>> };
-  const repositories = document.repositories ?? [];
+  const document = await getDataset<SkillsRepositoriesDocument>("skills-repositories");
 
-  return repositories
+  return (document.repositories ?? [])
     .map((repository) => ({
       slug: toScalar(repository.slug),
       name: toScalar(repository.name),
-      source: normalizeSource(repository.source),
-      location: toScalar(repository.location),
+      source: "github" as const,
+      location: "",
       allowed: toBoolean(repository.allowed),
       purpose: toScalar(repository.purpose),
       repository: toScalar(repository.repository),
@@ -388,77 +264,22 @@ export async function getTrustedSkillRepositories(): Promise<SkillRepositoryConf
       skillRoot: toScalar(repository.skill_root) || "skills",
       installSnippetTemplate: toScalar(repository.install_snippet_template),
     }))
-    .filter((repository) => repository.allowed);
-}
-
-async function getRepositorySkillFiles(repository: SkillRepositoryConfig) {
-  if (repository.source === "github") {
-    try {
-      return await findGitHubSkillFiles(repository.repository, repository.ref, repository.skillRoot);
-    } catch (error) {
-      if (repository.location && (await pathExists(repository.location))) {
-        return findLocalSkillFiles(repository.location);
-      }
-
-      throw error;
-    }
-  }
-
-  if (!repository.location) {
-    return [];
-  }
-
-  return findLocalSkillFiles(repository.location);
-}
-
-async function readSkillMarkdown(repository: SkillRepositoryConfig, skillFilePath: string) {
-  if (repository.source === "github") {
-    if (isAbsolute(skillFilePath)) {
-      return readFile(skillFilePath, "utf-8");
-    }
-
-    try {
-      return await fetchText(getGitHubRawUrl(repository.repository, repository.ref, skillFilePath));
-    } catch (error) {
-      if (repository.location) {
-        const localMirrorPath = join(repository.location, skillFilePath.replace(/\//g, "\\"));
-
-        if (await pathExists(localMirrorPath)) {
-          return readFile(localMirrorPath, "utf-8");
-        }
-      }
-
-      throw error;
-    }
-  }
-
-  return readFile(skillFilePath, "utf-8");
+    .filter((repository) => repository.allowed && repository.repository);
 }
 
 function getRelativeSkillPath(repository: SkillRepositoryConfig, skillDir: string) {
-  if (repository.source === "github") {
-    if (isAbsolute(skillDir) && repository.location) {
-      return relative(repository.location, skillDir).replace(/\\/g, "/");
-    }
-
-    return posix.relative(repository.skillRoot.replace(/\\/g, "/"), skillDir.replace(/\\/g, "/"));
-  }
-
-  return relative(repository.location, skillDir).replace(/\\/g, "/");
+  return posix.relative(repository.skillRoot.replace(/\\/g, "/"), skillDir.replace(/\\/g, "/"));
 }
 
-function buildSkillEntry(
-  repository: SkillRepositoryConfig,
-  skillDir: string,
-  markdown: string,
-) {
+function buildSkillEntry(repository: SkillRepositoryConfig, skillDir: string, markdown: string) {
   const repositoryTags = getRepositoryTags(repository);
   const relativePath = getRelativeSkillPath(repository, skillDir).replace(/^\.\//, "");
   const relativeSegments = relativePath.split("/").map((segment) => segment.trim()).filter(Boolean);
-  const skillDirectoryName = basename(skillDir);
-  const skillSlug = relativeSegments.at(-1) ?? skillDirectoryName;
-  const parentTags = relativeSegments.slice(0, -1).map((segment) => normalizeTag(segment)).filter(Boolean);
-  const tags = [...new Set([...repositoryTags, ...parentTags])];
+  const skillSlug = relativeSegments.at(-1) ?? basename(skillDir);
+  const tags = [...new Set([
+    ...repositoryTags,
+    ...relativeSegments.slice(0, -1).map(normalizeTag).filter(Boolean),
+  ])];
   const installPath = posix.join(repository.skillRoot.replace(/\\/g, "/"), relativePath);
   const { name, description, metadata } = parseSkillDocument(markdown, skillSlug);
   const metadataPairs = getUniqueMetadataPairs(
@@ -466,11 +287,7 @@ function buildSkillEntry(
       (item) => !tags.some((tag) => tag.toLowerCase() === item.value.toLowerCase()),
     ),
   );
-  const sourcePath = repository.source === "github" ? installPath : skillDir.replace(/\\/g, "/");
-  const sourceUrl =
-    repository.source === "github"
-      ? getGitHubTreeUrl(repository.repository, repository.ref, sourcePath)
-      : "";
+  const sourceUrl = getGitHubTreeUrl(repository.repository, repository.ref, installPath);
   const installSnippet = repository.installSnippetTemplate
     ? renderInstallSnippet(repository.installSnippetTemplate, {
         repository: repository.repository,
@@ -481,9 +298,9 @@ function buildSkillEntry(
       }).trim()
     : "";
   const metadataSearch = metadataPairs.map((item) => `${item.key} ${item.value}`).join(" ");
-  const id = `${repository.slug}:${relativePath || skillSlug}`;
+
   return {
-    id,
+    id: `${repository.slug}:${relativePath || skillSlug}`,
     slug: skillSlug,
     name,
     description,
@@ -491,13 +308,13 @@ function buildSkillEntry(
     repositoryName: repository.name,
     repositorySource: repository.source,
     repositoryPurpose: repository.purpose,
-    repositoryLabel: repository.repository || repository.name,
+    repositoryLabel: repository.repository,
     repositoryUrl: getRepositoryUrl(repository),
     repositoryRef: repository.ref,
-    localPath: repository.source === "local" ? sourcePath : "",
+    localPath: "",
     relativePath,
     installPath,
-    sourcePath,
+    sourcePath: installPath,
     sourceUrl,
     tags,
     metadata,
@@ -516,40 +333,23 @@ export async function getApprovedSkills(): Promise<ApprovedSkill[]> {
 
   for (const repository of repositories) {
     try {
-      const skillFiles = await getRepositorySkillFiles(repository);
-      const skills = await Promise.all(
-        skillFiles.map(async (skillFilePath) => {
-          const skillDir =
-            repository.source === "github" && !isAbsolute(skillFilePath)
-              ? posix.dirname(skillFilePath)
-              : dirname(skillFilePath);
-          const markdown = await readSkillMarkdown(repository, skillFilePath);
-
-          return buildSkillEntry(repository, skillDir, markdown);
-        }),
-      );
-
+      const skillFiles = await findGitHubSkillFiles(repository.repository, repository.ref, repository.skillRoot);
+      const skills = await Promise.all(skillFiles.map(async (skillFilePath) => {
+        const markdown = await readSourceText(
+          getGitHubRawUrl(repository.repository, repository.ref, skillFilePath),
+        );
+        return buildSkillEntry(repository, posix.dirname(skillFilePath), markdown);
+      }));
       resolvedSkillsByRepository.set(repository.slug, skills);
     } catch (error) {
-      const cachedSkills = cachedSkillsByRepository.get(repository.slug);
-
-      if (cachedSkills && cachedSkills.length > 0) {
-        console.warn(`Using cached skills for ${repository.slug}: ${error instanceof Error ? error.message : String(error)}`);
-        resolvedSkillsByRepository.set(repository.slug, cachedSkills);
-        continue;
-      }
-
-      if (repository.source === "github") {
-        console.warn(`Skipping ${repository.slug}: ${error instanceof Error ? error.message : String(error)}`);
-        resolvedSkillsByRepository.set(repository.slug, []);
-        continue;
-      }
-
-      throw error;
+      const cachedSkills = cachedSkillsByRepository.get(repository.slug) ?? [];
+      console.warn(
+        cachedSkills.length > 0 ? `Using cached skills for ${repository.slug}` : `Skipping ${repository.slug}`,
+        error instanceof Error ? error.message : String(error),
+      );
+      resolvedSkillsByRepository.set(repository.slug, cachedSkills);
     }
   }
-
-  await writeSkillsCatalogCache(resolvedSkillsByRepository);
 
   return [...resolvedSkillsByRepository.values()]
     .flat()
@@ -574,18 +374,16 @@ export async function getSkillsCatalogData(): Promise<SkillsCatalogData> {
 
   return {
     repositories: repositories
-      .map((repository) => ({
-        ...repository,
-        skillCount: repositoryCounts.get(repository.slug) ?? 0,
-      }))
+      .map((repository) => ({ ...repository, skillCount: repositoryCounts.get(repository.slug) ?? 0 }))
       .sort((left, right) => left.name.localeCompare(right.name)),
     skills,
   };
 }
 
 export async function getApprovedSkillByRepoAndSlug(repositorySlug: string, skillSlug: string) {
-  const skills = await getApprovedSkills();
-  return skills.find((skill) => skill.repositorySlug === repositorySlug && skill.slug === skillSlug);
+  return (await getApprovedSkills()).find(
+    (skill) => skill.repositorySlug === repositorySlug && skill.slug === skillSlug,
+  );
 }
 
 export function getSkillDetailHtmlUrl(repositorySlug: string, skillSlug: string) {

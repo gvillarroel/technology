@@ -6,13 +6,13 @@ will scan and publish in the Documentation section.
 ## Repository Overview
 
 The `technology` repository is a static Astro site that publishes multiple knowledge
-surfaces from a single data root. At a macro level, the project is composed of page
-templates, domain loaders, shared rendering utilities, and curated data files that are
+surfaces from a private remote catalog. At a macro level, the project is composed of page
+templates, domain loaders, shared rendering utilities, and governed remote datasets that are
 expanded into static HTML routes and Markdown twins.
 
 ```mermaid
 flowchart LR
-    A["data/ YAML and Markdown"] --> B["src/lib domain loaders"]
+    A["Private GCS site.json"] --> B["src/lib connectors and loaders"]
     C["GitHub repositories and raw Markdown"] --> B
     D["src/pages Astro routes"] --> E["Static HTML and Markdown pages"]
     B --> D
@@ -34,7 +34,7 @@ The Tech Radar surface captures the approved technology inventory, operating pos
 and lifecycle recommendation for tools, platforms, and practices that teams may adopt.
 
 - Route: [`/tech-radar/`](/tech-radar/)
-- Data source: `data/tech-radar.yaml`
+- Data source: `site.json#datasets.tech-radar`
 - Implementation: `src/lib/tech-radar.ts`, `src/pages/tech-radar.*`
 
 ## ADRs
@@ -43,7 +43,7 @@ The ADR catalog turns repository-scanned architecture decision records into a se
 library with normalized metadata, repository provenance, and route-level publication.
 
 - Route: [`/adrs/`](/adrs/)
-- Data source: `data/adr-repositories.yaml`
+- Data source: `site.json#datasets.adr-repositories` plus original GitHub Markdown
 - Implementation: `src/lib/adrs.ts`, `src/pages/adrs.*`
 
 ## Skills
@@ -52,7 +52,7 @@ The Skills area in AI SDLC documents the approved skill repositories, installati
 sources, and evaluation-backed records used to understand reusable agent capabilities.
 
 - Route: [`/ai-sdlc/skills/`](/ai-sdlc/skills/)
-- Data source: `data/skills-repositories.yaml`, `data/skill-evaluations.yaml`
+- Data source: `site.json` repository rules plus original GitHub skills
 - Implementation: `src/lib/skills-repositories.ts`, `src/lib/skill-evaluations.ts`, `src/pages/ai-sdlc/skills/**`
 
 ## Metrics
@@ -61,7 +61,7 @@ The Metrics area in AI SDLC explains how adoption, usage, throughput, and qualit
 should be read so teams can evaluate whether AI-assisted delivery is producing real value.
 
 - Route: [`/ai-sdlc/metrics/`](/ai-sdlc/metrics/)
-- Data source: `data/ai-sdlc.yaml`
+- Data source: `site.json#datasets.ai-sdlc`
 - Implementation: `src/lib/ai-sdlc.ts`, `src/lib/ai-metrics-demo.ts`, `src/pages/ai-sdlc/[slug].*`
 
 ## Harness Tools
@@ -70,7 +70,7 @@ The Harness Tools subsection describes the agent tooling layer used during execu
 including tool roles, operating expectations, and how those tools fit inside the SDLC.
 
 - Route: [`/ai-sdlc/harness-tools/`](/ai-sdlc/harness-tools/)
-- Data source: `data/ai-sdlc.yaml`
+- Data source: `site.json#datasets.ai-sdlc`
 - Implementation: `src/lib/ai-sdlc.ts`, `src/pages/ai-sdlc/[slug].*`
 
 ## Cloud Enablement
@@ -79,7 +79,7 @@ The Cloud Enablement surface compares provider capabilities, operating constrain
 service-level guidance so teams can reason about platform fit from one normalized model.
 
 - Route: [`/cloud-enablement/`](/cloud-enablement/)
-- Data source: `data/cloud-enablement.yaml`
+- Data source: `site.json#datasets.cloud-enablement`
 - Implementation: `src/lib/cloud-enablement.ts`, `src/pages/cloud-enablement.*`
 
 ## Communities
@@ -88,8 +88,8 @@ The Communities area tracks internal and external groups that shape technical pr
 shared standards, and cross-team knowledge exchange.
 
 - Route: [`/communities/`](/communities/)
-- Data source: `data/tech-communities.yaml`
-- Implementation: `src/lib/tech-communities.ts`, `src/pages/communities.*`
+- Data source: `site.json#datasets.tech-communities`
+- Implementation: remote `catalog` route plus `src/components/templates/CatalogPage.astro`
 
 ## Documentation
 
@@ -97,7 +97,7 @@ The Documentation surface scans repository-backed Markdown trees, rewrites inter
 and publishes them as folder-aware reading experiences with HTML and Markdown twins.
 
 - Route: [`/documents/`](/documents/)
-- Data source: `data/document-repositories.yaml`
+- Data source: `site.json` scan rules plus original GitHub Markdown
 - Implementation: `src/lib/documents.ts`, `src/pages/documents.*`
 
 ## Use Cases

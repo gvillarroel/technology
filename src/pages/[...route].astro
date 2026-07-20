@@ -1,0 +1,20 @@
+---
+import CatalogPage from "../components/templates/CatalogPage.astro";
+import {
+  getCatalogRouteDefinitions,
+  getRouteParameter,
+  resolveCatalogRoute,
+  type ResolvedCatalogRoute,
+} from "../lib/catalog-routes";
+
+export async function getStaticPaths() {
+  return Promise.all((await getCatalogRouteDefinitions()).map(async (route) => ({
+    params: { route: getRouteParameter(route) },
+    props: await resolveCatalogRoute(route),
+  })));
+}
+
+const props = Astro.props as ResolvedCatalogRoute;
+---
+
+<CatalogPage {...props} />

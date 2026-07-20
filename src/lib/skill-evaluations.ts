@@ -1,6 +1,4 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-import { parse } from "yaml";
+import { getDataset } from "./site-catalog";
 
 export interface SkillEvaluationPrompt {
   id: string;
@@ -80,8 +78,6 @@ export interface SkillEvaluationSummary {
   totalRuns: number;
 }
 
-const skillEvaluationsYamlPath = join(process.cwd(), "data", "skill-evaluations.yaml");
-
 function toScalar(value: unknown) {
   return String(value ?? "").trim();
 }
@@ -107,8 +103,7 @@ function toList(value: unknown) {
 }
 
 export async function getSkillEvaluations(): Promise<SkillEvaluation[]> {
-  const rawFile = await readFile(skillEvaluationsYamlPath, "utf-8");
-  const document = parse(rawFile) as { evaluations?: Array<Record<string, unknown>> };
+  const document = await getDataset<{ evaluations?: Array<Record<string, unknown>> }>("skill-evaluations");
   const evaluations = document.evaluations ?? [];
 
   return evaluations.map((evaluation) => {

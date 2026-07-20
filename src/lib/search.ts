@@ -220,7 +220,7 @@ export async function getGlobalSearchIndex(): Promise<GlobalSearchEntry[]> {
     summary: aiSdlcData.overview.summary,
     htmlUrl: withBasePath("/ai-sdlc/"),
     markdownUrl: withBasePath("/ai-sdlc.md"),
-    fileName: "data/ai-sdlc.yaml",
+    fileName: "site.json#datasets.ai-sdlc",
     searchText: normalizeText(
       [
         aiSdlcData.overview.title,

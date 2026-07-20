@@ -1,11 +1,6 @@
 import { defineCollection } from "astro:content";
-import { glob } from "astro/loaders";
 import { z } from "astro/zod";
-import {
-  csvPageLoader,
-  githubRemotePageLoader,
-  jsonPageLoader,
-} from "./loaders/spike-page-loaders";
+import { catalogPageLoader } from "./loaders/catalog-page-loader";
 
 const pageSchema = z.object({
   title: z.string(),
@@ -15,25 +10,22 @@ const pageSchema = z.object({
 });
 
 const dualFormatPages = defineCollection({
-  loader: glob({
-    base: "./src/content/dual-format-pages",
-    pattern: "**/*.md",
-  }),
+  loader: catalogPageLoader("dual-format-pages"),
   schema: pageSchema,
 });
 
 const jsonFormatPages = defineCollection({
-  loader: jsonPageLoader("./data/spikes/spike-json-pages.json"),
+  loader: catalogPageLoader("json-format-pages"),
   schema: pageSchema,
 });
 
 const csvFormatPages = defineCollection({
-  loader: csvPageLoader("./data/spikes/spike-csv-pages.csv"),
+  loader: catalogPageLoader("csv-format-pages"),
   schema: pageSchema,
 });
 
 const githubFormatPages = defineCollection({
-  loader: githubRemotePageLoader(),
+  loader: catalogPageLoader("github-format-pages"),
   schema: pageSchema,
 });
 

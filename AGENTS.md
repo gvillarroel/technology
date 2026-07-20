@@ -3,7 +3,7 @@
 ## Working Rules
 
 - Always use English in every document, comment, and written artifact in this repository.
-- Keep a single repository data root under `data/`. Do not introduce or maintain duplicated structured content under `src/data/` or any parallel data folder.
+- Keep governed site data outside the repository. Do not introduce local structured-content roots such as `data/` or `src/data/`.
 
 ## Project References
 
@@ -12,11 +12,8 @@ Read the following documents when they are relevant to the task:
 - `.specs/adr/*.md`: technical decision records.
 - `.specs/spikes/**/README.md`: summaries of technical experiments, including conclusions, lessons learned, and references to related files.
 - `.specs/designs.md`: preferred design and styling guidance.
-- `data/tech-radar.yaml`: approved technologies.
-- `data/models.yaml`: AI models.
-- `data/tech-communities.yaml`: technology communities.
-- `data/skills-repositories.yaml`: allowed sources of skills that may be listed here.
-- `data/spikes/**`: data files used by spike loaders and spike-backed routes.
+- `gs://limited-502918-cheap-gcs/technology/site.json`: private route registry, presentation configuration, and datasets.
+- Original GitHub repositories declared in the remote catalog: preferred sources for repository-backed ADRs, documentation, and skills.
 - Record new durable technical or workflow decisions as ADRs under `.specs/adr/*.md`.
 
 ## Workflow

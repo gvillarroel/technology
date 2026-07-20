@@ -17,7 +17,7 @@ const rights = [
 export async function GET() {
   const [landingCommands, primaryRoutes, supportingRoutes] = await Promise.all([
     getLandingMarkdownCommands(),
-    Promise.resolve(getLandingMarkdownPrimaryRoutes()),
+    getLandingMarkdownPrimaryRoutes(),
     getLandingMarkdownSupportingRoutes(),
   ]);
   const doc = createMarkdownDocument({

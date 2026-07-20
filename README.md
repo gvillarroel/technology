@@ -2,66 +2,48 @@
 
 Astro `7.1.1` static site published to GitHub Pages.
 
-## Scripts
+## Commands
 
 - `npm install`
-- `npm run data:pull`
-- `npm run data:push`
-- `npm run dev`
+- `npm run dev -- --host 0.0.0.0 --port 4321`
 - `npm run check`
-- `npm run check:markdown-pages`
-- `npm run check:markdown-pages:dist`
 - `npm run build`
-- `npm run preview`
 
-## Shared Local Server
-
-When a live local service is needed, prefer one shared development session for the whole repository instead of multiple parallel instances on different ports.
-
-- Shared command: `npm run dev -- --host 0.0.0.0 --port 4321`
-- Shared URL: `http://localhost:4321/`
-- Before starting a new local server, first check whether the shared URL is already responding and reuse it if available.
-
-`npm install` also runs `prepare`, which configures `git` to use the repository-local hooks under `.githooks/`.
-The `pre-commit` hook runs `npm run check:markdown-pages` so a new `.astro` page cannot be committed without its matching `.md.ts` route.
-`npm run build` also runs a post-build Markdown graph audit that crawls generated `dist/**/*.md`
-from `/index.md` and fails on broken internal Markdown links or unreachable generated pages.
-
-## Private Build Data
-
-The source data is stored privately at `gs://limited-502918-cheap-gcs/technology/` and is not tracked by Git.
-Maintainers with access to the bucket can synchronize it into the ignored local `data/` directory:
+Local builds require an authenticated Google Cloud identity that can read the private catalog:
 
 ```sh
 gcloud auth login
-npm run data:pull
+npm run build
 ```
 
-After editing local data, an authorized maintainer can replace the private archive with `npm run data:push`.
-The archive-based transfer deliberately avoids granting the CI identity permission to list unrelated object
-names elsewhere in the shared bucket.
+The build reads `gs://limited-502918-cheap-gcs/technology/site.json` directly. Set
+`TECHNOLOGY_SITE_CATALOG_URI` to another `gs://` or `https://` catalog for an isolated build.
+No site data is downloaded into or stored in the repository.
 
-The deployment workflow uses GitHub OIDC and Google Cloud Workload Identity Federation. It receives a
-short-lived, read-only identity restricted to this repository's `main` deployment workflow and to the
-bucket's `technology/` managed folder. No Google Cloud service-account key or long-lived GitHub secret is
-required.
+Repository-backed ADRs, documents, and skills are fetched from their original GitHub sources.
+The private GCS catalog holds route definitions, governed JSON datasets, and remote snapshots when an
+original source cannot be queried directly.
 
-The bucket source remains private, but the static pages and assets generated from it are public after a
-GitHub Pages deployment. Do not put secrets in the build data.
+## Private CI Access
 
-## Deploy
+The deployment workflow uses GitHub OIDC and Google Cloud Workload Identity Federation. Google issues
+a short-lived, read-only credential restricted to this repository's `main` deployment workflow and the
+bucket's `technology/` managed folder. There is no service-account key or long-lived Google credential
+in GitHub.
 
-The workflow [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) downloads the private data,
-builds the site, and publishes `dist/` to GitHub Pages on push to `main`.
+The catalog is private, but generated GitHub Pages output is public. Never place secrets in content that
+the site renders.
+
+## Route and Template Contract
+
+The remote catalog contains `navigationGroups`, `routes`, and `datasets`. A route chooses a template and
+dataset. The generic `catalog` template can publish a new flat directory in HTML and Markdown with only a
+catalog change. Specialized experiences keep a small Astro route and reuse the same remote route metadata.
+
+See [ADR 0009](.specs/adr/0009-remote-catalog-connectors-routes-and-templates.md) and the
+[data-source guide](docs/configuration/data-sources-and-build.md).
 
 ## GitHub Pages
 
-In the GitHub repository:
-
-1. Go to `Settings > Pages`.
-2. Under `Build and deployment`, choose `GitHub Actions`.
-
-Astro computes `base` automatically:
-
-- `https://<owner>.github.io/` for repositories named `<owner>.github.io`
-- `/<repo>` for standard repositories like this one
+The workflow at [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) checks and builds the site,
+then publishes `dist/`. Astro computes the Pages base path from `GITHUB_REPOSITORY`.

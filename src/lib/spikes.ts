@@ -1,6 +1,4 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-import { parse } from "yaml";
+import { getDataset } from "./site-catalog";
 import { withBasePath } from "./site-url";
 
 export type SpikePageKey =
@@ -25,7 +23,6 @@ export interface SpikePageContent {
   pills: SpikeIntroPill[];
 }
 
-const spikesPath = join(process.cwd(), "data", "spikes.yaml");
 const spikePageOrder: SpikePageKey[] = [
   "format-architecture",
   "terminal-colors",
@@ -40,11 +37,9 @@ function toScalar(value: unknown) {
 }
 
 async function readSpikesDocument() {
-  const rawFile = await readFile(spikesPath, "utf-8");
-
-  return parse(rawFile) as {
+  return getDataset<{
     pages?: Record<string, Record<string, unknown>>;
-  };
+  }>("spikes");
 }
 
 function normalizePills(value: unknown): SpikeIntroPill[] {

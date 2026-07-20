@@ -39,9 +39,6 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Download private build data
-        run: npm run data:pull
-
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v6
 

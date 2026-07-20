@@ -1,6 +1,4 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-import { parse } from "yaml";
+import { getSiteRoute } from "./site-catalog";
 
 export type StandardSourcePageKey =
   | "adrs"
@@ -18,29 +16,19 @@ export interface StandardPageSourceContent {
   summary: string;
 }
 
-const pageSourcesPath = join(process.cwd(), "data", "page-sources.yaml");
-
-function toScalar(value: unknown) {
-  return String(value ?? "").trim();
-}
-
 export async function getStandardPageSource(
   pageKey: StandardSourcePageKey,
 ): Promise<StandardPageSourceContent> {
-  const rawFile = await readFile(pageSourcesPath, "utf-8");
-  const document = parse(rawFile) as {
-    pages?: Record<string, Record<string, unknown>>;
-  };
-  const entry = document.pages?.[pageKey];
+  const entry = (await getSiteRoute(pageKey)).source;
 
   if (!entry) {
     throw new Error(`Missing standard page source for "${pageKey}".`);
   }
 
   return {
-    file: toScalar(entry.file),
-    lang: toScalar(entry.lang),
-    title: toScalar(entry.title),
-    summary: toScalar(entry.summary),
+    file: entry.file,
+    lang: entry.lang,
+    title: entry.title,
+    summary: entry.summary,
   };
 }

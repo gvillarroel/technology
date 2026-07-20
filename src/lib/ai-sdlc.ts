@@ -1,6 +1,3 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-import { parse } from "yaml";
 import { getScopedHtmlPageUrl, getScopedMarkdownPageUrl } from "./dual-format";
 import { createMarkdownDocument, markdownLink } from "./markdown";
 import { type SkillsCatalogData } from "./skills-repositories";
@@ -8,6 +5,7 @@ import { formatSkillSuccessRatio } from "./skills-page";
 import { getSkillDetailMarkdownUrl } from "./skills-repositories";
 import { withBasePath } from "./site-url";
 import { getRadarEntries, type RadarEntry } from "./tech-radar";
+import { getDataset } from "./site-catalog";
 
 export interface AiSdlcLink {
   label: string;
@@ -238,8 +236,6 @@ export interface AiSdlcOverview {
     backLabel: string;
   };
 }
-
-const aiSdlcYamlPath = join(process.cwd(), "data", "ai-sdlc.yaml");
 
 function toScalar(value: unknown) {
   if (value instanceof Date) {
@@ -482,11 +478,10 @@ export async function getAiSdlcData(): Promise<{
   overview: AiSdlcOverview;
   topics: AiSdlcTopic[];
 }> {
-  const rawFile = await readFile(aiSdlcYamlPath, "utf-8");
-  const document = parse(rawFile) as {
+  const document = await getDataset<{
     overview?: Record<string, unknown>;
     topics?: Array<Record<string, unknown>>;
-  };
+  }>("ai-sdlc");
 
   const overview = document.overview ?? {};
   const copy = (overview.copy as Record<string, unknown> | undefined) ?? {};

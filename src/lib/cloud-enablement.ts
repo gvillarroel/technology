@@ -1,9 +1,7 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-import { parse } from "yaml";
 import { getScopedHtmlPageUrl, getScopedMarkdownPageUrl } from "./dual-format";
 import { withBasePath } from "./site-url";
 import { createMarkdownDocument, markdownLink } from "./markdown";
+import { getDataset } from "./site-catalog";
 
 export interface CloudEnablementProduct {
   slug: string;
@@ -48,7 +46,6 @@ export interface CloudEnablementEntry extends CloudEnablementProduct {
   providerUpdated: string;
 }
 
-const cloudEnablementYamlPath = join(process.cwd(), "data", "cloud-enablement.yaml");
 const cloudEnablementArchetypes = new Set<CloudEnablementProduct["archetype"]>([
   "Infrastructure",
   "Tool",
@@ -80,8 +77,7 @@ function toArchetype(value: unknown): CloudEnablementProduct["archetype"] {
 }
 
 export async function getCloudEnablementProviders(): Promise<CloudEnablementProvider[]> {
-  const rawFile = await readFile(cloudEnablementYamlPath, "utf-8");
-  const document = parse(rawFile) as { providers?: Array<Record<string, unknown>> };
+  const document = await getDataset<{ providers?: Array<Record<string, unknown>> }>("cloud-enablement");
   const providers = document.providers ?? [];
   const toPriority = (value: unknown): CloudEnablementProvider["priority"] =>
     toScalar(value) === "secondary" ? "secondary" : "primary";

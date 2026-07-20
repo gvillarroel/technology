@@ -38,7 +38,7 @@ const formatDisplayDate = (value?: string) => {
 const formatRepositoryUpdatedLabel = (value?: string) =>
   value ? formatDisplayDate(value) : "";
 const configFilesPreview = [
-  "data/document-repositories.yaml",
+  "gs://limited-502918-cheap-gcs/technology/site.json#datasets.document-repositories",
   "src/lib/documents.ts",
   "src/pages/documents.astro",
   "src/pages/documents/[...slug].astro",

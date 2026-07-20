@@ -1,6 +1,4 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-import { parse } from "yaml";
+import { getDataset } from "./site-catalog";
 import { withBasePath } from "./site-url";
 
 export interface TerminalCommandConfig {
@@ -11,8 +9,6 @@ export interface TerminalCommandConfig {
   markdownUrl: string | null;
   fileName: string | null;
 }
-
-const terminalCommandsYamlPath = join(process.cwd(), "data", "terminal-commands.yaml");
 
 function toScalar(value: unknown) {
   return String(value ?? "").trim();
@@ -28,8 +24,7 @@ function toKind(value: unknown): TerminalCommandConfig["kind"] {
 }
 
 export async function getTerminalCommandConfigs(): Promise<TerminalCommandConfig[]> {
-  const rawFile = await readFile(terminalCommandsYamlPath, "utf-8");
-  const document = parse(rawFile) as { commands?: Array<Record<string, unknown>> };
+  const document = await getDataset<{ commands?: Array<Record<string, unknown>> }>("terminal-commands");
   const commands = document.commands ?? [];
 
   return commands.map((entry) => ({
