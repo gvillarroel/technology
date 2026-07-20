@@ -3,9 +3,9 @@
   "$id": "https://example.invalid/github-gcs-astro-seed/catalog.schema.json",
   "title": "GitHub GCS Astro Seed Catalog",
   "type": "object",
-  "required": ["schemaVersion", "site", "routes", "datasets"],
+  "required": ["schemaVersion", "site", "routes"],
   "properties": {
-    "schemaVersion": { "const": 1 },
+    "schemaVersion": { "const": 2 },
     "site": {
       "type": "object",
       "additionalProperties": false,
@@ -24,47 +24,35 @@
         "properties": { "path": { "const": "/" } }
       },
       "items": { "$ref": "#/$defs/route" }
-    },
-    "datasets": {
-      "type": "object",
-      "minProperties": 1,
-      "additionalProperties": {
-        "oneOf": [
-          { "$ref": "#/$defs/source" },
-          {
-            "oneOf": [
-              { "type": "array" },
-              {
-                "type": "object",
-                "not": { "required": ["$source"] }
-              }
-            ]
-          }
-        ]
-      }
     }
   },
   "additionalProperties": false,
   "$defs": {
-    "source": {
+    "data": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["$source"],
+      "required": ["source"],
       "properties": {
-        "$source": { "type": "string", "pattern": "^(https?://|gs://)" },
-        "$fallback": { "type": "string", "pattern": "^gs://" }
+        "source": {
+          "type": "string",
+          "pattern": "^(?:https?://|gs://).+\\.jsonl?(?:[?#].*)?$"
+        },
+        "fallback": {
+          "type": "string",
+          "pattern": "^gs://.+\\.jsonl?(?:[?#].*)?$"
+        }
       }
     },
     "route": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "path", "label", "template", "dataset", "intro", "view"],
+      "required": ["id", "path", "label", "template", "data", "intro", "view"],
       "properties": {
         "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
         "path": { "type": "string", "pattern": "^/$|^/(?:[a-z0-9][a-z0-9-]*/)+$" },
         "label": { "type": "string", "minLength": 1 },
         "template": { "const": "catalog" },
-        "dataset": { "type": "string", "minLength": 1 },
+        "data": { "$ref": "#/$defs/data" },
         "intro": {
           "type": "object",
           "additionalProperties": false,

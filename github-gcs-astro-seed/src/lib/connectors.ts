@@ -73,3 +73,39 @@ export function readSourceText(uri: string) {
 export async function readSourceJson<T>(uri: string): Promise<T> {
   return JSON.parse(await readSourceText(uri)) as T;
 }
+
+export type SourceFormat = "json" | "jsonl";
+
+export function getSourceFormat(uri: string): SourceFormat {
+  const pathname = uri.split(/[?#]/, 1)[0].toLowerCase();
+
+  if (pathname.endsWith(".jsonl")) {
+    return "jsonl";
+  }
+
+  if (pathname.endsWith(".json")) {
+    return "json";
+  }
+
+  throw new Error(`Source URI must end in .json or .jsonl: ${uri}`);
+}
+
+export async function readSourceData(uri: string): Promise<unknown> {
+  const text = await readSourceText(uri);
+
+  if (getSourceFormat(uri) === "json") {
+    return JSON.parse(text) as unknown;
+  }
+
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line, index) => {
+      try {
+        return JSON.parse(line) as unknown;
+      } catch (error) {
+        throw new Error(`Invalid JSONL record ${index + 1} in ${uri}`, { cause: error });
+      }
+    });
+}

@@ -7,7 +7,7 @@ interface Props extends ResolvedRoute {
   routes: CatalogRoute[];
 }
 
-const { siteTitle, route, routes, items } = Astro.props;
+const { siteTitle, route, routes, items, dataFormat } = Astro.props;
 ---
 
 <Layout
@@ -24,7 +24,7 @@ const { siteTitle, route, routes, items } = Astro.props;
       <p>{route.intro.summary}</p>
       <div class="facts" aria-label="Page facts">
         <span>{items.length} {items.length === 1 ? "entry" : "entries"}</span>
-        <span>{route.dataset}</span>
+        <span>{dataFormat.toUpperCase()}</span>
         <span>Remote build input</span>
       </div>
     </header>

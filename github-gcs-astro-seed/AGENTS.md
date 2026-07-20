@@ -22,11 +22,12 @@ required. Do not ask whether to run relevant checks, builds, tests, or safe read
 
 - Write every document, comment, identifier, and artifact in English.
 - Never add governed site data, downloaded catalogs, or structured-content roots to the repository.
+- Keep `site.json` metadata-only. Every route must reference its own unique remote `.json` or `.jsonl` object.
 - Never add `file://` or filesystem fallbacks. Local and CI builds must use the same remote source path.
 - Never commit secrets, service-account keys, `.env`, or `gha-creds-*.json`.
 - Keep every external GitHub Action pinned to a reviewed full-length commit SHA; retain its release tag as a comment.
 - Treat GCS input as private and generated GitHub Pages output as public.
-- Prefer the original HTTPS source. Use private GCS JSON only as fallback or as the governed catalog.
+- Prefer an original HTTPS page object. Use private GCS JSON or JSONL as fallback or governed page data.
 - Keep transport logic in `src/lib/connectors.ts` and data interpretation in `src/lib/catalog.ts`.
 - Keep compatible routes data-defined. Add TypeScript only for a genuinely new interaction template.
 - Preserve an `.md.ts` counterpart for every `.astro` page.
@@ -34,8 +35,8 @@ required. Do not ask whether to run relevant checks, builds, tests, or safe read
 
 ## Extension Rules
 
-- **Add data:** add an inline dataset to the remote catalog, or add `$source` plus optional `$fallback`.
-- **Add a route:** add a route and field projection to the remote catalog. Do not add a page file.
+- **Add data:** replace the route's remote `.json` or `.jsonl` object; never inline records in `site.json`.
+- **Add a route:** upload one unique page object, then add its route, source, and field projection to `site.json`.
 - **Add a connector:** extend `readSourceText`, document its trust boundary, and add failure-path coverage.
 - **Add a template:** define its catalog contract first, add one shared HTML component and Markdown renderer,
   then update the route dispatcher and schema.

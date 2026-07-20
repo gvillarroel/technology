@@ -1,11 +1,14 @@
-import { readSourceJson } from "./connectors";
+import { getSourceFormat, readSourceData, readSourceJson, type SourceFormat } from "./connectors";
 
 export interface CatalogRoute {
   id: string;
   path: string;
   label: string;
   template: "catalog";
-  dataset: string;
+  data: {
+    source: string;
+    fallback?: string;
+  };
   intro: {
     eyebrow?: string;
     title: string;
@@ -20,19 +23,13 @@ export interface CatalogRoute {
   };
 }
 
-interface DatasetReference {
-  $source: string;
-  $fallback?: string;
-}
-
 interface SiteCatalog {
-  schemaVersion: 1;
+  schemaVersion: 2;
   site: {
     title: string;
     description: string;
   };
   routes: CatalogRoute[];
-  datasets: Record<string, unknown | DatasetReference>;
 }
 
 export interface CatalogItem {
@@ -45,10 +42,11 @@ export interface CatalogItem {
 export interface ResolvedRoute {
   route: CatalogRoute;
   items: CatalogItem[];
+  dataFormat: SourceFormat;
 }
 
 let catalogPromise: Promise<SiteCatalog> | undefined;
-const datasetCache = new Map<string, Promise<unknown>>();
+const routeDataCache = new Map<string, Promise<{ value: unknown; uri: string }>>();
 
 function getCatalogUri() {
   const uri = process.env.SITE_CATALOG_URI || import.meta.env.SITE_CATALOG_URI;
@@ -61,26 +59,38 @@ function getCatalogUri() {
 }
 
 function validateCatalog(value: SiteCatalog) {
-  if (value.schemaVersion !== 1 || !value.site || !Array.isArray(value.routes) || !value.datasets) {
+  if (value.schemaVersion !== 2 || !value.site || !Array.isArray(value.routes)) {
     throw new Error(`Invalid site catalog at ${getCatalogUri()}`);
   }
 
   const ids = new Set<string>();
   const paths = new Set<string>();
+  const sources = new Set<string>();
 
   for (const route of value.routes) {
     const validPath = route.path === "/" || /^\/(?:[a-z0-9][a-z0-9-]*\/)+$/.test(route.path);
 
-    if (!route.id || !validPath || route.template !== "catalog" || !route.dataset || !route.view) {
+    if (!route.id || !validPath || route.template !== "catalog" || !route.data?.source || !route.view) {
       throw new Error(`Invalid route in ${getCatalogUri()}: ${JSON.stringify(route)}`);
     }
 
-    if (ids.has(route.id) || paths.has(route.path)) {
-      throw new Error(`Duplicate route id or path in ${getCatalogUri()}: ${route.id}`);
+    getSourceFormat(route.data.source);
+
+    if (route.data.fallback) {
+      getSourceFormat(route.data.fallback);
+
+      if (!route.data.fallback.startsWith("gs://")) {
+        throw new Error(`Route fallback must use gs:// in ${getCatalogUri()}: ${route.id}`);
+      }
+    }
+
+    if (ids.has(route.id) || paths.has(route.path) || sources.has(route.data.source)) {
+      throw new Error(`Duplicate route id, path, or page source in ${getCatalogUri()}: ${route.id}`);
     }
 
     ids.add(route.id);
     paths.add(route.path);
+    sources.add(route.data.source);
   }
 
   if (!paths.has("/")) {
@@ -99,40 +109,26 @@ export async function getRoutes() {
   return (await getSiteCatalog()).routes;
 }
 
-function isDatasetReference(value: unknown): value is DatasetReference {
-  return Boolean(value && typeof value === "object" && typeof (value as DatasetReference).$source === "string");
-}
-
-async function getDataset(id: string) {
-  const existing = datasetCache.get(id);
+async function getRouteData(route: CatalogRoute) {
+  const existing = routeDataCache.get(route.id);
 
   if (existing) {
     return existing;
   }
 
-  const request = getSiteCatalog().then(async (catalog) => {
-    if (!(id in catalog.datasets)) {
-      throw new Error(`Dataset "${id}" is not defined in ${getCatalogUri()}`);
-    }
-
-    const definition = catalog.datasets[id];
-
-    if (!isDatasetReference(definition)) {
-      return definition;
-    }
-
+  const request = (async () => {
     try {
-      return await readSourceJson<unknown>(definition.$source);
+      return { value: await readSourceData(route.data.source), uri: route.data.source };
     } catch (error) {
-      if (!definition.$fallback) {
+      if (!route.data.fallback) {
         throw error;
       }
 
-      return readSourceJson<unknown>(definition.$fallback);
+      return { value: await readSourceData(route.data.fallback), uri: route.data.fallback };
     }
-  });
+  })();
 
-  datasetCache.set(id, request);
+  routeDataCache.set(route.id, request);
   return request;
 }
 
@@ -153,15 +149,16 @@ function toTags(value: unknown) {
 }
 
 export async function resolveRoute(route: CatalogRoute): Promise<ResolvedRoute> {
-  const dataset = await getDataset(route.dataset);
-  const collection = route.view.collection ? readField(dataset, route.view.collection) : dataset;
+  const data = await getRouteData(route);
+  const collection = route.view.collection ? readField(data.value, route.view.collection) : data.value;
 
   if (!Array.isArray(collection)) {
-    throw new Error(`Route "${route.id}" expected dataset "${route.dataset}" to resolve to an array.`);
+    throw new Error(`Route "${route.id}" expected ${data.uri} to resolve to an array.`);
   }
 
   return {
     route,
+    dataFormat: getSourceFormat(data.uri),
     items: collection.map((item) => ({
       title: toText(readField(item, route.view.titleField)),
       summary: toText(readField(item, route.view.summaryField)),
