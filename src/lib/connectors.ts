@@ -33,13 +33,33 @@ async function readHttpObject(uri: string) {
     headers.set("Authorization", `Bearer ${githubToken}`);
   }
 
-  const response = await fetch(uri, { headers });
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    let response: Response;
 
-  if (!response.ok) {
-    throw new Error(`Failed to read ${uri}: ${response.status}`);
+    try {
+      response = await fetch(uri, { headers });
+    } catch (error) {
+      if (attempt === 2) {
+        throw error;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 500 * (2 ** attempt)));
+      continue;
+    }
+
+    if (response.ok) {
+      return response.text();
+    }
+
+    const retryable = response.status === 429 || response.status >= 500;
+    if (!retryable || attempt === 2) {
+      throw new Error(`Failed to read ${uri}: ${response.status}`);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 500 * (2 ** attempt)));
   }
 
-  return response.text();
+  throw new Error(`Failed to read ${uri}`);
 }
 
 export function readSourceText(uri: string) {

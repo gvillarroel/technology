@@ -1,6 +1,5 @@
 import { getCatalogRouteDefinitions, getRouteParameter, resolveCatalogRoute } from "../lib/catalog-routes";
 import { createMarkdownDocument, markdownLink, markdownResponse } from "../lib/markdown";
-import { toMarkdownHref } from "../lib/dual-format";
 import { withBasePath } from "../lib/site-url";
 
 export async function getStaticPaths() {
@@ -32,6 +31,6 @@ export async function GET({ props }: { props: Awaited<ReturnType<typeof resolveC
     ].filter((field) => field.value));
   }
 
-  doc.paragraph(markdownLink("Back to home", toMarkdownHref(withBasePath("/"))));
+  doc.paragraph(markdownLink("Back to home", withBasePath("/index.md")));
   return markdownResponse(doc.finish());
 }
