@@ -1,0 +1,40 @@
+---
+import "../styles/global.css";
+import type { CatalogRoute } from "../lib/catalog";
+import { markdownPath, withBasePath } from "../lib/paths";
+
+interface Props {
+  siteTitle: string;
+  title: string;
+  description: string;
+  currentPath: string;
+  routes: CatalogRoute[];
+}
+
+const { siteTitle, title, description, currentPath, routes } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="description" content={description} />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231d4ed8'/%3E%3Cpath d='M18 21h28v7H18zm0 15h28v7H18z' fill='white'/%3E%3C/svg%3E" />
+    <title>{title} | {siteTitle}</title>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href={withBasePath("/")}>{siteTitle}</a>
+      <nav aria-label="Primary navigation">
+        {routes.map((route) => (
+          <a href={withBasePath(route.path)} aria-current={route.path === currentPath ? "page" : undefined}>
+            {route.label}
+          </a>
+        ))}
+      </nav>
+      <a class="format-link" href={withBasePath(markdownPath(currentPath))}>Markdown</a>
+    </header>
+    <slot />
+  </body>
+</html>

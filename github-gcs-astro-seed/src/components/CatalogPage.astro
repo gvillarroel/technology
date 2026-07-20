@@ -1,0 +1,47 @@
+---
+import Layout from "../layouts/Layout.astro";
+import type { CatalogRoute, ResolvedRoute } from "../lib/catalog";
+
+interface Props extends ResolvedRoute {
+  siteTitle: string;
+  routes: CatalogRoute[];
+}
+
+const { siteTitle, route, routes, items } = Astro.props;
+---
+
+<Layout
+  siteTitle={siteTitle}
+  title={route.intro.title}
+  description={route.intro.summary}
+  currentPath={route.path}
+  routes={routes}
+>
+  <main>
+    <header class="hero">
+      <p class="eyebrow">{route.intro.eyebrow ?? "Remote catalog"}</p>
+      <h1>{route.intro.title}</h1>
+      <p>{route.intro.summary}</p>
+      <div class="facts" aria-label="Page facts">
+        <span>{items.length} {items.length === 1 ? "entry" : "entries"}</span>
+        <span>{route.dataset}</span>
+        <span>Remote build input</span>
+      </div>
+    </header>
+
+    <section class="grid" aria-label={`${route.label} entries`}>
+      {items.map((item) => (
+        <article class="card">
+          <h2>{item.title}</h2>
+          <p>{item.summary}</p>
+          {item.tags.length > 0 && (
+            <ul class="tags" aria-label="Tags">
+              {item.tags.map((tag) => <li>{tag}</li>)}
+            </ul>
+          )}
+          {item.url && <a href={item.url}>Open source <span aria-hidden="true">→</span></a>}
+        </article>
+      ))}
+    </section>
+  </main>
+</Layout>

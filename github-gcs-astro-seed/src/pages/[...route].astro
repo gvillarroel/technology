@@ -1,0 +1,18 @@
+---
+import CatalogPage from "../components/CatalogPage.astro";
+import { getRoutes, getSiteCatalog, resolveRoute, routeParameter, type ResolvedRoute } from "../lib/catalog";
+
+export async function getStaticPaths() {
+  const routes = (await getRoutes()).filter((route) => route.path !== "/");
+  return Promise.all(routes.map(async (route) => ({
+    params: { route: routeParameter(route.path) },
+    props: await resolveRoute(route),
+  })));
+}
+
+const catalog = await getSiteCatalog();
+const routes = await getRoutes();
+const page = Astro.props as ResolvedRoute;
+---
+
+<CatalogPage siteTitle={catalog.site.title} routes={routes} {...page} />

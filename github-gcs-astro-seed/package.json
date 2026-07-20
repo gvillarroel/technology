@@ -1,0 +1,23 @@
+{
+  "name": "github-gcs-astro-seed",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "check": "npm run check:markdown && astro check",
+    "build": "npm run check:markdown && astro build && npm run check:markdown:dist",
+    "preview": "astro preview",
+    "check:markdown": "node ./scripts/check-markdown-pages.mjs",
+    "check:markdown:dist": "node ./scripts/check-markdown-pages.mjs --dist"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.9",
+    "@types/node": "^24.6.1",
+    "astro": "7.0.8",
+    "typescript": "5.9.3"
+  }
+}

@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.astro/
+.env
+output/
+.playwright-cli/
+playwright-report/
+test-results/
+gha-creds-*.json

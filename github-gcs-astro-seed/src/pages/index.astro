@@ -1,0 +1,11 @@
+---
+import CatalogPage from "../components/CatalogPage.astro";
+import { getRoutes, getSiteCatalog, resolveRoute } from "../lib/catalog";
+
+const catalog = await getSiteCatalog();
+const routes = await getRoutes();
+const root = routes.find((route) => route.path === "/")!;
+const page = await resolveRoute(root);
+---
+
+<CatalogPage siteTitle={catalog.site.title} routes={routes} {...page} />
